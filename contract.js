@@ -1,3 +1,4 @@
+(function () {
 // ArcOdds Contract Config
 const CONTRACT_ADDRESS = "0x19D638Af6b2De9718Eff496fc27a304155D6Af44"; // Arc testnet deployment ke baad yahan contract address paste karein.
 
@@ -160,7 +161,8 @@ async function connectContractWallet() {
 
 // Place bet
 async function placeBet(marketId, side, usdcAmount) {
-  const { contract } = await connectContractWallet();
+  const wallet = await connectContractWallet();
+  const contract = wallet && wallet.contract;
   if (!contract) throw new Error("Contract address not configured yet");
   const value = ethers.utils
     ? ethers.utils.parseEther(usdcAmount.toString())
@@ -175,14 +177,16 @@ async function placeBet(marketId, side, usdcAmount) {
 
 // Get odds
 async function getOdds(marketId) {
-  const { contract } = await connectContractWallet();
+  const wallet = await connectContractWallet();
+  const contract = wallet && wallet.contract;
   if (!contract) throw new Error("Contract address not configured yet");
   const [yesOdds, noOdds] = await contract.getOdds(marketId);
   return { yes: yesOdds.toString(), no: noOdds.toString() };
 }
 
 async function claimWinnings(marketId) {
-  const { contract } = await connectContractWallet();
+  const wallet = await connectContractWallet();
+  const contract = wallet && wallet.contract;
   if (!contract) throw new Error("Contract address not configured yet");
   const tx = await contract.claimWinnings(marketId);
   await tx.wait();
@@ -245,3 +249,4 @@ window.ArcOddsContracts = {
   getWalletPositions,
   hasContractAddress,
 };
+})();
