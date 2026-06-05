@@ -136,8 +136,8 @@ function formatNative(value) {
   return ethers.utils ? ethers.utils.formatEther(value) : ethers.formatEther(value);
 }
 
-// Connect wallet
-async function connectWallet() {
+// Contract wallet connection. Keep this name distinct from page-level connectWallet handlers.
+async function connectContractWallet() {
   if (typeof window.ethereum !== 'undefined') {
     try {
       const { provider, signer, account } = await getProviderAndSigner();
@@ -160,7 +160,7 @@ async function connectWallet() {
 
 // Place bet
 async function placeBet(marketId, side, usdcAmount) {
-  const { contract } = await connectWallet();
+  const { contract } = await connectContractWallet();
   if (!contract) throw new Error("Contract address not configured yet");
   const value = ethers.utils
     ? ethers.utils.parseEther(usdcAmount.toString())
@@ -175,14 +175,14 @@ async function placeBet(marketId, side, usdcAmount) {
 
 // Get odds
 async function getOdds(marketId) {
-  const { contract } = await connectWallet();
+  const { contract } = await connectContractWallet();
   if (!contract) throw new Error("Contract address not configured yet");
   const [yesOdds, noOdds] = await contract.getOdds(marketId);
   return { yes: yesOdds.toString(), no: noOdds.toString() };
 }
 
 async function claimWinnings(marketId) {
-  const { contract } = await connectWallet();
+  const { contract } = await connectContractWallet();
   if (!contract) throw new Error("Contract address not configured yet");
   const tx = await contract.claimWinnings(marketId);
   await tx.wait();
@@ -237,7 +237,7 @@ async function getWalletPositions(account) {
 window.ArcOddsContracts = {
   CONTRACT_ADDRESS,
   CONTRACT_ABI,
-  connectWallet,
+  connectWallet: connectContractWallet,
   placeBet,
   claimWinnings,
   getOdds,
