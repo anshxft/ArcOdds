@@ -1,0 +1,18 @@
+{
+  "name": "arcodds",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:arc": "hardhat run scripts/deploy.js --network arcTestnet",
+    "resolve:arc": "hardhat run scripts/resolve-market.js --network arcTestnet",
+    "set-address": "node scripts/set-contract-address.js",
+    "ai:server": "node ai-server.js"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.10"
+  }
+}

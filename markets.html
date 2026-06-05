@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Markets — ArcOdds</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root, [data-theme="dark"] {
+      --bg: #0d0d12;
+      --surface: #13131a;
+      --surface2: #1a1a24;
+      --surface3: #1f1f2e;
+      --purple: #6d28d9;
+      --purple-light: #8b5cf6;
+      --purple-faint: rgba(109,40,217,0.12);
+      --text: #f4f4f6;
+      --text2: #a0a0b0;
+      --text3: #5a5a70;
+      --border: #1e1e2c;
+      --border2: #252535;
+      --green: #22c55e;
+      --green-faint: rgba(34,197,94,0.1);
+      --red: #ef4444;
+      --red-faint: rgba(239,68,68,0.1);
+      --nav-bg: rgba(13,13,18,0.92);
+    }
+    [data-theme="light"] {
+      --bg: #f4f5f7; --surface: #ffffff; --surface2: #eef0f3; --surface3: #e3e6eb;
+      --purple: #6d28d9; --purple-light: #7c3aed; --purple-faint: rgba(109,40,217,0.08);
+      --text: #15151b; --text2: #555866; --text3: #8a8e9c;
+      --border: #e2e4e9; --border2: #cfd3dc;
+      --green: #15803d; --green-faint: rgba(21,128,61,0.08);
+      --red: #b91c1c; --red-faint: rgba(185,28,28,0.08);
+      --nav-bg: rgba(244,245,247,0.94);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .bg-glow {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    }
+    .bg-glow::before {
+      content: ''; position: absolute;
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(109,40,217,0.07) 0%, transparent 70%);
+      top: -200px; left: -100px;
+    }
+
+    /* Nav */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: 60px; display: flex; align-items: center;
+      justify-content: space-between; padding: 0 32px;
+      background: var(--nav-bg); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-left { display: flex; align-items: center; gap: 40px; }
+    .nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+    .nav-logo-mark { width: 32px; height: 32px; display: block; flex-shrink: 0; }
+    .nav-logo span span { color: var(--purple-light); }
+    .nav-links { display: flex; gap: 4px; list-style: none; }
+    .nav-links a {
+      font-size: 14px; color: var(--text2); text-decoration: none;
+      padding: 6px 12px; border-radius: 8px; transition: all 0.15s; font-weight: 500;
+    }
+    .nav-links a:hover { color: var(--text); background: var(--surface2); }
+    .nav-links a.active { color: var(--text); background: var(--surface2); }
+    .nav-right { display: flex; align-items: center; gap: 10px; }
+    .network-badge {
+      display: flex; align-items: center; gap: 7px; padding: 6px 12px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 8px; font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; color: var(--text2);
+    }
+    .net-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .btn-connect {
+      padding: 8px 18px; background: var(--purple); border: none;
+      border-radius: 8px; color: white; font-weight: 600; font-size: 13px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-connect:hover { background: var(--purple-light); }
+    .btn-faucet {
+      padding: 8px 14px; background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 8px; color: var(--text2); font-weight: 600; font-size: 13px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-faucet:hover { border-color: var(--purple-light); color: var(--text); }
+    .theme-toggle {
+      width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border2);
+      background: var(--surface2); color: var(--text2); font-size: 16px; cursor: pointer;
+    }
+
+    /* Page */
+    main { position: relative; z-index: 1; padding-top: 60px; }
+
+    .page-header {
+      max-width: 1100px; margin: 0 auto;
+      padding: 40px 32px 28px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .page-title {
+      font-size: 24px; font-weight: 700;
+      letter-spacing: -0.8px; margin-bottom: 6px;
+    }
+
+    .page-sub { font-size: 14px; color: var(--text2); }
+
+    /* Stats bar */
+    .stats-bar {
+      max-width: 1100px; margin: 0 auto;
+      padding: 20px 32px;
+      display: flex; gap: 32px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sbar-item { display: flex; flex-direction: column; gap: 2px; }
+    .sbar-label { font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.5px; }
+    .sbar-val { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
+    .sbar-val.green { color: var(--green); }
+
+    /* Filters */
+    .filters-bar {
+      max-width: 1100px; margin: 0 auto;
+      padding: 20px 32px;
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 16px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .filter-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+    /* Search */
+    .search-wrap { position: relative; }
+    .search-icon {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: var(--text3); font-size: 14px; pointer-events: none;
+    }
+    .search-input {
+      padding: 9px 14px 9px 36px;
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 10px; color: var(--text);
+      font-family: 'Inter', sans-serif; font-size: 13px;
+      outline: none; transition: border-color 0.15s; width: 220px;
+    }
+    .search-input:focus { border-color: var(--purple-light); }
+    .search-input::placeholder { color: var(--text3); }
+
+    /* Category tabs */
+    .cat-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .cat-tab {
+      padding: 7px 14px; border-radius: 8px;
+      border: 1px solid var(--border2);
+      background: transparent; color: var(--text2);
+      font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .cat-tab:hover { color: var(--text); border-color: var(--purple-light); }
+    .cat-tab.active {
+      background: var(--purple-faint); color: var(--purple-light);
+      border-color: rgba(139,92,246,0.3);
+    }
+
+    /* Sort */
+    .sort-select {
+      padding: 8px 14px; background: var(--surface);
+      border: 1px solid var(--border2); border-radius: 10px;
+      color: var(--text2); font-size: 13px; font-weight: 500;
+      cursor: pointer; outline: none;
+    }
+    .sort-select option { background: var(--surface); }
+
+    /* Market count */
+    .market-count {
+      max-width: 1100px; margin: 0 auto;
+      padding: 16px 32px 0;
+      font-size: 13px; color: var(--text3);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Grid */
+    .markets-grid {
+      max-width: 1100px; margin: 0 auto;
+      padding: 16px 32px 80px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .mcard {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex; flex-direction: column;
+    }
+    .mcard:hover {
+      border-color: var(--border2);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    }
+
+    /* Card image placeholder */
+    .mcard-img {
+      width: 100%; height: 140px;
+      background: var(--surface2);
+      position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .mcard-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.35s ease; }
+    .mcard:hover .mcard-img img { transform: scale(1.035); }
+
+    .mcard-img-placeholder {
+      font-size: 40px; opacity: 0.4;
+    }
+
+    .mcard-img-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, transparent 50%, var(--surface) 100%);
+    }
+
+    .mcard-img-tag {
+      position: absolute; top: 10px; left: 10px;
+    }
+
+    .mtag {
+      display: inline-block; padding: 3px 9px;
+      border-radius: 6px; font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .mtag-crypto { background: var(--purple-faint); color: var(--purple-light); }
+    .mtag-politics { background: rgba(239,68,68,0.12); color: #f87171; }
+    .mtag-sports { background: var(--green-faint); color: #4ade80; }
+    .mtag-tech { background: rgba(59,130,246,0.1); color: #60a5fa; }
+    .mtag-entertainment { background: rgba(251,146,60,0.1); color: #fb923c; }
+    .mtag-finance { background: rgba(234,179,8,0.1); color: #facc15; }
+
+    .mcard-body { padding: 16px; flex: 1; display: flex; flex-direction: column; }
+
+    .mq {
+      font-size: 14px; font-weight: 500;
+      color: var(--text); line-height: 1.45;
+      margin-bottom: 14px; flex: 1;
+    }
+
+    .mbets { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+
+    .btn-yes {
+      padding: 8px; background: var(--green-faint);
+      border: 1px solid rgba(34,197,94,0.25); border-radius: 8px;
+      color: var(--green); font-weight: 600; font-size: 12px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-yes:hover { background: rgba(34,197,94,0.18); }
+
+    .btn-no {
+      padding: 8px; background: var(--red-faint);
+      border: 1px solid rgba(239,68,68,0.25); border-radius: 8px;
+      color: var(--red); font-weight: 600; font-size: 12px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-no:hover { background: rgba(239,68,68,0.18); }
+
+    .mbar-track {
+      height: 4px; background: var(--red-faint);
+      border-radius: 100px; overflow: hidden; margin-bottom: 10px;
+    }
+    .mbar-fill {
+      height: 100%; border-radius: 100px;
+      background: var(--green); transition: width 0.8s ease;
+    }
+
+    .mfooter {
+      display: flex; justify-content: space-between;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; color: var(--text3);
+    }
+    .mfooter strong { color: var(--text2); }
+
+    /* No results */
+    .no-results {
+      grid-column: 1/-1; text-align: center;
+      padding: 60px 20px; color: var(--text3);
+    }
+    .no-results-icon { font-size: 40px; margin-bottom: 12px; }
+    .no-results p { font-size: 14px; }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px 32px;
+      display: flex; justify-content: space-between; align-items: center;
+      position: relative; z-index: 1;
+    }
+    .footer-logo { font-size: 15px; font-weight: 700; color: var(--text); }
+    .footer-logo span { color: var(--purple-light); }
+    .footer-links { display: flex; gap: 20px; list-style: none; }
+    .footer-links a { font-size: 13px; color: var(--text3); text-decoration: none; transition: color 0.15s; }
+    .footer-links a:hover { color: var(--text2); }
+    .footer-copy { font-size: 12px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .mcard { animation: fadeUp 0.4s ease both; }
+
+    @media (max-width: 900px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .markets-grid { grid-template-columns: 1fr; padding: 16px 20px 60px; }
+      .filters-bar { padding: 16px 20px; }
+      .page-header { padding: 32px 20px 20px; }
+      .stats-bar { padding: 16px 20px; gap: 20px; flex-wrap: wrap; }
+      .market-count { padding: 16px 20px 0; }
+      footer { flex-direction: column; gap: 16px; text-align: center; padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-glow"></div>
+
+  <nav>
+    <div class="nav-left">
+      <a class="nav-logo" href="arcodds.html">
+        <img class="nav-logo-mark" src="assets/arcodds-mark.svg" alt=""/>
+        <span>Arc<span>Odds</span></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="arcodds.html">Home</a></li>
+        <li><a href="#" class="active">Markets</a></li>
+        <li><a href="portfolio.html">Portfolio</a></li>
+        <li><a href="leaderboard.html">Leaderboard</a></li>
+        <li><a href="#">Docs</a></li>
+      </ul>
+    </div>
+    <div class="nav-right">
+      <div class="network-badge"><div class="net-dot"></div>Arc Testnet</div>
+      <button class="btn-faucet" onclick="openArcFaucet()">Claim Faucet</button>
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">☀</button>
+      <button class="btn-connect" onclick="connectWallet()">Connect Wallet</button>
+    </div>
+  </nav>
+
+  <main>
+    <div class="page-header">
+      <div class="page-title">Markets</div>
+      <div class="page-sub">Live reference odds, settled on Arc Testnet with USDC</div>
+    </div>
+
+    <div class="stats-bar">
+      <div class="sbar-item">
+        <div class="sbar-label">Reference Feed</div>
+        <div class="sbar-val green">Live</div>
+      </div>
+      <div class="sbar-item">
+        <div class="sbar-label">Settlement</div>
+        <div class="sbar-val">Arc Testnet</div>
+      </div>
+      <div class="sbar-item">
+        <div class="sbar-label">Currency</div>
+        <div class="sbar-val">USDC</div>
+      </div>
+      <div class="sbar-item">
+        <div class="sbar-label">Network Fee</div>
+        <div class="sbar-val green">Low</div>
+      </div>
+    </div>
+
+    <div class="filters-bar">
+      <div class="filter-left">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" type="text" placeholder="Search markets..." id="searchInput" oninput="filterMarkets()"/>
+        </div>
+        <div class="cat-tabs" id="catTabs">
+          <button class="cat-tab active" onclick="setCategory('all', this)">All</button>
+          <button class="cat-tab" onclick="setCategory('crypto', this)">Crypto</button>
+          <button class="cat-tab" onclick="setCategory('politics', this)">Politics</button>
+          <button class="cat-tab" onclick="setCategory('sports', this)">Sports</button>
+          <button class="cat-tab" onclick="setCategory('tech', this)">Tech</button>
+          <button class="cat-tab" onclick="setCategory('entertainment', this)">Entertainment</button>
+          <button class="cat-tab" onclick="setCategory('finance', this)">Finance</button>
+        </div>
+      </div>
+      <select class="sort-select" id="sortSelect" onchange="filterMarkets()">
+        <option value="volume">Sort: Volume</option>
+        <option value="newest">Sort: Newest</option>
+        <option value="closing">Sort: Closing Soon</option>
+        <option value="yes">Sort: YES %</option>
+      </select>
+    </div>
+
+    <div class="market-count" id="marketCount">Loading reference markets...</div>
+
+    <div class="markets-grid" id="marketsGrid"></div>
+  </main>
+
+  <footer>
+    <div class="footer-logo">Arc<span>Odds</span></div>
+    <ul class="footer-links">
+      <li><a href="#">Markets</a></li>
+      <li><a href="portfolio.html">Portfolio</a></li>
+      <li><a href="#">Docs</a></li>
+      <li><a href="#">GitHub</a></li>
+      <li><a href="#">Discord</a></li>
+    </ul>
+    <div class="footer-copy">© 2026 ArcOdds</div>
+  </footer>
+
+  <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+  <script src="contract.js?v=20260605c"></script>
+  <script src="app.js?v=20260605c"></script>
+  <script>
+    const MARKETS = window.ArcOddsApp.ARC_MARKETS.map((market) => ({
+      ...market,
+      closes: market.closeShort || market.closes,
+    }));
+
+    const TAG_CLASSES = {
+      crypto: 'mtag-crypto',
+      politics: 'mtag-politics',
+      sports: 'mtag-sports',
+      tech: 'mtag-tech',
+      entertainment: 'mtag-entertainment',
+      finance: 'mtag-finance',
+    };
+
+    // bg colors per category for image placeholder
+    const CAT_BG = {
+      crypto: '#1a1228',
+      politics: '#1a1010',
+      sports: '#0f1a10',
+      tech: '#0f1020',
+      entertainment: '#1a1208',
+      finance: '#1a1a08',
+    };
+
+    let activeCategory = 'all';
+
+    function setCategory(cat, el) {
+      activeCategory = cat;
+      document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      filterMarkets();
+    }
+
+    function filterMarkets() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const sort = document.getElementById('sortSelect').value;
+
+      let filtered = MARKETS.filter(m => {
+        const matchCat = activeCategory === 'all' || m.cat === activeCategory;
+        const matchSearch = m.q.toLowerCase().includes(search);
+        return matchCat && matchSearch;
+      });
+
+      if (sort === 'volume') filtered.sort((a,b) => b.volume - a.volume);
+      else if (sort === 'yes') filtered.sort((a,b) => b.yes - a.yes);
+      else if (sort === 'closing') filtered.sort((a,b) => a.closes.localeCompare(b.closes));
+
+      renderMarkets(filtered);
+    }
+
+    function renderMarkets(list) {
+      const grid = document.getElementById('marketsGrid');
+      const count = document.getElementById('marketCount');
+      count.textContent = `Showing ${list.length} market${list.length !== 1 ? 's' : ''}`;
+
+      if (list.length === 0) {
+        grid.innerHTML = `
+          <div class="no-results">
+            <div class="no-results-icon">🔍</div>
+            <p>No markets found. Try a different search or category.</p>
+          </div>`;
+        return;
+      }
+
+      grid.innerHTML = list.map((m, i) => `
+        <div class="mcard" style="animation-delay:${i * 0.04}s" onclick="openMarket(${m.id})">
+          <div class="mcard-img" style="background:${CAT_BG[m.cat]}">
+            <img src="${m.image}" alt="" loading="lazy"/>
+            <div class="mcard-img-overlay"></div>
+            <div class="mcard-img-tag">
+              <span class="mtag ${TAG_CLASSES[m.cat]}">${m.cat}</span>
+            </div>
+          </div>
+          <div class="mcard-body">
+            <div class="mq">${m.q}</div>
+            <div class="mbets">
+              <button class="btn-yes" onclick="openMarket(${m.id}, 'yes', event)">YES ${m.yes}%</button>
+              <button class="btn-no" onclick="openMarket(${m.id}, 'no', event)">NO ${100-m.yes}%</button>
+            </div>
+            <div class="mbar-track">
+              <div class="mbar-fill" style="width:${m.yes}%"></div>
+            </div>
+            <div class="mfooter">
+              <span>Vol: <strong>${m.vol}</strong></span>
+              <span>Closes ${m.closes}</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      // Animate bars
+      setTimeout(() => {
+        document.querySelectorAll('.mbar-fill').forEach(bar => {
+          const w = bar.style.width;
+          bar.style.width = '0%';
+          setTimeout(() => { bar.style.width = w; }, 100);
+        });
+      }, 50);
+    }
+
+    function openMarket(id, side, event) {
+      if (event) event.stopPropagation();
+      const suffix = side ? `&side=${side}` : '';
+      window.location.href = `market-detail.html?id=${id}${suffix}`;
+    }
+
+    async function connectWallet() {
+      try {
+        await window.ArcOddsApp.ensureArcWallet();
+      } catch (err) {
+        alert(err.message || 'Wallet connection failed');
+      }
+    }
+
+    function toggleTheme() {
+      const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+      document.documentElement.dataset.theme = next;
+      localStorage.setItem('theme', next);
+      document.getElementById('themeBtn').textContent = next === 'light' ? '☾' : '☀';
+    }
+
+    // Init
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.dataset.theme = savedTheme;
+    document.getElementById('themeBtn').textContent = savedTheme === 'light' ? '☾' : '☀';
+    filterMarkets();
+    window.addEventListener('arcodds:markets-updated', () => {
+      window.ArcOddsApp.ARC_MARKETS.forEach((market, index) => Object.assign(MARKETS[index], market, { closes: market.closeShort || market.closes }));
+      filterMarkets();
+    });
+  </script>
+</body>
+</html>

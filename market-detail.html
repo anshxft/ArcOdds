@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Market Detail — ArcOdds</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root, [data-theme="dark"] {
+      --bg: #0d0d12; --surface: #13131a; --surface2: #1a1a24; --surface3: #1f1f2e;
+      --purple: #6d28d9; --purple-light: #8b5cf6; --purple-faint: rgba(109,40,217,0.12);
+      --text: #f4f4f6; --text2: #a0a0b0; --text3: #5a5a70;
+      --border: #1e1e2c; --border2: #252535;
+      --green: #22c55e; --green-faint: rgba(34,197,94,0.1);
+      --red: #ef4444; --red-faint: rgba(239,68,68,0.1);
+      --nav-bg: rgba(13,13,18,0.92); --shadow: rgba(0,0,0,0.4);
+    }
+    [data-theme="light"] {
+      --bg: #f1f1f5; --surface: #ffffff; --surface2: #e8e8f0; --surface3: #dcdce8;
+      --purple: #6d28d9; --purple-light: #7c3aed; --purple-faint: rgba(109,40,217,0.08);
+      --text: #111118; --text2: #50506a; --text3: #90909a;
+      --border: #e0e0ec; --border2: #ccccdc;
+      --green: #15803d; --green-faint: rgba(21,128,61,0.08);
+      --red: #b91c1c; --red-faint: rgba(185,28,28,0.08);
+      --nav-bg: rgba(241,241,245,0.94); --shadow: rgba(0,0,0,0.08);
+    }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; -webkit-font-smoothing: antialiased; transition: background 0.3s, color 0.3s; }
+
+    /* NAV */
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; background: var(--nav-bg); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); transition: background 0.3s, border-color 0.3s; }
+    .nav-left { display: flex; align-items: center; gap: 36px; }
+    .nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; }
+    .logo-img-wrap { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .logo-img-wrap img { width: 32px; height: 32px; object-fit: contain; display: block; }
+    .nav-logo-text { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+    .nav-logo-text span { color: var(--purple-light); }
+    .nav-links { display: flex; gap: 2px; list-style: none; }
+    .nav-links a { font-size: 14px; color: var(--text2); text-decoration: none; padding: 6px 12px; border-radius: 8px; transition: all 0.15s; font-weight: 500; }
+    .nav-links a:hover, .nav-links a.active { color: var(--text); background: var(--surface2); }
+    .nav-right { display: flex; align-items: center; gap: 10px; }
+    .network-badge { display: flex; align-items: center; gap: 7px; padding: 6px 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text2); }
+    .net-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); animation: netpulse 2s infinite; }
+    @keyframes netpulse { 0%,100%{box-shadow:0 0 6px var(--green)} 50%{box-shadow:0 0 14px var(--green)} }
+    .theme-toggle { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .theme-toggle:hover { border-color: var(--purple-light); }
+    .btn-connect { padding: 8px 18px; background: var(--purple); border: none; border-radius: 8px; color: white; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+    .btn-connect:hover { background: var(--purple-light); transform: translateY(-1px); }
+    .btn-faucet { padding: 8px 14px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; color: var(--text2); font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+    .btn-faucet:hover { border-color: var(--purple-light); color: var(--text); }
+
+    main { padding-top: 60px; }
+
+    /* BREADCRUMB */
+    .breadcrumb { max-width: 1100px; margin: 0 auto; padding: 20px 32px 0; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text3); }
+    .breadcrumb a { color: var(--text3); text-decoration: none; transition: color 0.15s; }
+    .breadcrumb a:hover { color: var(--purple-light); }
+    .breadcrumb-sep { color: var(--text3); }
+
+    /* PAGE LAYOUT */
+    .page { max-width: 1100px; margin: 0 auto; padding: 20px 32px 100px; display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
+
+    /* LEFT COLUMN */
+    .left-col { display: flex; flex-direction: column; gap: 20px; }
+
+    /* MARKET HEADER */
+    .market-header { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; animation: fadeUp 0.4s ease both; position: relative; overflow: hidden; }
+    .market-header-image { width: calc(100% + 48px); height: 190px; margin: -24px -24px 22px; object-fit: cover; display: block; border-bottom: 1px solid var(--border); }
+    .market-tag { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; font-family: 'JetBrains Mono', monospace; background: var(--purple-faint); color: var(--purple-light); margin-bottom: 14px; }
+    .market-title { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.3; letter-spacing: -0.5px; margin-bottom: 20px; }
+    .market-meta { display: flex; gap: 24px; flex-wrap: wrap; padding-top: 16px; border-top: 1px solid var(--border); }
+    .meta-item { display: flex; flex-direction: column; gap: 3px; }
+    .meta-label { font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-val { font-size: 15px; font-weight: 700; color: var(--text); }
+    .meta-val.green { color: var(--green); }
+    .meta-val.purple { color: var(--purple-light); }
+
+    /* ODDS BAR */
+    .odds-section { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; animation: fadeUp 0.4s 0.05s ease both; }
+    .odds-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .odds-title { font-size: 14px; font-weight: 600; color: var(--text); }
+    .odds-live { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--green); font-family: 'JetBrains Mono', monospace; }
+    .odds-live::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: netpulse 1.5s infinite; }
+    .big-odds { display: flex; gap: 16px; margin-bottom: 16px; }
+    .big-odd { flex: 1; padding: 16px; border-radius: 12px; text-align: center; }
+    .big-odd.yes { background: var(--green-faint); border: 1px solid rgba(34,197,94,0.2); }
+    .big-odd.no { background: var(--red-faint); border: 1px solid rgba(239,68,68,0.2); }
+    .big-odd-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace; margin-bottom: 6px; }
+    .big-odd.yes .big-odd-label { color: var(--green); }
+    .big-odd.no .big-odd-label { color: var(--red); }
+    .big-odd-pct { font-size: 32px; font-weight: 700; letter-spacing: -1px; }
+    .big-odd.yes .big-odd-pct { color: var(--green); }
+    .big-odd.no .big-odd-pct { color: var(--red); }
+    .big-odd-change { font-size: 11px; font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+    .big-odd.yes .big-odd-change { color: var(--green); }
+    .big-odd.no .big-odd-change { color: var(--red); }
+    .prog-track { height: 8px; background: var(--red-faint); border-radius: 100px; overflow: hidden; }
+    .prog-fill { height: 100%; border-radius: 100px; background: var(--green); transition: width 1s ease; }
+
+    /* AI BRIEF */
+    .ai-section { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 22px; margin-top: 18px; animation: fadeUp 0.4s 0.08s ease both; }
+    .ai-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+    .ai-kicker { font-size: 11px; color: var(--purple-light); font-family: 'JetBrains Mono', monospace; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 4px; }
+    .ai-title { font-size: 16px; color: var(--text); font-weight: 700; }
+    .ai-btn { flex-shrink: 0; border: 1px solid var(--border2); background: var(--surface2); color: var(--text); border-radius: 9px; padding: 9px 13px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+    .ai-btn:hover { border-color: var(--purple-light); transform: translateY(-1px); }
+    .ai-btn:disabled { cursor: wait; opacity: 0.68; transform: none; }
+    .ai-summary { font-size: 14px; line-height: 1.7; color: var(--text2); padding: 13px 14px; border-radius: 12px; background: var(--surface2); border: 1px solid var(--border); margin-bottom: 14px; }
+    .ai-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .ai-box { border: 1px solid var(--border); background: var(--surface2); border-radius: 12px; padding: 14px; min-height: 132px; }
+    .ai-box h4 { font-size: 12px; color: var(--text); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .ai-box ul { list-style: none; display: grid; gap: 8px; }
+    .ai-box li { position: relative; padding-left: 14px; color: var(--text2); font-size: 13px; line-height: 1.55; }
+    .ai-box li::before { content: ''; position: absolute; left: 0; top: 8px; width: 5px; height: 5px; border-radius: 50%; background: var(--purple-light); }
+    .ai-disclaimer { margin-top: 12px; color: var(--text3); font-size: 12px; line-height: 1.6; }
+    .ai-empty { color: var(--text3); font-size: 13px; line-height: 1.7; }
+
+    /* CHART */
+    .chart-section { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; animation: fadeUp 0.4s 0.1s ease both; }
+    .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .chart-title { font-size: 14px; font-weight: 600; color: var(--text); }
+    .chart-tabs { display: flex; gap: 4px; }
+    .chart-tab { padding: 5px 12px; border-radius: 7px; border: 1px solid var(--border2); background: transparent; color: var(--text3); font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+    .chart-tab.active { background: var(--purple-faint); color: var(--purple-light); border-color: rgba(139,92,246,0.3); }
+    .chart-wrap { position: relative; height: 220px; }
+
+    /* ACTIVITY */
+    .activity-section { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; animation: fadeUp 0.4s 0.15s ease both; }
+    .activity-head { padding: 18px 20px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 600; color: var(--text); }
+    .activity-row { display: grid; grid-template-columns: auto 1fr auto auto; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--border); align-items: center; transition: background 0.15s; }
+    .activity-row:last-child { border-bottom: none; }
+    .activity-row:hover { background: var(--surface2); }
+    .act-side { font-size: 11px; font-weight: 700; font-family: 'JetBrains Mono', monospace; padding: 3px 8px; border-radius: 5px; }
+    .act-side.yes { background: var(--green-faint); color: var(--green); }
+    .act-side.no { background: var(--red-faint); color: var(--red); }
+    .act-addr { font-size: 13px; font-family: 'JetBrains Mono', monospace; color: var(--text2); }
+    .act-amt { font-size: 13px; font-family: 'JetBrains Mono', monospace; color: var(--text); font-weight: 500; }
+    .act-time { font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+
+    /* RIGHT COLUMN — BET PANEL */
+    .bet-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; position: sticky; top: 80px; animation: fadeUp 0.4s 0.05s ease both; }
+    .bet-card-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 20px; }
+
+    /* Toggle YES/NO */
+    .bet-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 0; background: var(--surface2); border-radius: 10px; padding: 3px; margin-bottom: 20px; }
+    .bet-toggle-btn { padding: 10px; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--text3); }
+    .bet-toggle-btn.yes.active { background: var(--green); color: white; box-shadow: 0 4px 12px rgba(34,197,94,0.3); }
+    .bet-toggle-btn.no.active { background: var(--red); color: white; box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
+    .bet-toggle-btn:not(.active):hover { color: var(--text2); }
+
+    /* Amount input */
+    .bet-label { font-size: 12px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; font-family: 'JetBrains Mono', monospace; }
+    .bet-input-wrap { position: relative; margin-bottom: 16px; }
+    .bet-input { width: 100%; padding: 14px 60px 14px 16px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 600; outline: none; transition: all 0.15s; }
+    .bet-input:focus { border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(139,92,246,0.1); }
+    .bet-input::placeholder { color: var(--text3); font-weight: 400; }
+    .bet-currency { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; font-weight: 600; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+
+    /* Quick amounts */
+    .quick-amounts { display: flex; gap: 6px; margin-bottom: 20px; }
+    .quick-btn { flex: 1; padding: 7px 4px; border: 1px solid var(--border2); border-radius: 8px; background: transparent; color: var(--text3); font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; font-family: 'JetBrains Mono', monospace; }
+    .quick-btn:hover { border-color: var(--purple-light); color: var(--purple-light); }
+
+    /* Summary */
+    .bet-summary { background: var(--surface2); border-radius: 10px; padding: 14px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; }
+    .bet-summary-row { display: flex; justify-content: space-between; align-items: center; }
+    .bet-summary-label { font-size: 12px; color: var(--text3); }
+    .bet-summary-val { font-size: 13px; font-weight: 600; color: var(--text); font-family: 'JetBrains Mono', monospace; }
+    .bet-summary-val.green { color: var(--green); }
+
+    /* Submit */
+    .btn-bet-yes { width: 100%; padding: 14px; background: var(--green); border: none; border-radius: 10px; color: white; font-weight: 700; font-size: 15px; cursor: pointer; transition: all 0.2s; margin-bottom: 10px; box-shadow: 0 4px 16px rgba(34,197,94,0.2); }
+    .btn-bet-yes:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(34,197,94,0.3); }
+    .btn-bet-no { width: 100%; padding: 14px; background: var(--red); border: none; border-radius: 10px; color: white; font-weight: 700; font-size: 15px; cursor: pointer; transition: all 0.2s; margin-bottom: 10px; box-shadow: 0 4px 16px rgba(239,68,68,0.2); display: none; }
+    .btn-bet-no:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(239,68,68,0.3); }
+    .bet-disclaimer { font-size: 11px; color: var(--text3); text-align: center; line-height: 1.5; }
+
+    /* Divider */
+    .bet-divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+    /* Wallet warning */
+    .wallet-warn { background: var(--purple-faint); border: 1px solid rgba(139,92,246,0.2); border-radius: 10px; padding: 14px; margin-bottom: 16px; font-size: 13px; color: var(--purple-light); text-align: center; line-height: 1.5; }
+
+    /* BOTTOM NAV */
+    .bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 200; background: var(--nav-bg); backdrop-filter: blur(20px); border-top: 1px solid var(--border); padding: 8px 0 20px; }
+    .bottom-nav-inner { display: flex; justify-content: space-around; align-items: center; }
+    .bnav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 4px 16px; border-radius: 10px; transition: all 0.15s; text-decoration: none; border: none; background: none; }
+    .bnav-icon { width: 22px; height: 22px; color: var(--text3); transition: color 0.2s; }
+    .bnav-label { font-size: 10px; font-weight: 500; color: var(--text3); letter-spacing: 0.3px; transition: color 0.2s; }
+    .bnav-item.active .bnav-label, .bnav-item.active .bnav-icon { color: var(--purple-light); }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+
+    /* Confirm modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 500; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .modal-overlay.show { opacity: 1; pointer-events: all; }
+    .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: 20px; padding: 28px; width: 90%; max-width: 380px; transform: translateY(20px); transition: transform 0.25s; }
+    .modal-overlay.show .modal { transform: translateY(0); }
+    .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.5px; }
+    .modal-sub { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+    .modal-detail { background: var(--surface2); border-radius: 10px; padding: 14px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
+    .modal-row { display: flex; justify-content: space-between; font-size: 13px; }
+    .modal-row span:first-child { color: var(--text2); }
+    .modal-row span:last-child { font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+    .modal-btns { display: flex; gap: 10px; }
+    .modal-cancel { flex: 1; padding: 12px; border: 1px solid var(--border2); border-radius: 10px; background: transparent; color: var(--text2); font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.15s; }
+    .modal-cancel:hover { border-color: var(--text2); color: var(--text); }
+    .modal-confirm { flex: 1; padding: 12px; border: none; border-radius: 10px; color: white; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+    .modal-confirm.yes { background: var(--green); }
+    .modal-confirm.no { background: var(--red); }
+    .modal-confirm:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    @media(max-width:900px) {
+      nav { padding: 0 20px; }
+      .nav-links, .network-badge { display: none; }
+      .page { grid-template-columns: 1fr; padding: 16px 16px 100px; }
+      .bet-card { position: static; }
+      .breadcrumb { padding: 16px 16px 0; }
+      .bottom-nav { display: block; }
+      .big-odd-pct { font-size: 26px; }
+      .ai-head { align-items: flex-start; flex-direction: column; }
+      .ai-grid { grid-template-columns: 1fr; }
+    }
+  </style><script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+  <script src="contract.js?v=20260605c"></script>
+  <script src="app.js?v=20260605c"></script>
+</head>
+<body>
+  <nav>
+    <div class="nav-left">
+      <a class="nav-logo" href="arcodds.html">
+        <div class="logo-img-wrap">
+          <img src="assets/arcodds-mark.svg" alt="ArcOdds" id="navLogo"/>
+        </div>
+        <div class="nav-logo-text">Arc<span>Odds</span></div>
+      </a>
+      <ul class="nav-links">
+        <li><a href="arcodds.html">Home</a></li>
+        <li><a href="markets.html" class="active">Markets</a></li>
+        <li><a href="portfolio.html">Portfolio</a></li>
+        <li><a href="leaderboard.html">Leaderboard</a></li>
+        <li><a href="#">Docs</a></li>
+      </ul>
+    </div>
+    <div class="nav-right">
+      <div class="network-badge"><div class="net-dot"></div>Arc Testnet</div>
+      <button class="btn-faucet" onclick="openArcFaucet()">Claim Faucet</button>
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙</button>
+      <button class="btn-connect" onclick="connectWallet()">Connect Wallet</button>
+    </div>
+  </nav>
+
+  <main>
+    <div class="breadcrumb">
+      <a href="arcodds.html">Home</a>
+      <span class="breadcrumb-sep">›</span>
+      <a href="markets.html">Markets</a>
+      <span class="breadcrumb-sep">›</span>
+      <span>Bitcoin $150K EOY</span>
+    </div>
+
+    <div class="page">
+      <!-- LEFT -->
+      <div class="left-col">
+
+        <!-- Market Header -->
+        <div class="market-header">
+          <img class="market-header-image" id="marketHeaderImage" src="assets/markets/crypto.jpg" alt=""/>
+          <div class="market-tag">Crypto</div>
+          <div class="market-title">Loading current reference market...</div>
+          <div class="market-meta">
+            <div class="meta-item">
+              <div class="meta-label">Volume</div>
+              <div class="meta-val purple">$842,300</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Liquidity</div>
+              <div class="meta-val">$124,500</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Bettors</div>
+              <div class="meta-val">2,841</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Closes</div>
+              <div class="meta-val">Loading...</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Created by</div>
+              <div class="meta-val" style="font-family:'JetBrains Mono',monospace;font-size:13px;">0xArc...9d4e</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Odds -->
+        <div class="odds-section">
+          <div class="odds-header">
+            <div class="odds-title">Current Odds</div>
+            <div class="odds-live">LIVE</div>
+          </div>
+          <div class="big-odds">
+            <div class="big-odd yes">
+              <div class="big-odd-label">YES</div>
+              <div class="big-odd-pct">68%</div>
+              <div class="big-odd-change">↑ +2.1% today</div>
+            </div>
+            <div class="big-odd no">
+              <div class="big-odd-label">NO</div>
+              <div class="big-odd-pct">32%</div>
+              <div class="big-odd-change">↓ -2.1% today</div>
+            </div>
+          </div>
+          <div class="prog-track">
+            <div class="prog-fill" id="mainBar" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- AI Brief -->
+        <div class="ai-section">
+          <div class="ai-head">
+            <div>
+              <div class="ai-kicker">AI Brief</div>
+              <div class="ai-title">Market context</div>
+            </div>
+            <button class="ai-btn" id="aiBriefBtn" onclick="loadAiBrief()">Generate brief</button>
+          </div>
+          <div id="aiBriefContent" class="ai-empty">Get a neutral AI summary with YES/NO arguments, risks, and what to watch before placing a testnet trade.</div>
+        </div>
+
+        <!-- Chart -->
+        <div class="chart-section">
+          <div class="chart-header">
+            <div class="chart-title">Price History</div>
+            <div class="chart-tabs">
+              <button class="chart-tab active" onclick="setRange('1D',this)">1D</button>
+              <button class="chart-tab" onclick="setRange('1W',this)">1W</button>
+              <button class="chart-tab" onclick="setRange('1M',this)">1M</button>
+              <button class="chart-tab" onclick="setRange('ALL',this)">ALL</button>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="priceChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Activity Feed -->
+        <div class="activity-section">
+          <div class="activity-head">Recent Activity</div>
+          <div class="activity-row">
+            <div class="act-side yes">YES</div>
+            <div class="act-addr">0xF3a1...8b2c</div>
+            <div class="act-amt">2.4 USDC</div>
+            <div class="act-time">2m ago</div>
+          </div>
+          <div class="activity-row">
+            <div class="act-side no">NO</div>
+            <div class="act-addr">0x7b2c...4d1e</div>
+            <div class="act-amt">0.8 USDC</div>
+            <div class="act-time">5m ago</div>
+          </div>
+          <div class="activity-row">
+            <div class="act-side yes">YES</div>
+            <div class="act-addr">0x9d4e...2f3a</div>
+            <div class="act-amt">5.0 USDC</div>
+            <div class="act-time">12m ago</div>
+          </div>
+          <div class="activity-row">
+            <div class="act-side yes">YES</div>
+            <div class="act-addr">0x2a8f...c1b7</div>
+            <div class="act-amt">1.2 USDC</div>
+            <div class="act-time">18m ago</div>
+          </div>
+          <div class="activity-row">
+            <div class="act-side no">NO</div>
+            <div class="act-addr">0xc1b7...f3a1</div>
+            <div class="act-amt">3.5 USDC</div>
+            <div class="act-time">24m ago</div>
+          </div>
+          <div class="activity-row">
+            <div class="act-side yes">YES</div>
+            <div class="act-addr">0x4d1e...9d4e</div>
+            <div class="act-amt">0.5 USDC</div>
+            <div class="act-time">31m ago</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT — BET PANEL -->
+      <div class="bet-card">
+        <div class="bet-card-title">Place Your Bet</div>
+
+        <div class="bet-toggle">
+          <button class="bet-toggle-btn yes active" id="btnYes" onclick="selectSide('yes')">YES ↑</button>
+          <button class="bet-toggle-btn no" id="btnNo" onclick="selectSide('no')">NO ↓</button>
+        </div>
+
+        <div class="bet-label">Amount</div>
+        <div class="bet-input-wrap">
+          <input class="bet-input" type="number" placeholder="0.00" id="betAmount" oninput="updateSummary()" min="0" step="0.01"/>
+          <span class="bet-currency">USDC</span>
+        </div>
+
+        <div class="quick-amounts">
+          <button class="quick-btn" onclick="setAmount(0.1)">0.1</button>
+          <button class="quick-btn" onclick="setAmount(0.5)">0.5</button>
+          <button class="quick-btn" onclick="setAmount(1)">1.0</button>
+          <button class="quick-btn" onclick="setAmount(5)">5.0</button>
+        </div>
+
+        <div class="bet-summary">
+          <div class="bet-summary-row">
+            <span class="bet-summary-label">Odds</span>
+            <span class="bet-summary-val" id="summOdds">68%</span>
+          </div>
+          <div class="bet-summary-row">
+            <span class="bet-summary-label">Est. payout</span>
+            <span class="bet-summary-val green" id="summPayout">—</span>
+          </div>
+          <div class="bet-summary-row">
+            <span class="bet-summary-label">Potential profit</span>
+            <span class="bet-summary-val green" id="summProfit">—</span>
+          </div>
+          <div class="bet-summary-row">
+            <span class="bet-summary-label">Fee (2%)</span>
+            <span class="bet-summary-val" id="summFee">—</span>
+          </div>
+        </div>
+
+        <div class="wallet-warn" id="walletWarn">
+          Connect your wallet to place a bet
+        </div>
+
+        <button class="btn-bet-yes" id="betSubmitYes" onclick="showConfirm()">Bet YES — 68%</button>
+        <button class="btn-bet-no" id="betSubmitNo" onclick="showConfirm()">Bet NO — 32%</button>
+
+        <div class="bet-disclaimer">
+          By placing a bet you agree to the ArcOdds terms. Markets resolve based on verified real-world outcomes.
+        </div>
+
+        <div class="bet-divider"></div>
+
+        <div style="font-size:13px;color:var(--text2);margin-bottom:12px;font-weight:500;">Market Rules</div>
+        <div style="font-size:12px;color:var(--text3);line-height:1.6;">
+          Loading market rules and reference source.
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- CONFIRM MODAL -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-title" id="modalTitle">Confirm Bet</div>
+      <div class="modal-sub" id="modalSub">Review your position before confirming</div>
+      <div class="modal-detail">
+        <div class="modal-row"><span>Market</span><span>BTC $150K EOY</span></div>
+        <div class="modal-row"><span>Side</span><span id="modalSide">YES</span></div>
+        <div class="modal-row"><span>Amount</span><span id="modalAmt">—</span></div>
+        <div class="modal-row"><span>Est. Payout</span><span id="modalPayout">—</span></div>
+      </div>
+      <div class="modal-btns">
+        <button class="modal-cancel" onclick="hideConfirm()">Cancel</button>
+        <button class="modal-confirm yes" id="modalConfirmBtn" onclick="confirmBet()">Confirm Bet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <a class="bnav-item" href="arcodds.html">
+        <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span class="bnav-label">Home</span>
+      </a>
+      <a class="bnav-item active" href="markets.html">
+        <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span class="bnav-label">Markets</span>
+      </a>
+      <a class="bnav-item" href="portfolio.html">
+        <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <span class="bnav-label">Portfolio</span>
+      </a>
+      <a class="bnav-item" href="leaderboard.html">
+        <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+        <span class="bnav-label">Leaderboard</span>
+      </a>
+      <a class="bnav-item" href="#" onclick="toggleTheme(); return false;">
+        <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="themeIconBottom"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <span class="bnav-label">Theme</span>
+      </a>
+    </div>
+  </div>
+
+  <script>
+    let activeSide = new URLSearchParams(window.location.search).get('side') === 'no' ? 'no' : 'yes';
+    let walletConnected = false;
+    let chart = null;
+    let activeMarket = null;
+
+    // Chart data — YES + NO both
+    const chartData = {
+      '1D': {
+        labels: ['9AM','10AM','11AM','12PM','1PM','2PM','3PM','4PM','5PM','6PM','7PM','8PM'],
+        yes:   [61,63,62,64,65,63,66,67,65,67,68,68],
+        no:    [39,37,38,36,35,37,34,33,35,33,32,32],
+      },
+      '1W': {
+        labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+        yes:   [55,58,56,60,62,65,68],
+        no:    [45,42,44,40,38,35,32],
+      },
+      '1M': {
+        labels: ['W1','W2','W3','W4'],
+        yes:   [48,54,61,68],
+        no:    [52,46,39,32],
+      },
+      'ALL': {
+        labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+        yes:   [30,35,40,38,45,50,48,55,58,62,65,68],
+        no:    [70,65,60,62,55,50,52,45,42,38,35,32],
+      },
+    };
+
+    function buildChart(range) {
+      const d = chartData[range];
+      const isDark = document.documentElement.dataset.theme === 'dark';
+      const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+      const tickColor = isDark ? '#5a5a70' : '#90909a';
+
+      if (chart) chart.destroy();
+      const ctx = document.getElementById('priceChart').getContext('2d');
+
+      const gradYes = ctx.createLinearGradient(0, 0, 0, 220);
+      gradYes.addColorStop(0, 'rgba(34,197,94,0.15)');
+      gradYes.addColorStop(1, 'rgba(34,197,94,0)');
+
+      const gradNo = ctx.createLinearGradient(0, 0, 0, 220);
+      gradNo.addColorStop(0, 'rgba(239,68,68,0.12)');
+      gradNo.addColorStop(1, 'rgba(239,68,68,0)');
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: d.labels,
+          datasets: [
+            {
+              label: 'YES',
+              data: d.yes,
+              borderColor: '#22c55e',
+              backgroundColor: gradYes,
+              borderWidth: 2,
+              pointRadius: 0,
+              pointHoverRadius: 5,
+              pointHoverBackgroundColor: '#22c55e',
+              tension: 0.4,
+              fill: true,
+            },
+            {
+              label: 'NO',
+              data: d.no,
+              borderColor: '#ef4444',
+              backgroundColor: gradNo,
+              borderWidth: 2,
+              pointRadius: 0,
+              pointHoverRadius: 5,
+              pointHoverBackgroundColor: '#ef4444',
+              tension: 0.4,
+              fill: true,
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { intersect: false, mode: 'index' },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              align: 'end',
+              labels: {
+                color: isDark ? '#a0a0b0' : '#50506a',
+                font: { family: 'JetBrains Mono', size: 11, weight: '600' },
+                boxWidth: 12, boxHeight: 2, padding: 16,
+                usePointStyle: true, pointStyle: 'line',
+              }
+            },
+            tooltip: {
+              backgroundColor: isDark ? '#13131a' : '#fff',
+              borderColor: isDark ? '#252535' : '#e0e0ec',
+              borderWidth: 1,
+              titleColor: isDark ? '#a0a0b0' : '#50506a',
+              bodyColor: isDark ? '#f4f4f6' : '#111118',
+              bodyFont: { family: 'JetBrains Mono', size: 12, weight: '600' },
+              callbacks: {
+                label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}%`
+              }
+            }
+          },
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { family: 'JetBrains Mono', size: 11 } } },
+            y: {
+              min: 0, max: 100,
+              grid: { color: gridColor },
+              ticks: { color: tickColor, font: { family: 'JetBrains Mono', size: 11 }, callback: v => v + '%' }
+            }
+          }
+        }
+      });
+    }
+
+    function setRange(range, el) {
+      document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      buildChart(range);
+    }
+
+    function selectSide(side) {
+      activeSide = side;
+      const btnY = document.getElementById('btnYes');
+      const btnN = document.getElementById('btnNo');
+      const subY = document.getElementById('betSubmitYes');
+      const subN = document.getElementById('betSubmitNo');
+
+      if (side === 'yes') {
+        btnY.classList.add('active'); btnN.classList.remove('active');
+        subY.style.display = 'block'; subN.style.display = 'none';
+        document.getElementById('summOdds').textContent = `${activeMarket.yes}%`;
+      } else {
+        btnN.classList.add('active'); btnY.classList.remove('active');
+        subN.style.display = 'block'; subY.style.display = 'none';
+        document.getElementById('summOdds').textContent = `${100 - activeMarket.yes}%`;
+      }
+      updateSummary();
+    }
+
+    function setAmount(val) {
+      document.getElementById('betAmount').value = val;
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const amt = parseFloat(document.getElementById('betAmount').value) || 0;
+      const odds = (activeSide === 'yes' ? activeMarket.yes : 100 - activeMarket.yes) / 100;
+      const fee = amt * 0.02;
+      const payout = amt > 0 ? (amt / odds).toFixed(4) : '—';
+      const profit = amt > 0 ? ((amt / odds) - amt).toFixed(4) : '—';
+      document.getElementById('summPayout').textContent = amt > 0 ? payout + ' USDC' : '—';
+      document.getElementById('summProfit').textContent = amt > 0 ? '+' + profit + ' USDC' : '—';
+      document.getElementById('summFee').textContent = amt > 0 ? fee.toFixed(4) + ' USDC' : '—';
+    }
+
+    function localAiBrief() {
+      const yes = Number(activeMarket.yes || 50);
+      const no = 100 - yes;
+      return {
+        summary: `${activeMarket.q} is currently priced at ${yes}% YES and ${no}% NO on ArcOdds testnet.`,
+        yesCase: [
+          `The current market price leans ${yes >= no ? 'toward' : 'against'} YES at ${yes}%.`,
+          `A clear catalyst before ${activeMarket.closes} could move probability higher.`,
+          `The resolution rule is simple enough for testnet users to track.`,
+        ],
+        noCase: [
+          `The NO side still has ${no}% implied probability.`,
+          `Timing risk matters because the market must resolve by ${activeMarket.closes}.`,
+          `Unexpected news or weak evidence could pull YES probability lower.`,
+        ],
+        risks: [
+          'This is a testnet market, so displayed activity is not real money liquidity.',
+          'Reference probabilities can move quickly when fresh news appears.',
+          'Resolution depends on the final market question and verified outcome source.',
+        ],
+        watchlist: [
+          `Watch news connected to ${activeMarket.icon || activeMarket.cat}.`,
+          'Check whether new information changes the YES/NO balance.',
+          'Review the resolution rule before placing a test trade.',
+        ],
+        disclaimer: 'This brief is informational only and is not financial advice.',
+      };
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[char]);
+    }
+
+    function renderAiBrief(brief, note) {
+      const content = document.getElementById('aiBriefContent');
+      const section = (title, items) => `
+        <div class="ai-box">
+          <h4>${title}</h4>
+          <ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+        </div>`;
+      content.className = '';
+      content.innerHTML = `
+        <div class="ai-summary">${escapeHtml(brief.summary)}</div>
+        <div class="ai-grid">
+          ${section('YES case', brief.yesCase || [])}
+          ${section('NO case', brief.noCase || [])}
+          ${section('Risks', brief.risks || [])}
+          ${section('Watchlist', brief.watchlist || [])}
+        </div>
+        <div class="ai-disclaimer">${escapeHtml(note || brief.disclaimer || 'This brief is informational only and is not financial advice.')}</div>`;
+    }
+
+    async function loadAiBrief() {
+      const button = document.getElementById('aiBriefBtn');
+      const content = document.getElementById('aiBriefContent');
+      button.disabled = true;
+      button.textContent = 'Generating...';
+      content.className = 'ai-empty';
+      content.textContent = 'AI is reading the market question, odds, deadline, and resolution rule...';
+      try {
+        const response = await fetch('/api/ai-brief', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            market: {
+              id: activeMarket.id,
+              q: activeMarket.q,
+              cat: activeMarket.cat,
+              yes: activeMarket.yes,
+              closes: activeMarket.closes,
+              rule: activeMarket.rule,
+              source: activeMarket.source,
+            },
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'AI brief unavailable');
+        renderAiBrief(data.brief);
+      } catch (error) {
+        renderAiBrief(localAiBrief(), 'Local preview shown. Add GEMINI_API_KEY and run the ArcOdds AI server to generate a live AI brief.');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Refresh brief';
+      }
+    }
+
+    function showConfirm() {
+      if (!walletConnected) { alert('Please connect your wallet first!'); return; }
+      const amt = parseFloat(document.getElementById('betAmount').value) || 0;
+      if (!amt) { alert('Please enter an amount'); return; }
+      const odds = (activeSide === 'yes' ? activeMarket.yes : 100 - activeMarket.yes) / 100;
+      document.getElementById('modalSide').textContent = activeSide.toUpperCase();
+      document.getElementById('modalSide').style.color = activeSide === 'yes' ? 'var(--green)' : 'var(--red)';
+      document.getElementById('modalAmt').textContent = amt + ' USDC';
+      document.getElementById('modalPayout').textContent = (amt / odds).toFixed(4) + ' USDC';
+      document.getElementById('modalConfirmBtn').className = 'modal-confirm ' + activeSide;
+      document.getElementById('modalOverlay').classList.add('show');
+    }
+
+    function hideConfirm() {
+      document.getElementById('modalOverlay').classList.remove('show');
+    }
+
+    async function confirmBet() {
+      hideConfirm();
+      const amt = parseFloat(document.getElementById('betAmount').value) || 0;
+      try {
+        if (!window.ArcOddsContracts.hasContractAddress()) {
+          alert('Wallet flow ready. Contract address add karte hi ye Arc testnet par bet submit karega.');
+          return;
+        }
+        const side = activeSide === 'yes';
+        const tx = await window.ArcOddsContracts.placeBet(activeMarket.id, side, amt);
+        const positions = JSON.parse(localStorage.getItem('arcodds_positions') || '[]');
+        positions.unshift({ marketId: activeMarket.id, question: activeMarket.q, side: activeSide.toUpperCase(), amount: amt, txHash: tx.hash });
+        localStorage.setItem('arcodds_positions', JSON.stringify(positions));
+        alert('Bet submitted: ' + tx.hash);
+      } catch (err) {
+        alert(err.message || 'Bet failed');
+      }
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const isDark = html.dataset.theme === 'dark';
+      html.dataset.theme = isDark ? 'light' : 'dark';
+      document.getElementById('themeBtn').textContent = isDark ? '☀️' : '🌙';
+      localStorage.setItem('theme', html.dataset.theme);
+      setTimeout(() => buildChart(document.querySelector('.chart-tab.active').textContent), 100);
+    }
+
+    async function connectWallet() {
+      try {
+        await window.ArcOddsApp.ensureArcWallet();
+        walletConnected = true;
+        document.getElementById('walletWarn').style.display = 'none';
+      } catch (err) {
+        alert(err.message || 'Wallet connection failed');
+      }
+    }
+
+    function hydrateMarket() {
+      activeMarket = window.ArcOddsApp.getMarketFromUrl();
+      const noPct = 100 - activeMarket.yes;
+      document.title = `${activeMarket.q} — ArcOdds`;
+      document.querySelector('.breadcrumb span:last-child').textContent = `Market #${activeMarket.id}`;
+      document.querySelector('.market-tag').textContent = activeMarket.cat;
+      document.getElementById('marketHeaderImage').src = activeMarket.image;
+      document.querySelector('.market-title').textContent = activeMarket.q;
+      const metaVals = document.querySelectorAll('.meta-val');
+      metaVals[0].textContent = activeMarket.vol.replace('K', ',000');
+      metaVals[1].textContent = activeMarket.liquidity;
+      metaVals[2].textContent = activeMarket.bettors;
+      metaVals[3].textContent = activeMarket.closes;
+      metaVals[4].textContent = activeMarket.creator;
+      document.querySelector('.big-odd.yes .big-odd-pct').textContent = `${activeMarket.yes}%`;
+      document.querySelector('.big-odd.no .big-odd-pct').textContent = `${noPct}%`;
+      document.getElementById('betSubmitYes').textContent = `Bet YES — ${activeMarket.yes}%`;
+      document.getElementById('betSubmitNo').textContent = `Bet NO — ${noPct}%`;
+      document.querySelector('.modal-row:first-child span:last-child').textContent = `Market #${activeMarket.id}`;
+      document.querySelector('.bet-card [style*="line-height"]').textContent = activeMarket.rule;
+      document.querySelector('.chart-section').innerHTML = `<div class="chart-header"><div class="chart-title">Reference probability</div><div class="odds-live">LIVE</div></div>
+        <div style="padding:24px 0 8px;font-size:32px;font-weight:700;color:var(--green)">${activeMarket.yes}% YES</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.7">${activeMarket.source === 'ArcOdds on-chain odds' ? 'Odds are calculated directly from the YES and NO pools on the ArcOdds contract.' : 'Current discovery odds are refreshed from a public reference feed until the ArcOdds contract is deployed.'}</div>`;
+      document.querySelector('.activity-section').innerHTML = `<div class="activity-head">Arc Testnet Activity</div>
+        <div style="padding:28px 20px;color:var(--text3);font-size:13px;text-align:center">No confirmed ArcOdds trades for this market yet.</div>`;
+      const aiContent = document.getElementById('aiBriefContent');
+      aiContent.className = 'ai-empty';
+      aiContent.textContent = 'Get a neutral AI summary with YES/NO arguments, risks, and what to watch before placing a testnet trade.';
+      document.getElementById('aiBriefBtn').textContent = 'Generate brief';
+      setTimeout(() => { document.getElementById('mainBar').style.width = `${activeMarket.yes}%`; }, 400);
+      selectSide(activeSide);
+    }
+
+    window.addEventListener('load', () => {
+      const saved = localStorage.getItem('theme');
+      if (saved) { document.documentElement.dataset.theme = saved; document.getElementById('themeBtn').textContent = saved === 'light' ? '☀️' : '🌙'; }
+      walletConnected = Boolean(localStorage.getItem('arcodds_wallet'));
+      if (walletConnected) document.getElementById('walletWarn').style.display = 'none';
+      hydrateMarket();
+    });
+    window.addEventListener('arcodds:markets-updated', hydrateMarket);
+
+    document.getElementById('modalOverlay').addEventListener('click', function(e) {
+      if (e.target === this) hideConfirm();
+    });
+  </script>
+</body>
+</html>
