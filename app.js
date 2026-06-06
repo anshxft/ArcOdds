@@ -161,13 +161,14 @@ async function loadOnchainMarkets() {
     markets.forEach((market, index) => {
       if (!ARC_MARKETS[index]) return;
       const realVolume = Number(market.yesPool) + Number(market.noPool);
+      const hasTradeLiquidity = realVolume > 0;
       const displayVolume = (DISPLAY_VOLUME_BASES[index] || 420) + realVolume;
       const closes = formatCloseDate(market.deadline * 1000);
       Object.assign(ARC_MARKETS[index], {
         q: market.question,
         cat: market.category,
         image: getSeedMarketImage(index),
-        yes: market.yesOdds,
+        yes: hasTradeLiquidity ? market.yesOdds : ARC_MARKETS[index].yes,
         vol: formatDisplayVolume(displayVolume),
         volume: displayVolume,
         liquidity: formatDisplayVolume(Math.round(displayVolume * (0.38 + ((index % 4) * 0.04)))),
@@ -175,7 +176,7 @@ async function loadOnchainMarkets() {
         closes,
         closeShort: closes.replace(", 2026", ""),
         creator: formatShortAddress(market.creator),
-        source: "PredictArc on-chain odds",
+        source: hasTradeLiquidity ? "PredictArc on-chain odds" : "PredictArc reference odds",
         status: market.status,
       });
     });
