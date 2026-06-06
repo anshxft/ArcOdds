@@ -40,6 +40,7 @@ const MARKET_IMAGES = [
 ];
 
 const DISPLAY_VOLUME_BASES = [128, 245, 386, 472, 620, 755, 890, 1040, 1215, 1380, 1660, 1945];
+const DISPLAY_BETTOR_BASES = [42, 57, 68, 76, 84, 93, 105, 116, 124, 132, 141, 149];
 
 function getSeedMarketImage(index) {
   return MARKET_IMAGES[index] || CATEGORY_IMAGES.finance;
@@ -75,7 +76,7 @@ const ARC_MARKETS = FALLBACK_MARKETS.map(([q, cat, yes, icon, closes], index) =>
     vol: formatDisplayVolume(volume),
     volume,
     liquidity: formatDisplayVolume(Math.round(volume * (0.38 + ((index % 4) * 0.04)))),
-    bettors: String(8 + (index * 3) % 29),
+    bettors: String(DISPLAY_BETTOR_BASES[index] || 64),
     closes,
     closeShort: closes.replace(", 2026", ""),
     icon,
@@ -179,7 +180,7 @@ async function loadOnchainMarkets() {
         vol: formatDisplayVolume(displayVolume),
         volume: displayVolume,
         liquidity: formatDisplayVolume(Math.round(displayVolume * (0.38 + ((index % 4) * 0.04)))),
-        bettors: String(8 + (index * 3) % 29 + Math.floor(realVolume)),
+        bettors: String((DISPLAY_BETTOR_BASES[index] || 64) + Math.floor(realVolume * 2)),
         closes,
         closeShort: closes.replace(", 2026", ""),
         creator: formatShortAddress(market.creator),

@@ -250,9 +250,9 @@
       .modal { padding: 22px; }
     }
   </style><script src="assets/vendor/ethers.umd.min.js"></script>
-  <script src="contract.js?v=20260606k"></script>
-  <script src="supabase.js?v=20260606k"></script>
-  <script src="app.js?v=20260606k"></script>
+  <script src="contract.js?v=20260606l"></script>
+  <script src="supabase.js?v=20260606l"></script>
+  <script src="app.js?v=20260606l"></script>
 </head>
 <body>
   <nav>
@@ -303,12 +303,8 @@
               <div class="meta-val purple">$842,300</div>
             </div>
             <div class="meta-item">
-              <div class="meta-label">Liquidity</div>
-              <div class="meta-val">$124,500</div>
-            </div>
-            <div class="meta-item">
               <div class="meta-label">Bettors</div>
-              <div class="meta-val">2,841</div>
+              <div class="meta-val">84</div>
             </div>
             <div class="meta-item">
               <div class="meta-label">Closes</div>
@@ -716,7 +712,7 @@
           `Unexpected news or weak evidence could pull YES probability lower.`,
         ],
         risks: [
-          'This is a testnet market, so displayed activity is not real money liquidity.',
+        'This is a testnet market, so displayed activity is not real money volume.',
           'Reference probabilities can move quickly when fresh news appears.',
           'Resolution depends on the final market question and verified outcome source.',
         ],
@@ -890,10 +886,9 @@
       document.querySelector('.market-title').textContent = activeMarket.q;
       const metaVals = document.querySelectorAll('.meta-val');
       metaVals[0].textContent = activeMarket.vol;
-      metaVals[1].textContent = activeMarket.liquidity;
-      metaVals[2].textContent = activeMarket.bettors;
-      metaVals[3].textContent = activeMarket.closes;
-      metaVals[4].textContent = activeMarket.creator;
+      metaVals[1].textContent = activeMarket.bettors;
+      metaVals[2].textContent = activeMarket.closes;
+      metaVals[3].textContent = activeMarket.creator;
       document.querySelector('.big-odd.yes .big-odd-pct').textContent = `${activeMarket.yes}%`;
       document.querySelector('.big-odd.no .big-odd-pct').textContent = `${noPct}%`;
       document.getElementById('betSubmitYes').textContent = `Buy YES - ${activeMarket.yes}c`;
