@@ -49,9 +49,24 @@ Winning users can then claim from the Portfolio page.
 
 ## Open App
 
-Open `predictarc.html` in a browser, connect MetaMask, and switch/add Arc Testnet when prompted.
+Open `predictarc.html` in a browser, connect MetaMask, OKX Wallet, Rabby, Trust Wallet, Coinbase Wallet, or another injected wallet, and switch/add Arc Testnet when prompted.
 
 Do not upload `.env`, `node_modules`, `artifacts`, `cache`, or local deployment output when publishing the site. Add API keys in Vercel environment variables instead.
+
+## Optional Supabase
+
+PredictArc can run without Supabase. When configured, Supabase stores off-chain app data such as wallet profiles, activity events, portfolio cache, and watchlists. Arc Testnet smart contracts remain the source of truth for trading and settlement.
+
+1. Create a Supabase project.
+2. Open the SQL editor and run `supabase-schema.sql`.
+3. Open `supabase.js` and add your public project URL and anon key:
+
+   ```js
+   const SUPABASE_URL = "https://your-project.supabase.co";
+   const SUPABASE_ANON_KEY = "your-public-anon-key";
+   ```
+
+The anon key is public by design. Do not put service-role keys in frontend files.
 
 ## AI Briefs
 

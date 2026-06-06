@@ -106,14 +106,17 @@ function hasContractAddress() {
 }
 
 async function getProviderAndSigner() {
-  if (typeof window.ethereum === "undefined") {
-    throw new Error("MetaMask not found. Please install MetaMask or open this in a wallet browser.");
+  const injectedProvider = window.PredictArcApp && window.PredictArcApp.getSelectedWalletProvider
+    ? window.PredictArcApp.getSelectedWalletProvider()
+    : window.ethereum;
+  if (typeof injectedProvider === "undefined") {
+    throw new Error("No browser wallet found. Please install MetaMask, OKX Wallet, Rabby, Trust Wallet, or open this in a wallet browser.");
   }
 
-  const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+  const accounts = await injectedProvider.request({ method: "eth_requestAccounts" });
   const provider = ethers.providers
-    ? new ethers.providers.Web3Provider(window.ethereum)
-    : new ethers.BrowserProvider(window.ethereum);
+    ? new ethers.providers.Web3Provider(injectedProvider)
+    : new ethers.BrowserProvider(injectedProvider);
   const signer = await provider.getSigner();
   return { provider, signer, account: accounts[0] };
 }

@@ -4,10 +4,14 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Docs - PredictArc</title>
+  <link rel="icon" href="/favicon.ico" sizes="any"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"/>
+  <link rel="apple-touch-icon" href="assets/favicon-180.png"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <script src="assets/vendor/ethers.umd.min.js"></script>
-  <script src="contract.js?v=20260606i"></script>
-  <script src="app.js?v=20260606i"></script>
+  <script src="contract.js?v=20260606k"></script>
+  <script src="supabase.js?v=20260606k"></script>
+  <script src="app.js?v=20260606k"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root, [data-theme="dark"] {
@@ -149,9 +153,19 @@
 
         <article class="doc-card">
           <h2>Wallet And Faucet</h2>
-          <p>Connect a wallet, add Arc Testnet when prompted, then claim test USDC from the faucet.</p>
+          <p>Connect MetaMask, OKX Wallet, Rabby, Trust Wallet, or another injected wallet, add Arc Testnet when prompted, then claim test USDC from the faucet.</p>
           <div class="code-line">Faucet: https://faucet.circle.com</div>
-          <p style="margin-top:12px">The app button can connect and disconnect locally. To revoke wallet permissions completely, use MetaMask connected sites settings.</p>
+          <p style="margin-top:12px">The app button can connect and disconnect locally. To revoke wallet permissions completely, use your wallet's connected sites settings.</p>
+        </article>
+
+        <article class="doc-card">
+          <h2>Supabase Layer</h2>
+          <p>PredictArc can optionally use Supabase for off-chain product data while keeping trading and settlement on Arc Testnet.</p>
+          <ul class="doc-list">
+            <li>Wallet profiles and activity events can be stored off-chain.</li>
+            <li>Portfolio cache helps the page feel faster when RPC is slow.</li>
+            <li>The smart contract remains the source of truth for positions.</li>
+          </ul>
         </article>
 
         <article class="doc-card">

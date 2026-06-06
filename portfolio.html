@@ -4,11 +4,15 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Portfolio — PredictArc</title>
+  <link rel="icon" href="/favicon.ico" sizes="any"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"/>
+  <link rel="apple-touch-icon" href="assets/favicon-180.png"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="assets/vendor/ethers.umd.min.js"></script>
-  <script src="contract.js?v=20260606i"></script>
-  <script src="app.js?v=20260606i"></script>
+  <script src="contract.js?v=20260606k"></script>
+  <script src="supabase.js?v=20260606k"></script>
+  <script src="app.js?v=20260606k"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root, [data-theme="dark"] {
@@ -509,6 +513,14 @@
       state.innerHTML = `<h3>Loading portfolio</h3><p>Reading your Arc Testnet positions. This usually takes a few seconds.</p>`;
       const localPositions = JSON.parse(localStorage.getItem('PredictArc_positions') || '[]');
       let positions = localPositions;
+      if (!positions.length && window.PredictArcSupabase?.isEnabled()) {
+        try {
+          const cached = await window.PredictArcSupabase.loadPortfolioCache(account);
+          if (cached?.positions?.length) positions = cached.positions;
+        } catch (error) {
+          console.warn('Unable to load Supabase portfolio cache:', error.message);
+        }
+      }
       if (account && window.PredictArcContracts.hasContractAddress()) {
         try {
           const onchainPositions = await withTimeout(window.PredictArcContracts.getWalletPositions(account), 5500, 'Portfolio');
@@ -517,6 +529,7 @@
             const match = localPositions.find((item) => Number(item.marketId) === Number(position.marketId) && item.side === position.side);
             return { ...position, entryOdds: match?.entryOdds, txHash: match?.txHash, timestamp: match?.timestamp };
           });
+          window.PredictArcSupabase?.savePortfolioCache(account, positions).catch(() => {});
         } catch (error) {
           console.warn('Unable to load on-chain positions:', error.message);
         }
