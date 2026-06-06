@@ -1,6 +1,6 @@
 (function () {
-  const SUPABASE_URL = "";
-  const SUPABASE_ANON_KEY = "";
+  const SUPABASE_URL = "https://gtweocaxvfoauqkvbtar.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0d2VvY2F4dmZvYXVxa3ZidGFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3MzQ0NDAsImV4cCI6MjA5NjMxMDQ0MH0.7bGc_bNcrHzgSV8muzn5MD0SHpUxUTcMh1gUhpfZtPM";
 
   const enabled = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
