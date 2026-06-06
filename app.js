@@ -261,9 +261,12 @@ function restoreWalletLabel() {
 function updateLogoFallbacks() {
   document.querySelectorAll('img[src*="predictarc-bird.png"]').forEach((img) => {
     img.onerror = () => {
-      img.onerror = null;
-      img.src = "assets/predictarc-mark.svg";
-      img.style.filter = "none";
+      img.onerror = () => {
+        img.onerror = null;
+        img.src = "assets/predictarc-mark.svg";
+        img.style.filter = "none";
+      };
+      img.src = "assets/predictarc-bird-compact.png";
     };
   });
 }
