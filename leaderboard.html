@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Leaderboard — ArcOdds</title>
+  <title>Testnet Status - PredictArc</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <script src="assets/vendor/ethers.umd.min.js"></script>
-  <script src="contract.js?v=20260605e"></script>
-  <script src="app.js?v=20260605e"></script>
+  <script src="contract.js?v=20260606f"></script>
+  <script src="app.js?v=20260606f"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root, [data-theme="dark"] {
@@ -22,7 +22,8 @@
     nav { position:fixed; top:0; left:0; right:0; z-index:200; height:60px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; background:var(--nav-bg); backdrop-filter:blur(20px); border-bottom:1px solid var(--border); }
     .nav-left { display:flex; align-items:center; gap:36px; }
     .nav-logo { display:flex; align-items:center; gap:9px; text-decoration:none; font-size:17px; font-weight:700; color:var(--text); letter-spacing:-0.3px; }
-    .nav-logo-mark { width:32px; height:32px; display:block; flex-shrink:0; }
+    .nav-logo-mark { width:34px; height:34px; display:block; flex-shrink:0; object-fit:contain; filter:invert(1); }
+    [data-theme="light"] .nav-logo-mark { filter:none; }
     .nav-logo span span { color:var(--purple-light); }
     .nav-links { display:flex; gap:2px; list-style:none; }
     .nav-links a { font-size:14px; color:var(--text2); text-decoration:none; padding:6px 12px; border-radius:8px; transition:all .15s; font-weight:500; }
@@ -65,20 +66,32 @@
       .table-head > *:nth-child(4), .table-head > *:nth-child(5), .table-row > *:nth-child(4), .table-row > *:nth-child(5) { display:none; }
       .bottom-nav { display:block; }
     }
+    @media(max-width:520px) {
+      nav { padding:0 14px; }
+      .nav-left { gap:12px; }
+      .nav-logo { gap:7px; font-size:16px; }
+      .nav-logo-mark { width:30px; height:30px; }
+      .nav-right { gap:7px; }
+      .btn-faucet { display:none; }
+      .btn-connect { padding:8px 12px; font-size:12px; }
+      .theme-toggle { width:34px; height:34px; }
+      .podium-card { padding:18px; }
+      .profit { font-size:20px; }
+    }
   </style>
 </head>
 <body>
   <nav>
     <div class="nav-left">
-      <a class="nav-logo" href="arcodds.html">
-        <img class="nav-logo-mark" src="assets/arcodds-mark.svg" alt=""/>
-        <span>Arc<span>Odds</span></span>
+      <a class="nav-logo" href="predictarc.html">
+        <img class="nav-logo-mark" src="assets/predictarc-bird.png" alt=""/>
+        <span>Predict<span>Arc</span></span>
       </a>
       <ul class="nav-links">
-        <li><a href="arcodds.html">Home</a></li>
+        <li><a href="predictarc.html">Home</a></li>
         <li><a href="markets.html">Markets</a></li>
         <li><a href="portfolio.html">Portfolio</a></li>
-        <li><a href="#" class="active">Leaderboard</a></li>
+        <li><a href="#" class="active">Status</a></li>
         <li><a href="#">Docs</a></li>
       </ul>
     </div>
@@ -92,37 +105,38 @@
 
   <main>
     <div class="page">
-      <div class="page-title">Leaderboard</div>
-      <div class="page-sub">Top predictors ranked by realized profit and market accuracy</div>
+      <div class="page-title">Testnet Status</div>
+      <div class="page-sub">A transparent view of what PredictArc is using and what is live today</div>
 
       <div class="podium">
-        <div class="podium-card"><div class="rank">#1</div><div class="addr">0xVega...f3a1</div><div class="profit">+$24,180</div><div class="accuracy">84% accuracy · 91 markets</div></div>
-        <div class="podium-card"><div class="rank">#2</div><div class="addr">0xNova...7b2c</div><div class="profit">+$18,440</div><div class="accuracy">79% accuracy · 76 markets</div></div>
-        <div class="podium-card"><div class="rank">#3</div><div class="addr">0xArc...9d4e</div><div class="profit">+$11,920</div><div class="accuracy">76% accuracy · 64 markets</div></div>
+        <div class="podium-card"><div class="rank">REFERENCE</div><div class="addr">Polymarket Gamma API</div><div class="profit">Live</div><div class="accuracy">Public read-only discovery odds</div></div>
+        <div class="podium-card"><div class="rank">SETTLEMENT</div><div class="addr">Arc Testnet</div><div class="profit">Ready</div><div class="accuracy">Independent PredictArc contract flow</div></div>
+        <div class="podium-card"><div class="rank">CURRENCY</div><div class="addr">USDC</div><div class="profit">Native</div><div class="accuracy">Bet currency and network gas</div></div>
       </div>
 
       <div class="table">
-        <div class="table-head"><div>Rank</div><div>User</div><div>Profit</div><div>Accuracy</div><div>Badge</div></div>
-        <div class="table-row"><div>#4</div><div class="addr">0xZero...2a8f</div><div class="profit" style="font-size:14px">+$8,340</div><div>72%</div><div><span class="pill">Sharp</span></div></div>
-        <div class="table-row"><div>#5</div><div class="addr">0xPulse...c1b7</div><div class="profit" style="font-size:14px">+$6,110</div><div>69%</div><div><span class="pill">Active</span></div></div>
-        <div class="table-row"><div>#6</div><div class="addr">0xDelta...e93b</div><div class="profit" style="font-size:14px">+$4,920</div><div>67%</div><div><span class="pill">Rising</span></div></div>
-        <div class="table-row"><div>#7</div><div class="addr">0xQuark...73aa</div><div class="profit" style="font-size:14px">+$3,780</div><div>64%</div><div><span class="pill">Arc OG</span></div></div>
+        <div class="table-head"><div>Step</div><div>Flow</div><div>Status</div><div>Network</div><div>Type</div></div>
+        <div class="table-row"><div>01</div><div class="addr">Connect wallet</div><div class="profit" style="font-size:14px">Ready</div><div>Arc</div><div><span class="pill">Wallet</span></div></div>
+        <div class="table-row"><div>02</div><div class="addr">Claim faucet USDC</div><div class="profit" style="font-size:14px">Ready</div><div>Circle</div><div><span class="pill">Faucet</span></div></div>
+        <div class="table-row"><div>03</div><div class="addr">Browse live reference odds</div><div class="profit" style="font-size:14px">Live</div><div>Public API</div><div><span class="pill">Data</span></div></div>
+        <div class="table-row"><div>04</div><div class="addr">Submit testnet position</div><div class="profit" style="font-size:14px">Contract</div><div>Arc</div><div><span class="pill">Trade</span></div></div>
       </div>
     </div>
   </main>
 
   <div class="bottom-nav">
     <div class="bottom-nav-inner">
-      <a class="bnav-item" href="arcodds.html"><svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="bnav-label">Home</span></a>
+      <a class="bnav-item" href="predictarc.html"><svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="bnav-label">Home</span></a>
       <a class="bnav-item" href="markets.html"><svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="bnav-label">Markets</span></a>
       <a class="bnav-item" href="portfolio.html"><svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span class="bnav-label">Portfolio</span></a>
-      <a class="bnav-item active" href="#"><svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg><span class="bnav-label">Leaderboard</span></a>
+      <a class="bnav-item active" href="#"><svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg><span class="bnav-label">Status</span></a>
+      <a class="bnav-item" href="#" onclick="toggleTheme(); return false;"><svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><span class="bnav-label">Theme</span></a>
     </div>
   </div>
 
   <script>
     async function connectWallet() {
-      try { await window.ArcOddsApp.ensureArcWallet(); }
+      try { await window.PredictArcApp.ensureArcWallet(); }
       catch (err) { alert(err.message || 'Wallet connection failed'); }
     }
     function toggleTheme() {
@@ -134,10 +148,10 @@
     }
     function renderTestnetStatus() {
       document.querySelector('.page-title').textContent = 'Testnet Status';
-      document.querySelector('.page-sub').textContent = 'A transparent view of what ArcOdds is using and what is live today';
+      document.querySelector('.page-sub').textContent = 'A transparent view of what PredictArc is using and what is live today';
       document.querySelector('.podium').innerHTML = `
         <div class="podium-card"><div class="rank">REFERENCE</div><div class="addr">Polymarket Gamma API</div><div class="profit">Live</div><div class="accuracy">Public read-only discovery odds</div></div>
-        <div class="podium-card"><div class="rank">SETTLEMENT</div><div class="addr">Arc Testnet</div><div class="profit">Ready</div><div class="accuracy">Independent ArcOdds contract flow</div></div>
+        <div class="podium-card"><div class="rank">SETTLEMENT</div><div class="addr">Arc Testnet</div><div class="profit">Ready</div><div class="accuracy">Independent PredictArc contract flow</div></div>
         <div class="podium-card"><div class="rank">CURRENCY</div><div class="addr">USDC</div><div class="profit">Native</div><div class="accuracy">Bet currency and network gas</div></div>`;
       document.querySelector('.table').innerHTML = `
         <div class="table-head"><div>Step</div><div>Flow</div><div>Status</div><div>Network</div><div>Type</div></div>

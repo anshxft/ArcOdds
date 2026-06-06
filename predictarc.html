@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PredictArc — Predict. Stake. Win.</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── THEMES ── */
+    :root, [data-theme="dark"] {
+      --bg: #0d0d12; --surface: #13131a; --surface2: #1a1a24; --surface3: #1f1f2e;
+      --purple: #6d28d9; --purple-light: #8b5cf6; --purple-faint: rgba(109,40,217,0.12);
+      --text: #f4f4f6; --text2: #a0a0b0; --text3: #5a5a70;
+      --border: #1e1e2c; --border2: #252535;
+      --green: #22c55e; --green-faint: rgba(34,197,94,0.1);
+      --red: #ef4444; --red-faint: rgba(239,68,68,0.1);
+      --nav-bg: rgba(13,13,18,0.92);
+      --shadow: rgba(0,0,0,0.4);
+    }
+    [data-theme="light"] {
+      --bg: #f1f1f5; --surface: #ffffff; --surface2: #e8e8f0; --surface3: #dcdce8;
+      --purple: #6d28d9; --purple-light: #7c3aed; --purple-faint: rgba(109,40,217,0.08);
+      --text: #111118; --text2: #50506a; --text3: #90909a;
+      --border: #e0e0ec; --border2: #ccccdc;
+      --green: #15803d; --green-faint: rgba(21,128,61,0.08);
+      --red: #b91c1c; --red-faint: rgba(185,28,28,0.08);
+      --nav-bg: rgba(241,241,245,0.94);
+      --shadow: rgba(0,0,0,0.08);
+    }
+
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; overflow-x: hidden; -webkit-font-smoothing: antialiased; transition: background 0.3s, color 0.3s; }
+
+    /* BG */
+    .bg-glow { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+    .bg-glow::before { content: ''; position: absolute; width: 700px; height: 700px; background: radial-gradient(circle, rgba(109,40,217,0.09) 0%, transparent 70%); top: -200px; left: -100px; animation: bgdrift 12s ease-in-out infinite alternate; }
+    .bg-glow::after { content: ''; position: absolute; width: 500px; height: 500px; background: radial-gradient(circle, rgba(139,92,246,0.06) 0%, transparent 70%); bottom: 0; right: -100px; animation: bgdrift 16s ease-in-out infinite alternate-reverse; }
+    @keyframes bgdrift { from{transform:translate(0,0)} to{transform:translate(50px,35px)} }
+
+    /* PARTICLES */
+    .particles { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .particle { position: absolute; border-radius: 50%; background: var(--purple-light); opacity: 0; animation: pfloat linear infinite; }
+    @keyframes pfloat { 0%{transform:translateY(100vh) scale(0);opacity:0} 10%{opacity:0.12} 90%{opacity:0.06} 100%{transform:translateY(-80px) scale(1);opacity:0} }
+
+    /* ── NAVBAR ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      height: 60px; display: flex; align-items: center;
+      justify-content: space-between; padding: 0 28px;
+      background: var(--nav-bg); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border); transition: background 0.3s, border-color 0.3s;
+    }
+
+    .nav-left { display: flex; align-items: center; gap: 36px; }
+
+    .nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; }
+    .logo-img-wrap {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .logo-img-wrap img { width: 34px; height: 34px; object-fit: contain; display: block; filter: invert(1); }
+    [data-theme="light"] .logo-img-wrap img { filter: none; }
+    .nav-logo-text { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; transition: color 0.3s; }
+    .nav-logo-text span { color: var(--purple-light); }
+
+    /* Desktop links */
+    .nav-links { display: flex; gap: 2px; list-style: none; }
+    .nav-links a { font-size: 14px; color: var(--text2); text-decoration: none; padding: 6px 12px; border-radius: 8px; transition: all 0.15s; font-weight: 500; }
+    .nav-links a:hover, .nav-links a.active { color: var(--text); background: var(--surface2); }
+
+    .nav-right { display: flex; align-items: center; gap: 10px; }
+
+    .network-badge { display: flex; align-items: center; gap: 7px; padding: 6px 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text2); transition: all 0.3s; }
+    .net-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); animation: netpulse 2s infinite; }
+    @keyframes netpulse { 0%,100%{box-shadow:0 0 6px var(--green)} 50%{box-shadow:0 0 14px var(--green)} }
+
+    /* Theme toggle */
+    .theme-toggle {
+      width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border2);
+      background: var(--surface2); color: var(--text2); font-size: 16px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s; flex-shrink: 0;
+    }
+    .theme-toggle:hover { border-color: var(--purple-light); color: var(--text); }
+
+    .btn-connect { padding: 8px 18px; background: var(--purple); border: none; border-radius: 8px; color: white; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .btn-connect:hover { background: var(--purple-light); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(109,40,217,0.4); }
+    .btn-faucet { padding: 8px 14px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; color: var(--text2); font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .btn-faucet:hover { border-color: var(--purple-light); color: var(--text); }
+
+    /* Hamburger */
+    .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 6px; border-radius: 8px; transition: background 0.2s; background: transparent; border: none; }
+    .hamburger:hover { background: var(--surface2); }
+    .hline { width: 22px; height: 2px; background: var(--text2); border-radius: 2px; transition: all 0.3s; }
+    .hamburger.open .hline:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger.open .hline:nth-child(2) { opacity: 0; }
+    .hamburger.open .hline:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* Mobile drawer */
+    .mobile-menu {
+      position: fixed; top: 60px; left: 0; right: 0; z-index: 150;
+      background: var(--nav-bg); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px 20px;
+      transform: translateY(-110%); opacity: 0;
+      transition: transform 0.3s cubic-bezier(0.34,1.2,0.64,1), opacity 0.25s;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .mobile-menu.open { transform: translateY(0); opacity: 1; }
+    .mobile-menu a { font-size: 15px; color: var(--text2); text-decoration: none; padding: 10px 12px; border-radius: 10px; font-weight: 500; transition: all 0.15s; display: block; }
+    .mobile-menu a:hover, .mobile-menu a.active { color: var(--text); background: var(--surface2); }
+    .mobile-menu-footer { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+    /* MAIN */
+    main { position: relative; z-index: 1; padding-top: 60px; }
+
+    /* HERO */
+    .hero { max-width: 1100px; margin: 0 auto; padding: 72px 32px 48px; display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+
+    .hero-pill { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px; background: var(--purple-faint); border: 1px solid rgba(139,92,246,0.2); border-radius: 100px; font-size: 12px; font-weight: 500; color: var(--purple-light); margin-bottom: 20px; animation: fadeUp 0.5s ease both; }
+    .hero-pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--purple-light); animation: netpulse 2s infinite; }
+
+    .hero h1 { font-size: clamp(32px,4vw,48px); font-weight: 700; line-height: 1.15; letter-spacing: -1.5px; margin-bottom: 16px; animation: fadeUp 0.5s 0.1s ease both; }
+    .hero h1 em { font-style: normal; color: var(--purple-light); }
+    .hero p { font-size: 15px; color: var(--text2); line-height: 1.65; margin-bottom: 32px; max-width: 420px; animation: fadeUp 0.5s 0.2s ease both; }
+    .hero-actions { display: flex; gap: 10px; animation: fadeUp 0.5s 0.3s ease both; flex-wrap: wrap; }
+
+    .btn-primary { padding: 12px 24px; background: var(--purple); border: none; border-radius: 10px; color: white; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+    .btn-primary:hover { background: var(--purple-light); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(109,40,217,0.4); }
+    .btn-outline { padding: 12px 24px; background: transparent; border: 1px solid var(--border2); border-radius: 10px; color: var(--text2); font-weight: 500; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+    .btn-outline:hover { border-color: var(--purple-light); color: var(--text); }
+
+    /* STATS */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; transition: all 0.25s; animation: fadeUp 0.5s ease both; position: relative; overflow: hidden; }
+    .stat-box::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, var(--purple-faint), transparent); opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+    .stat-box:hover { border-color: var(--border2); transform: translateY(-2px); box-shadow: 0 8px 30px var(--shadow); }
+    .stat-box:hover::after { opacity: 1; }
+    .stat-box:nth-child(1){animation-delay:0.1s} .stat-box:nth-child(2){animation-delay:0.15s} .stat-box:nth-child(3){animation-delay:0.2s} .stat-box:nth-child(4){animation-delay:0.25s}
+    .stat-label { font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; font-family: 'JetBrains Mono', monospace; }
+    .stat-value { font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: -1px; margin-bottom: 4px; }
+    .stat-change { font-size: 12px; color: var(--green); font-family: 'JetBrains Mono', monospace; }
+
+    /* TICKER */
+    .ticker { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 10px 0; overflow: hidden; margin-bottom: 48px; background: var(--surface); transition: background 0.3s, border-color 0.3s; }
+    .ticker-inner { display: flex; gap: 40px; animation: ticker 25s linear infinite; white-space: nowrap; }
+    @keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+    .tick { display: flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text2); }
+    .tick-sep { color: var(--text3); }
+    .up { color: var(--green); } .dn { color: var(--red); }
+
+    /* CONTENT */
+    .content { max-width: 1100px; margin: 0 auto; padding: 0 32px 80px; }
+    .section-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .section-label { font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: -0.2px; }
+    .link-sm { font-size: 13px; color: var(--purple-light); text-decoration: none; font-weight: 500; transition: opacity 0.15s; }
+    .link-sm:hover { opacity: 0.7; }
+
+    /* FEATURED */
+    .featured { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; margin-bottom: 48px; display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: start; position: relative; overflow: hidden; animation: fadeUp 0.5s 0.1s ease both; transition: all 0.25s; }
+    .featured::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--purple), var(--purple-light)); }
+    .featured:hover { border-color: var(--border2); box-shadow: 0 16px 48px var(--shadow); }
+    .feat-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--purple-light); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px; font-family: 'JetBrains Mono', monospace; }
+    .feat-q { font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -0.5px; line-height: 1.3; margin-bottom: 20px; }
+    .feat-stats { display: flex; gap: 28px; margin-bottom: 20px; flex-wrap: wrap; }
+    .fstat { display: flex; flex-direction: column; gap: 4px; }
+    .fstat-label { font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.5px; }
+    .fstat-val { font-size: 16px; font-weight: 700; color: var(--text); }
+    .fstat-val.green { color: var(--green); } .fstat-val.purple { color: var(--purple-light); }
+    .prog-track { height: 8px; background: var(--red-faint); border-radius: 100px; overflow: hidden; margin-bottom: 8px; }
+    .prog-fill { height: 100%; border-radius: 100px; background: var(--green); transition: width 1.2s cubic-bezier(0.34,1.1,0.64,1); }
+    .prog-labels { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+    /* BET PANEL */
+    .bet-panel { display: flex; flex-direction: column; gap: 10px; min-width: 190px; }
+    .bet-input { width: 100%; padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 13px; outline: none; transition: all 0.15s; }
+    .bet-input:focus { border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(139,92,246,0.1); }
+    .bet-input::placeholder { color: var(--text3); }
+    .bet-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .btn-yes { padding: 11px; background: var(--green-faint); border: 1px solid rgba(34,197,94,0.25); border-radius: 10px; color: var(--green); font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+    .btn-yes:hover { background: rgba(34,197,94,0.18); transform: translateY(-1px); }
+    .btn-no { padding: 11px; background: var(--red-faint); border: 1px solid rgba(239,68,68,0.25); border-radius: 10px; color: var(--red); font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+    .btn-no:hover { background: rgba(239,68,68,0.18); transform: translateY(-1px); }
+    .bet-note { font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace; text-align: center; }
+
+    /* MARKETS GRID */
+    .markets { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 48px; }
+    .mcard { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; cursor: pointer; transition: all 0.2s; animation: fadeUp 0.5s ease both; }
+    .mcard:hover { border-color: var(--border2); transform: translateY(-3px); box-shadow: 0 16px 48px var(--shadow); }
+    .mcard-visual { width: calc(100% + 40px); height: 112px; margin: -20px -20px 16px; object-fit: cover; display: block; border-radius: 13px 13px 0 0; border-bottom: 1px solid var(--border); }
+    .mcard:nth-child(1){animation-delay:0.05s} .mcard:nth-child(2){animation-delay:0.1s} .mcard:nth-child(3){animation-delay:0.15s} .mcard:nth-child(4){animation-delay:0.2s} .mcard:nth-child(5){animation-delay:0.25s} .mcard:nth-child(6){animation-delay:0.3s}
+    .mtag { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; font-family: 'JetBrains Mono', monospace; }
+    .mtag-crypto { background: var(--purple-faint); color: var(--purple-light); }
+    .mtag-politics { background: rgba(239,68,68,0.1); color: #f87171; }
+    .mtag-sports { background: var(--green-faint); color: #4ade80; }
+    .mtag-tech { background: rgba(59,130,246,0.1); color: #60a5fa; }
+    .mtag-entertainment { background: rgba(251,146,60,0.1); color: #fb923c; }
+    .mtag-finance { background: rgba(234,179,8,0.1); color: #facc15; }
+    .mq { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.45; margin-bottom: 16px; }
+    .mbets { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 14px; }
+    .mbets .btn-yes, .mbets .btn-no { padding: 8px; font-size: 12px; border-radius: 8px; }
+    .mbar-track { height: 4px; background: var(--red-faint); border-radius: 100px; overflow: hidden; margin-bottom: 10px; }
+    .mbar-fill { height: 100%; border-radius: 100px; background: var(--green); transition: width 1.2s cubic-bezier(0.34,1.1,0.64,1); }
+    .mfooter { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); }
+    .mfooter strong { color: var(--text2); }
+
+    /* LEADERBOARD */
+    .lb { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 64px; animation: fadeUp 0.5s 0.2s ease both; }
+    .lb-head { display: grid; grid-template-columns: 44px 1fr auto auto; gap: 16px; padding: 12px 20px; border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; font-family: 'JetBrains Mono', monospace; }
+    .lb-row { display: grid; grid-template-columns: 44px 1fr auto auto; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--border); align-items: center; transition: background 0.15s; cursor: pointer; }
+    .lb-row:last-child { border-bottom: none; }
+    .lb-row:hover { background: var(--surface2); }
+    .lb-rank { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text3); text-align: center; }
+    .lb-rank.r1{color:#fbbf24} .lb-rank.r2{color:#94a3b8} .lb-rank.r3{color:#cd7c2f}
+    .lb-user { display: flex; align-items: center; gap: 10px; }
+    .lb-av { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--purple), var(--purple-light)); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: white; flex-shrink: 0; }
+    .lb-addr { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text); }
+    .lb-profit { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--green); font-weight: 500; }
+    .lb-acc { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text3); }
+
+    /* CTA */
+    .cta { text-align: center; padding: 64px 32px; border-top: 1px solid var(--border); }
+    .cta h2 { font-size: clamp(28px,4vw,40px); font-weight: 700; letter-spacing: -1.5px; margin-bottom: 12px; }
+    .cta h2 span { color: var(--purple-light); }
+    .cta p { font-size: 15px; color: var(--text2); margin-bottom: 28px; }
+
+    /* FOOTER */
+    footer { border-top: 1px solid var(--border); padding: 24px 32px; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1; transition: border-color 0.3s; }
+    .footer-logo { display: flex; align-items: center; gap: 8px; }
+    .footer-logo .logo-img-wrap { width: 26px; height: 26px; }
+    .footer-logo .logo-img-wrap img { width: 28px; height: 28px; }
+    .footer-logo-text { font-size: 15px; font-weight: 700; color: var(--text); }
+    .footer-logo-text span { color: var(--purple-light); }
+    .footer-links { display: flex; gap: 20px; list-style: none; }
+    .footer-links a { font-size: 13px; color: var(--text3); text-decoration: none; transition: color 0.15s; }
+    .footer-links a:hover { color: var(--text2); }
+    .footer-copy { font-size: 12px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+
+    /* PORTFOLIO SECTION */
+    .portfolio-preview { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 48px; animation: fadeUp 0.5s 0.15s ease both; }
+    .port-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .port-title { font-size: 14px; font-weight: 600; color: var(--text); }
+    .port-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--border); align-items: center; transition: background 0.15s; }
+    .port-row:last-child { border-bottom: none; }
+    .port-row:hover { background: var(--surface2); }
+    .port-market { font-size: 13px; color: var(--text); font-weight: 500; }
+    .port-side { font-size: 12px; font-family: 'JetBrains Mono', monospace; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+    .port-side.yes { background: var(--green-faint); color: var(--green); }
+    .port-side.no { background: var(--red-faint); color: var(--red); }
+    .port-amt { font-size: 13px; font-family: 'JetBrains Mono', monospace; color: var(--text2); }
+    .port-pnl { font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+    .port-pnl.pos { color: var(--green); } .port-pnl.neg { color: var(--red); }
+
+
+    /* BOTTOM NAV */
+    .bottom-nav {
+      display: none;
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+      background: var(--nav-bg); backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      padding: 8px 0 20px;
+    }
+    .bottom-nav-inner {
+      display: flex; justify-content: space-around; align-items: center;
+    }
+    .bnav-item {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 4px; cursor: pointer; padding: 4px 16px;
+      border-radius: 10px; transition: all 0.15s;
+      text-decoration: none; border: none; background: none;
+    }
+    .bnav-icon { width: 22px; height: 22px; color: var(--text3); transition: color 0.2s; }
+    .bnav-label { font-size: 10px; font-weight: 500; color: var(--text3); letter-spacing: 0.3px; transition: color 0.2s; }
+    .bnav-item.active .bnav-label { color: var(--purple-light); }
+    .bnav-item.active .bnav-icon { color: var(--purple-light); }
+    .bnav-item:hover .bnav-icon { color: var(--text2); }
+    .bnav-item:hover .bnav-label { color: var(--text2); }
+
+    @media(max-width: 900px) {
+      .bottom-nav { display: block; }
+      main { padding-bottom: 80px; }
+      footer { padding-bottom: 90px; }
+      .hamburger { display: none !important; }
+      .mobile-menu { display: none !important; }
+    }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+    .featured, .markets, .portfolio-preview, .lb, .ticker-inner { visibility: hidden; }
+
+    /* RESPONSIVE */
+    @media(max-width:900px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .network-badge { display: none; }
+      .hamburger { display: flex; }
+      .hero { grid-template-columns: 1fr; padding: 48px 20px 32px; gap: 40px; }
+      .markets { grid-template-columns: 1fr; }
+      .featured { grid-template-columns: 1fr; }
+      .content { padding: 0 20px 60px; }
+      footer { flex-direction: column; gap: 16px; text-align: center; padding: 20px; }
+      .footer-links { flex-wrap: wrap; justify-content: center; }
+      .port-row { grid-template-columns: 1fr auto auto; }
+    }
+    @media(max-width:520px) {
+      nav { padding: 0 14px; }
+      .nav-left { gap: 12px; }
+      .nav-logo-text { font-size: 16px; }
+      .logo-img-wrap { width: 30px; height: 30px; }
+      .logo-img-wrap img { width: 32px; height: 32px; }
+      .nav-right { gap: 7px; }
+      .btn-faucet { display: none; }
+      .btn-connect { padding: 8px 12px; font-size: 12px; }
+      .theme-toggle { width: 34px; height: 34px; }
+      .hero-actions .btn-primary, .hero-actions .btn-outline { flex: 1 1 150px; padding-left: 14px; padding-right: 14px; }
+      .featured { padding: 22px; }
+      .feat-q { font-size: 19px; }
+      .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .stat-box { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-glow"></div>
+  <div class="particles" id="particles"></div>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-left">
+      <a class="nav-logo" href="#">
+        <div class="logo-img-wrap">
+          <img src="assets/predictarc-bird.png" alt="PredictArc logo"/>
+        </div>
+        <div class="nav-logo-text">Predict<span>Arc</span></div>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#" class="active">Home</a></li>
+        <li><a href="markets.html">Markets</a></li>
+        <li><a href="portfolio.html">Portfolio</a></li>
+        <li><a href="leaderboard.html">Status</a></li>
+        <li><a href="#">Docs</a></li>
+      </ul>
+    </div>
+    <div class="nav-right">
+      <div class="network-badge"><div class="net-dot"></div>Arc Testnet</div>
+      <button class="btn-faucet" onclick="openArcFaucet()">Claim Faucet</button>
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙</button>
+      <button class="btn-connect" onclick="connectWallet()">Connect Wallet</button>
+      <button class="hamburger" id="hamburger" onclick="toggleMenu()">
+        <div class="hline"></div>
+        <div class="hline"></div>
+        <div class="hline"></div>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MOBILE MENU -->
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#" class="active">Home</a>
+    <a href="markets.html">Markets</a>
+    <a href="portfolio.html">Portfolio</a>
+    <a href="leaderboard.html">Status</a>
+    <a href="#" onclick="openArcFaucet(); return false;">Claim Faucet</a>
+    <a href="#">Docs</a>
+    <div class="mobile-menu-footer">
+      <div class="network-badge" style="display:flex"><div class="net-dot"></div>Arc Testnet</div>
+      <button class="theme-toggle" onclick="toggleTheme()" style="margin-left:auto">🌙</button>
+    </div>
+  </div>
+
+  <main>
+    <!-- HERO -->
+    <div class="hero">
+      <div>
+        <div class="hero-pill">Building for Arc Testnet</div>
+        <h1>Predict the future.<br/><em>Earn USDC.</em></h1>
+        <p>PredictArc is a decentralized prediction market. Stake on real-world events, earn rewards, and let the crowd find the truth.</p>
+        <div class="hero-actions">
+          <button class="btn-primary" onclick="window.location.href='markets.html'">Explore Markets</button>
+          <button class="btn-outline" onclick="openArcFaucet()">Get Test USDC</button>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-label">Reference Odds</div><div class="stat-value">Live</div><div class="stat-change">Polymarket public feed</div></div>
+        <div class="stat-box"><div class="stat-label">Settlement</div><div class="stat-value">Arc</div><div class="stat-change">Arc Testnet</div></div>
+        <div class="stat-box"><div class="stat-label">Trading Currency</div><div class="stat-value">USDC</div><div class="stat-change">Native gas token</div></div>
+        <div class="stat-box"><div class="stat-label">Market Mode</div><div class="stat-value">Testnet</div><div class="stat-change">No real funds</div></div>
+      </div>
+    </div>
+
+    <!-- TICKER -->
+    <div class="ticker">
+      <div class="ticker-inner"><div class="tick">Loading current reference markets...</div></div>
+    </div>
+
+    <div class="content">
+      <!-- FEATURED -->
+      <div class="section-row"><div class="section-label">Featured Market</div></div>
+      <div class="featured">
+        <div>
+          <div class="feat-tag">⚡ Hot</div>
+          <div class="feat-q">Loading current reference market...</div>
+          <div class="feat-stats">
+            <div class="fstat"><div class="fstat-label">Testnet Volume</div><div class="fstat-val purple">$0</div></div>
+            <div class="fstat"><div class="fstat-label">YES Odds</div><div class="fstat-val green">68%</div></div>
+            <div class="fstat"><div class="fstat-label">Closes</div><div class="fstat-val" style="color:var(--text2);font-size:14px;font-weight:500;">Loading...</div></div>
+          </div>
+          <div class="prog-track"><div class="prog-fill" id="featBar" style="width:0%"></div></div>
+          <div class="prog-labels">
+            <span style="color:var(--green);font-family:'JetBrains Mono',monospace;font-size:12px;">YES 68%</span>
+            <span style="color:var(--red);font-family:'JetBrains Mono',monospace;font-size:12px;">NO 32%</span>
+          </div>
+        </div>
+        <div class="bet-panel">
+          <input class="bet-input" type="text" placeholder="0.00 USDC"/>
+          <div class="bet-row">
+            <button class="btn-yes">YES ↑</button>
+            <button class="btn-no">NO ↓</button>
+          </div>
+          <div class="bet-note">Connect wallet to bet</div>
+        </div>
+      </div>
+
+      <!-- TRENDING MARKETS -->
+      <div class="section-row"><div class="section-label">Trending Markets</div><a href="markets.html" class="link-sm">See all →</a></div>
+      <div class="markets"><div class="mcard"><div class="mq">Loading current markets...</div></div></div>
+
+      <!-- PORTFOLIO PREVIEW -->
+      <div class="section-row"><div class="section-label">Your Portfolio</div><a href="portfolio.html" class="link-sm">Full portfolio -></a></div>
+      <div class="portfolio-preview">
+        <div class="port-header"><div class="port-title">Your testnet positions</div><a href="portfolio.html" class="link-sm">Open portfolio -></a></div>
+        <div class="port-row"><div class="port-market">No positions yet. Your trades will appear here after they are confirmed on Arc Testnet.</div><div></div><div></div><div></div></div>
+      </div>
+
+      <!-- LEADERBOARD -->
+      <div class="section-row"><div class="section-label">Protocol Status</div><a href="leaderboard.html" class="link-sm">View status -></a></div>
+      <div class="lb">
+        <div class="lb-head"><div></div><div>Testnet principle</div><div>Status</div><div></div></div>
+        <div class="lb-row"><div class="lb-rank">01</div><div class="lb-user"><div class="lb-av">R</div><div class="lb-addr">Reference odds from a public market feed</div></div><div class="lb-profit">Live</div><div></div></div>
+        <div class="lb-row"><div class="lb-rank">02</div><div class="lb-user"><div class="lb-av">A</div><div class="lb-addr">Trades settle independently on Arc Testnet</div></div><div class="lb-profit">Testnet</div><div></div></div>
+        <div class="lb-row"><div class="lb-rank">03</div><div class="lb-user"><div class="lb-av">U</div><div class="lb-addr">USDC is used for bets and network fees</div></div><div class="lb-profit">Ready</div><div></div></div>
+      </div>
+    </div>
+
+    <div class="cta">
+      <h2>Ready to <span>predict</span> the future?</h2>
+      <p>Test markets with Arc Testnet USDC and track your positions before mainnet.</p>
+      <button class="btn-primary" style="padding:14px 32px;font-size:15px" onclick="connectWallet()">Connect Wallet & Start</button>
+    </div>
+  </main>
+
+  <footer>
+    <div class="footer-logo">
+      <div class="logo-img-wrap"><img src="assets/predictarc-bird.png" alt=""/></div>
+      <div class="footer-logo-text">Predict<span>Arc</span></div>
+    </div>
+    <ul class="footer-links">
+      <li><a href="markets.html">Markets</a></li>
+      <li><a href="portfolio.html">Portfolio</a></li>
+      <li><a href="leaderboard.html">Status</a></li>
+      <li><a href="#">Docs</a></li>
+      <li><a href="#">GitHub</a></li>
+      <li><a href="#">Discord</a></li>
+    </ul>
+    <div class="footer-copy">© 2026 PredictArc</div>
+  </footer>
+
+  <script src="assets/vendor/ethers.umd.min.js"></script>
+  <script src="contract.js?v=20260606f"></script>
+  <script src="app.js?v=20260606f"></script>
+  <script>
+    // Particles
+    (function(){
+      const c = document.getElementById('particles');
+      for(let i=0;i<18;i++){
+        const p = document.createElement('div');
+        p.className = 'particle';
+        const s = Math.random()*2.5+0.5;
+        p.style.cssText = `width:${s}px;height:${s}px;left:${Math.random()*100}%;animation-duration:${Math.random()*18+10}s;animation-delay:${Math.random()*12}s`;
+        c.appendChild(p);
+      }
+    })();
+
+    // Count-up
+    function countUp(el, target, isFloat, prefix, suffix){
+      const dur = 1600, start = performance.now();
+      function tick(now){
+        const t = Math.min((now-start)/dur,1);
+        const e = 1-Math.pow(1-t,3);
+        const v = isFloat ? (e*target).toFixed(1) : Math.floor(e*target);
+        el.textContent = (prefix||'') + ((!isFloat && target>=1000) ? (v>=1000?(v/1000).toFixed(1)+'K':v) : v) + (suffix||'');
+        if(t<1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    // Theme
+    function toggleTheme(){
+      const html = document.documentElement;
+      const isDark = html.dataset.theme === 'dark';
+      html.dataset.theme = isDark ? 'light' : 'dark';
+      document.querySelectorAll('#themeBtn, .mobile-menu .theme-toggle').forEach(b => b.textContent = isDark ? '🌙' : '☀️');
+      const bi = document.getElementById('themeIconBottom');
+      if(bi) bi.innerHTML = isDark
+        ? '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'
+        : '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+      localStorage.setItem('theme', html.dataset.theme);
+    }
+
+    // Hamburger
+    function toggleMenu(){
+      const hb = document.getElementById('hamburger');
+      const mm = document.getElementById('mobileMenu');
+      hb.classList.toggle('open');
+      mm.classList.toggle('open');
+    }
+
+    // Wallet
+    async function connectWallet(){
+      try {
+        await window.PredictArcApp.ensureArcWallet();
+      } catch (err) {
+        alert(err.message || 'Wallet connection failed');
+      }
+    }
+
+
+    // Nav Search
+    const ALL_MARKETS = window.PredictArcApp.ARC_MARKETS;
+
+    const TAG_COLORS = {
+      crypto:'background:rgba(109,40,217,0.12);color:#8b5cf6',
+      politics:'background:rgba(239,68,68,0.1);color:#f87171',
+      sports:'background:rgba(34,197,94,0.1);color:#4ade80',
+      tech:'background:rgba(59,130,246,0.1);color:#60a5fa',
+      entertainment:'background:rgba(251,146,60,0.1);color:#fb923c',
+      finance:'background:rgba(234,179,8,0.1);color:#facc15',
+    };
+
+    function navSearchFn() {
+      const q = document.getElementById('navSearch').value.toLowerCase().trim();
+      const dd = document.getElementById('searchDropdown');
+      if (!q) { dd.innerHTML = ''; dd.classList.remove('show'); return; }
+      const results = ALL_MARKETS.filter(m => m.q.toLowerCase().includes(q)).slice(0, 5);
+      if (results.length === 0) {
+        dd.innerHTML = '<div class="search-empty">No markets found</div>';
+      } else {
+        dd.innerHTML = results.map(m => `
+          <div class="search-item" onmousedown="window.location.href='markets.html'">
+            <span class="search-item-tag" style="${TAG_COLORS[m.cat]}">${m.cat}</span>
+            <span class="search-item-q">${m.q}</span>
+            <span class="search-item-pct">${m.yes}%</span>
+          </div>`).join('');
+      }
+      dd.classList.add('show');
+    }
+
+    function showDropdown() {
+      const q = document.getElementById('navSearch').value.trim();
+      if (q) document.getElementById('searchDropdown').classList.add('show');
+    }
+
+    function hideDropdown() {
+      setTimeout(() => document.getElementById('searchDropdown').classList.remove('show'), 150);
+    }
+
+    function hydrateHomeMarkets() {
+      const markets = window.PredictArcApp.ARC_MARKETS;
+      const featured = markets[0];
+      document.querySelector('.ticker-inner').innerHTML = [...markets.slice(0, 8), ...markets.slice(0, 8)].map(m =>
+        `<div class="tick">${m.q.slice(0, 38)} <span class="tick-sep">·</span><span class="${m.yes >= 50 ? 'up' : 'dn'}">${m.yes}%</span></div>`
+      ).join('');
+
+      document.querySelector('.featured').innerHTML = `
+        <div>
+          <div class="feat-tag">Live reference odds</div>
+          <div class="feat-q">${featured.q}</div>
+          <div class="feat-stats">
+            <div class="fstat"><div class="fstat-label">Testnet volume</div><div class="fstat-val purple">${featured.vol}</div></div>
+            <div class="fstat"><div class="fstat-label">YES reference</div><div class="fstat-val green">${featured.yes}%</div></div>
+            <div class="fstat"><div class="fstat-label">Closes</div><div class="fstat-val" style="color:var(--text2);font-size:14px;font-weight:500;">${featured.closeShort}</div></div>
+          </div>
+          <div class="prog-track"><div class="prog-fill" style="width:${featured.yes}%"></div></div>
+          <div class="prog-labels"><span style="color:var(--green)">YES ${featured.yes}%</span><span style="color:var(--red)">NO ${100-featured.yes}%</span></div>
+        </div>
+        <div class="bet-panel">
+          <button class="btn-primary" onclick="window.location.href='market-detail.html?id=${featured.id}'">Open Market</button>
+          <div class="bet-note">Reference: Polymarket · Settlement: Arc Testnet</div>
+        </div>`;
+
+      document.querySelector('.markets').innerHTML = markets.slice(1, 7).map(m => `
+        <div class="mcard" onclick="window.location.href='market-detail.html?id=${m.id}'">
+          <img class="mcard-visual" src="${m.image}" alt="" loading="lazy"/>
+          <div class="mtag mtag-${m.cat}">${m.cat}</div><div class="mq">${m.q}</div>
+          <div class="mbets"><button class="btn-yes">YES ${m.yes}%</button><button class="btn-no">NO ${100-m.yes}%</button></div>
+          <div class="mbar-track"><div class="mbar-fill" style="width:${m.yes}%"></div></div>
+          <div class="mfooter"><span>Testnet: <strong>${m.vol}</strong></span><span>${m.closeShort}</span></div>
+        </div>`).join('');
+
+      document.querySelector('.portfolio-preview').innerHTML = `
+        <div class="port-header"><div class="port-title">Your testnet positions</div><a href="portfolio.html" class="link-sm">Open portfolio →</a></div>
+        <div class="port-row"><div class="port-market">No positions yet. Your trades will appear here after they are confirmed on Arc Testnet.</div><div></div><div></div><div></div></div>`;
+
+      document.querySelector('.lb').innerHTML = `
+        <div class="lb-head"><div></div><div>Testnet principle</div><div>Status</div><div></div></div>
+        <div class="lb-row"><div class="lb-rank">01</div><div class="lb-user"><div class="lb-av">R</div><div class="lb-addr">Reference odds from a public market feed</div></div><div class="lb-profit">Live</div><div></div></div>
+        <div class="lb-row"><div class="lb-rank">02</div><div class="lb-user"><div class="lb-av">A</div><div class="lb-addr">Trades settle independently on Arc Testnet</div></div><div class="lb-profit">Testnet</div><div></div></div>
+        <div class="lb-row"><div class="lb-rank">03</div><div class="lb-user"><div class="lb-av">U</div><div class="lb-addr">USDC is used for bets and network fees</div></div><div class="lb-profit">Ready</div><div></div></div>`;
+      document.querySelectorAll('.featured, .markets, .portfolio-preview, .lb, .ticker-inner').forEach(element => {
+        element.style.visibility = 'visible';
+      });
+    }
+
+    // Init animations
+    window.addEventListener('load', ()=>{
+      // Restore theme
+      const saved = localStorage.getItem('theme');
+      if(saved){ document.documentElement.dataset.theme = saved; document.querySelectorAll('#themeBtn').forEach(b=>b.textContent=saved==='light'?'🌙':'☀️'); }
+
+      // Bar animations
+      setTimeout(()=>{
+        const featuredBar = document.getElementById('featBar');
+        if (featuredBar) featuredBar.style.width = '68%';
+        document.querySelectorAll('.mbar-fill[data-w]').forEach((b,i)=>{
+          setTimeout(()=>{ b.style.width = b.dataset.w+'%'; }, i*80);
+        });
+      }, 500);
+
+      hydrateHomeMarkets();
+    });
+    window.addEventListener('PredictArc:markets-updated', hydrateHomeMarkets);
+  </script>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <a class="bnav-item active" href="predictarc.html">
+        <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span class="bnav-label">Home</span>
+      </a>
+      <a class="bnav-item" href="markets.html">
+        <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span class="bnav-label">Markets</span>
+      </a>
+      <a class="bnav-item" href="portfolio.html">
+        <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <span class="bnav-label">Portfolio</span>
+      </a>
+      <a class="bnav-item" href="leaderboard.html">
+        <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+        <span class="bnav-label">Status</span>
+      </a>
+      <a class="bnav-item" href="#" onclick="toggleTheme(); return false;" id="themeBnavItem">
+        <svg class="bnav-icon" id="themeIconBottom" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <span class="bnav-label">Theme</span>
+      </a>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,8 +1,8 @@
-# ArcOdds
+# PredictArc
 
-ArcOdds is a simple prediction market MVP built for Arc Testnet.
+PredictArc is a simple prediction market MVP built for Arc Testnet.
 
-Market discovery questions and displayed probabilities refresh from Polymarket's public read-only Gamma API. ArcOdds testnet trades, volume, and settlement remain separate.
+Market discovery questions and displayed probabilities refresh from Polymarket's public read-only Gamma API. PredictArc testnet trades, volume, and settlement remain separate.
 
 Current Arc Testnet deployment: `0x19D638Af6b2De9718Eff496fc27a304155D6Af44`
 
@@ -49,7 +49,9 @@ Winning users can then claim from the Portfolio page.
 
 ## Open App
 
-Open `arcodds.html` in a browser, connect MetaMask, and switch/add Arc Testnet when prompted.
+Open `predictarc.html` in a browser, connect MetaMask, and switch/add Arc Testnet when prompted.
+
+Do not upload `.env`, `node_modules`, `artifacts`, `cache`, or local deployment output when publishing the site. Add API keys in Vercel environment variables instead.
 
 ## AI Briefs
 
@@ -68,4 +70,4 @@ Then run:
 npm run ai:server
 ```
 
-Then open `http://localhost:4173/arcodds.html`. If the AI server or key is missing, the page still shows a local preview brief instead of breaking.
+Then open `http://localhost:4173/predictarc.html`. If the AI server or key is missing, the page still shows a local preview brief instead of breaking.

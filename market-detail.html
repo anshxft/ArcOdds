@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Market Detail — ArcOdds</title>
+  <title>Market Detail — PredictArc</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
@@ -34,7 +34,8 @@
     .nav-left { display: flex; align-items: center; gap: 36px; }
     .nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; }
     .logo-img-wrap { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .logo-img-wrap img { width: 32px; height: 32px; object-fit: contain; display: block; }
+    .logo-img-wrap img { width: 34px; height: 34px; object-fit: contain; display: block; filter: invert(1); }
+    [data-theme="light"] .logo-img-wrap img { filter: none; }
     .nav-logo-text { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
     .nav-logo-text span { color: var(--purple-light); }
     .nav-links { display: flex; gap: 2px; list-style: none; }
@@ -141,7 +142,10 @@
 
     /* RIGHT COLUMN — BET PANEL */
     .bet-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; position: sticky; top: 80px; animation: fadeUp 0.4s 0.05s ease both; }
-    .bet-card-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 20px; }
+    .trade-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    .bet-card-title { font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: -0.4px; }
+    .trade-sub { margin-top: 4px; font-size: 12px; color: var(--text3); }
+    .trade-balance { padding: 5px 9px; border-radius: 8px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); font-size: 11px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
 
     /* Toggle YES/NO */
     .bet-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 0; background: var(--surface2); border-radius: 10px; padding: 3px; margin-bottom: 20px; }
@@ -164,11 +168,12 @@
     .quick-btn:hover { border-color: var(--purple-light); color: var(--purple-light); }
 
     /* Summary */
-    .bet-summary { background: var(--surface2); border-radius: 10px; padding: 14px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; }
+    .bet-summary { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; }
     .bet-summary-row { display: flex; justify-content: space-between; align-items: center; }
     .bet-summary-label { font-size: 12px; color: var(--text3); }
     .bet-summary-val { font-size: 13px; font-weight: 600; color: var(--text); font-family: 'JetBrains Mono', monospace; }
     .bet-summary-val.green { color: var(--green); }
+    .summary-divider { height: 1px; background: var(--border); margin: 2px 0; }
 
     /* Submit */
     .btn-bet-yes { width: 100%; padding: 14px; background: var(--green); border: none; border-radius: 10px; color: white; font-weight: 700; font-size: 15px; cursor: pointer; transition: all 0.2s; margin-bottom: 10px; box-shadow: 0 4px 16px rgba(34,197,94,0.2); }
@@ -211,6 +216,7 @@
     .modal-confirm.yes { background: var(--green); }
     .modal-confirm.no { background: var(--red); }
     .modal-confirm:hover { opacity: 0.9; transform: translateY(-1px); }
+    .modal-confirm:disabled { opacity: 0.62; cursor: wait; transform: none; }
 
     @media(max-width:900px) {
       nav { padding: 0 20px; }
@@ -223,24 +229,41 @@
       .ai-head { align-items: flex-start; flex-direction: column; }
       .ai-grid { grid-template-columns: 1fr; }
     }
+    @media(max-width:520px) {
+      nav { padding: 0 14px; }
+      .nav-left { gap: 12px; }
+      .nav-logo-text { font-size: 16px; }
+      .logo-img-wrap { width: 30px; height: 30px; }
+      .logo-img-wrap img { width: 32px; height: 32px; }
+      .nav-right { gap: 7px; }
+      .btn-faucet { display: none; }
+      .btn-connect { padding: 8px 12px; font-size: 12px; }
+      .theme-toggle { width: 34px; height: 34px; }
+      .market-header { padding: 20px; }
+      .market-header-image { width: calc(100% + 40px); margin: -20px -20px 20px; height: 170px; }
+      .market-title { font-size: 20px; }
+      .market-meta { gap: 16px; }
+      .bet-card { padding: 20px; }
+      .modal { padding: 22px; }
+    }
   </style><script src="assets/vendor/ethers.umd.min.js"></script>
-  <script src="contract.js?v=20260605e"></script>
-  <script src="app.js?v=20260605e"></script>
+  <script src="contract.js?v=20260606f"></script>
+  <script src="app.js?v=20260606f"></script>
 </head>
 <body>
   <nav>
     <div class="nav-left">
-      <a class="nav-logo" href="arcodds.html">
+      <a class="nav-logo" href="predictarc.html">
         <div class="logo-img-wrap">
-          <img src="assets/arcodds-mark.svg" alt="ArcOdds" id="navLogo"/>
+          <img src="assets/predictarc-bird.png" alt="PredictArc" id="navLogo"/>
         </div>
-        <div class="nav-logo-text">Arc<span>Odds</span></div>
+        <div class="nav-logo-text">Predict<span>Arc</span></div>
       </a>
       <ul class="nav-links">
-        <li><a href="arcodds.html">Home</a></li>
+        <li><a href="predictarc.html">Home</a></li>
         <li><a href="markets.html" class="active">Markets</a></li>
         <li><a href="portfolio.html">Portfolio</a></li>
-        <li><a href="leaderboard.html">Leaderboard</a></li>
+        <li><a href="leaderboard.html">Status</a></li>
         <li><a href="#">Docs</a></li>
       </ul>
     </div>
@@ -254,7 +277,7 @@
 
   <main>
     <div class="breadcrumb">
-      <a href="arcodds.html">Home</a>
+      <a href="predictarc.html">Home</a>
       <span class="breadcrumb-sep">›</span>
       <a href="markets.html">Markets</a>
       <span class="breadcrumb-sep">›</span>
@@ -390,11 +413,17 @@
 
       <!-- RIGHT — BET PANEL -->
       <div class="bet-card">
-        <div class="bet-card-title">Place Your Bet</div>
+        <div class="trade-head">
+          <div>
+            <div class="bet-card-title">Trade</div>
+            <div class="trade-sub">Testnet order preview</div>
+          </div>
+          <div class="trade-balance">USDC</div>
+        </div>
 
         <div class="bet-toggle">
-          <button class="bet-toggle-btn yes active" id="btnYes" onclick="selectSide('yes')">YES ↑</button>
-          <button class="bet-toggle-btn no" id="btnNo" onclick="selectSide('no')">NO ↓</button>
+          <button class="bet-toggle-btn yes active" id="btnYes" onclick="selectSide('yes')">Buy YES</button>
+          <button class="bet-toggle-btn no" id="btnNo" onclick="selectSide('no')">Buy NO</button>
         </div>
 
         <div class="bet-label">Amount</div>
@@ -412,20 +441,25 @@
 
         <div class="bet-summary">
           <div class="bet-summary-row">
-            <span class="bet-summary-label">Odds</span>
-            <span class="bet-summary-val" id="summOdds">68%</span>
+            <span class="bet-summary-label">Avg price</span>
+            <span class="bet-summary-val" id="summOdds">68c</span>
           </div>
           <div class="bet-summary-row">
-            <span class="bet-summary-label">Est. payout</span>
-            <span class="bet-summary-val green" id="summPayout">—</span>
+            <span class="bet-summary-label">Shares</span>
+            <span class="bet-summary-val" id="summShares">-</span>
+          </div>
+          <div class="summary-divider"></div>
+          <div class="bet-summary-row">
+            <span class="bet-summary-label">Max payout</span>
+            <span class="bet-summary-val green" id="summPayout">-</span>
           </div>
           <div class="bet-summary-row">
-            <span class="bet-summary-label">Potential profit</span>
-            <span class="bet-summary-val green" id="summProfit">—</span>
+            <span class="bet-summary-label">Est. profit</span>
+            <span class="bet-summary-val green" id="summProfit">-</span>
           </div>
           <div class="bet-summary-row">
-            <span class="bet-summary-label">Fee (2%)</span>
-            <span class="bet-summary-val" id="summFee">—</span>
+            <span class="bet-summary-label">Network fee</span>
+            <span class="bet-summary-val" id="summFee">-</span>
           </div>
         </div>
 
@@ -433,11 +467,11 @@
           Connect your wallet to place a bet
         </div>
 
-        <button class="btn-bet-yes" id="betSubmitYes" onclick="showConfirm()">Bet YES — 68%</button>
-        <button class="btn-bet-no" id="betSubmitNo" onclick="showConfirm()">Bet NO — 32%</button>
+        <button class="btn-bet-yes" id="betSubmitYes" onclick="showConfirm()">Buy YES - 68c</button>
+        <button class="btn-bet-no" id="betSubmitNo" onclick="showConfirm()">Buy NO - 32c</button>
 
         <div class="bet-disclaimer">
-          By placing a bet you agree to the ArcOdds terms. Markets resolve based on verified real-world outcomes.
+          By placing a bet you agree to the PredictArc terms. Markets resolve based on verified real-world outcomes.
         </div>
 
         <div class="bet-divider"></div>
@@ -458,8 +492,10 @@
       <div class="modal-detail">
         <div class="modal-row"><span>Market</span><span>BTC $150K EOY</span></div>
         <div class="modal-row"><span>Side</span><span id="modalSide">YES</span></div>
-        <div class="modal-row"><span>Amount</span><span id="modalAmt">—</span></div>
-        <div class="modal-row"><span>Est. Payout</span><span id="modalPayout">—</span></div>
+        <div class="modal-row"><span>Avg price</span><span id="modalPrice">-</span></div>
+        <div class="modal-row"><span>Amount</span><span id="modalAmt">-</span></div>
+        <div class="modal-row"><span>Shares</span><span id="modalShares">-</span></div>
+        <div class="modal-row"><span>Max payout</span><span id="modalPayout">-</span></div>
       </div>
       <div class="modal-btns">
         <button class="modal-cancel" onclick="hideConfirm()">Cancel</button>
@@ -471,7 +507,7 @@
   <!-- BOTTOM NAV -->
   <div class="bottom-nav">
     <div class="bottom-nav-inner">
-      <a class="bnav-item" href="arcodds.html">
+      <a class="bnav-item" href="predictarc.html">
         <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         <span class="bnav-label">Home</span>
       </a>
@@ -485,7 +521,7 @@
       </a>
       <a class="bnav-item" href="leaderboard.html">
         <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
-        <span class="bnav-label">Leaderboard</span>
+        <span class="bnav-label">Status</span>
       </a>
       <a class="bnav-item" href="#" onclick="toggleTheme(); return false;">
         <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="themeIconBottom"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -623,15 +659,19 @@
       const btnN = document.getElementById('btnNo');
       const subY = document.getElementById('betSubmitYes');
       const subN = document.getElementById('betSubmitNo');
+      const yesPrice = Number(activeMarket.yes || 50);
+      const noPrice = 100 - yesPrice;
 
       if (side === 'yes') {
         btnY.classList.add('active'); btnN.classList.remove('active');
         subY.style.display = 'block'; subN.style.display = 'none';
-        document.getElementById('summOdds').textContent = `${activeMarket.yes}%`;
+        subY.textContent = `Buy YES - ${yesPrice}c`;
+        document.getElementById('summOdds').textContent = `${yesPrice}c`;
       } else {
         btnN.classList.add('active'); btnY.classList.remove('active');
         subN.style.display = 'block'; subY.style.display = 'none';
-        document.getElementById('summOdds').textContent = `${100 - activeMarket.yes}%`;
+        subN.textContent = `Buy NO - ${noPrice}c`;
+        document.getElementById('summOdds').textContent = `${noPrice}c`;
       }
       updateSummary();
     }
@@ -643,20 +683,24 @@
 
     function updateSummary() {
       const amt = parseFloat(document.getElementById('betAmount').value) || 0;
-      const odds = (activeSide === 'yes' ? activeMarket.yes : 100 - activeMarket.yes) / 100;
+      const pricePct = activeSide === 'yes' ? activeMarket.yes : 100 - activeMarket.yes;
+      const price = Math.max(pricePct / 100, 0.01);
       const fee = amt * 0.02;
-      const payout = amt > 0 ? (amt / odds).toFixed(4) : '—';
-      const profit = amt > 0 ? ((amt / odds) - amt).toFixed(4) : '—';
-      document.getElementById('summPayout').textContent = amt > 0 ? payout + ' USDC' : '—';
-      document.getElementById('summProfit').textContent = amt > 0 ? '+' + profit + ' USDC' : '—';
-      document.getElementById('summFee').textContent = amt > 0 ? fee.toFixed(4) + ' USDC' : '—';
+      const shares = amt / price;
+      const payout = shares;
+      const profit = payout - amt;
+      document.getElementById('summOdds').textContent = `${pricePct}c`;
+      document.getElementById('summShares').textContent = amt > 0 ? shares.toFixed(4) : '-';
+      document.getElementById('summPayout').textContent = amt > 0 ? payout.toFixed(4) + ' USDC' : '-';
+      document.getElementById('summProfit').textContent = amt > 0 ? '+' + profit.toFixed(4) + ' USDC' : '-';
+      document.getElementById('summFee').textContent = amt > 0 ? fee.toFixed(4) + ' USDC' : '-';
     }
 
     function localAiBrief() {
       const yes = Number(activeMarket.yes || 50);
       const no = 100 - yes;
       return {
-        summary: `${activeMarket.q} is currently priced at ${yes}% YES and ${no}% NO on ArcOdds testnet.`,
+        summary: `${activeMarket.q} is currently priced at ${yes}% YES and ${no}% NO on PredictArc testnet.`,
         yesCase: [
           `The current market price leans ${yes >= no ? 'toward' : 'against'} YES at ${yes}%.`,
           `A clear catalyst before ${activeMarket.closes} could move probability higher.`,
@@ -733,7 +777,7 @@
         if (!response.ok) throw new Error(data.error || 'AI brief unavailable');
         renderAiBrief(data.brief);
       } catch (error) {
-        renderAiBrief(localAiBrief(), 'Local preview shown. Add GEMINI_API_KEY and run the ArcOdds AI server to generate a live AI brief.');
+        renderAiBrief(localAiBrief(), 'Local preview shown. Add GEMINI_API_KEY and run the PredictArc AI server to generate a live AI brief.');
       } finally {
         button.disabled = false;
         button.textContent = 'Refresh brief';
@@ -744,12 +788,19 @@
       if (!walletConnected) { alert('Please connect your wallet first!'); return; }
       const amt = parseFloat(document.getElementById('betAmount').value) || 0;
       if (!amt) { alert('Please enter an amount'); return; }
-      const odds = (activeSide === 'yes' ? activeMarket.yes : 100 - activeMarket.yes) / 100;
+      const pricePct = activeSide === 'yes' ? activeMarket.yes : 100 - activeMarket.yes;
+      const price = Math.max(pricePct / 100, 0.01);
+      const shares = amt / price;
       document.getElementById('modalSide').textContent = activeSide.toUpperCase();
       document.getElementById('modalSide').style.color = activeSide === 'yes' ? 'var(--green)' : 'var(--red)';
-      document.getElementById('modalAmt').textContent = amt + ' USDC';
-      document.getElementById('modalPayout').textContent = (amt / odds).toFixed(4) + ' USDC';
-      document.getElementById('modalConfirmBtn').className = 'modal-confirm ' + activeSide;
+      document.getElementById('modalPrice').textContent = `${pricePct}c`;
+      document.getElementById('modalAmt').textContent = amt.toFixed(4) + ' USDC';
+      document.getElementById('modalShares').textContent = shares.toFixed(4);
+      document.getElementById('modalPayout').textContent = shares.toFixed(4) + ' USDC';
+      const confirmBtn = document.getElementById('modalConfirmBtn');
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = `Confirm ${activeSide.toUpperCase()}`;
+      confirmBtn.className = 'modal-confirm ' + activeSide;
       document.getElementById('modalOverlay').classList.add('show');
     }
 
@@ -758,21 +809,38 @@
     }
 
     async function confirmBet() {
-      hideConfirm();
+      const confirmBtn = document.getElementById('modalConfirmBtn');
+      const originalText = confirmBtn.textContent;
       const amt = parseFloat(document.getElementById('betAmount').value) || 0;
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Submitting...';
       try {
-        if (!window.ArcOddsContracts.hasContractAddress()) {
+        if (!window.PredictArcContracts.hasContractAddress()) {
           alert('Wallet flow ready. Contract address add karte hi ye Arc testnet par bet submit karega.');
           return;
         }
         const side = activeSide === 'yes';
-        const tx = await window.ArcOddsContracts.placeBet(activeMarket.id, side, amt);
-        const positions = JSON.parse(localStorage.getItem('arcodds_positions') || '[]');
-        positions.unshift({ marketId: activeMarket.id, question: activeMarket.q, side: activeSide.toUpperCase(), amount: amt, txHash: tx.hash });
-        localStorage.setItem('arcodds_positions', JSON.stringify(positions));
+        const tx = await window.PredictArcContracts.placeBet(activeMarket.id, side, amt);
+        const positions = JSON.parse(localStorage.getItem('PredictArc_positions') || '[]');
+        positions.unshift({
+          marketId: activeMarket.id,
+          question: activeMarket.q,
+          side: activeSide.toUpperCase(),
+          amount: amt,
+          entryOdds: activeSide === 'yes' ? activeMarket.yes : 100 - activeMarket.yes,
+          txHash: tx.hash,
+          timestamp: Date.now(),
+        });
+        localStorage.setItem('PredictArc_positions', JSON.stringify(positions));
+        hideConfirm();
+        document.getElementById('betAmount').value = '';
+        updateSummary();
         alert('Bet submitted: ' + tx.hash);
       } catch (err) {
         alert(err.message || 'Bet failed');
+      } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = originalText || `Confirm ${activeSide.toUpperCase()}`;
       }
     }
 
@@ -787,7 +855,7 @@
 
     async function connectWallet() {
       try {
-        await window.ArcOddsApp.ensureArcWallet();
+        await window.PredictArcApp.ensureArcWallet();
         walletConnected = true;
         document.getElementById('walletWarn').style.display = 'none';
       } catch (err) {
@@ -796,30 +864,30 @@
     }
 
     function hydrateMarket() {
-      activeMarket = window.ArcOddsApp.getMarketFromUrl();
+      activeMarket = window.PredictArcApp.getMarketFromUrl();
       const noPct = 100 - activeMarket.yes;
-      document.title = `${activeMarket.q} — ArcOdds`;
+      document.title = `${activeMarket.q} — PredictArc`;
       document.querySelector('.breadcrumb span:last-child').textContent = `Market #${activeMarket.id}`;
       document.querySelector('.market-tag').textContent = activeMarket.cat;
       document.getElementById('marketHeaderImage').src = activeMarket.image;
       document.querySelector('.market-title').textContent = activeMarket.q;
       const metaVals = document.querySelectorAll('.meta-val');
-      metaVals[0].textContent = activeMarket.vol.replace('K', ',000');
+      metaVals[0].textContent = activeMarket.vol;
       metaVals[1].textContent = activeMarket.liquidity;
       metaVals[2].textContent = activeMarket.bettors;
       metaVals[3].textContent = activeMarket.closes;
       metaVals[4].textContent = activeMarket.creator;
       document.querySelector('.big-odd.yes .big-odd-pct').textContent = `${activeMarket.yes}%`;
       document.querySelector('.big-odd.no .big-odd-pct').textContent = `${noPct}%`;
-      document.getElementById('betSubmitYes').textContent = `Bet YES — ${activeMarket.yes}%`;
-      document.getElementById('betSubmitNo').textContent = `Bet NO — ${noPct}%`;
+      document.getElementById('betSubmitYes').textContent = `Buy YES - ${activeMarket.yes}c`;
+      document.getElementById('betSubmitNo').textContent = `Buy NO - ${noPct}c`;
       document.querySelector('.modal-row:first-child span:last-child').textContent = `Market #${activeMarket.id}`;
       document.querySelector('.bet-card [style*="line-height"]').textContent = activeMarket.rule;
       document.querySelector('.chart-section').innerHTML = `<div class="chart-header"><div class="chart-title">Reference probability</div><div class="odds-live">LIVE</div></div>
         <div style="padding:24px 0 8px;font-size:32px;font-weight:700;color:var(--green)">${activeMarket.yes}% YES</div>
-        <div style="font-size:13px;color:var(--text2);line-height:1.7">${activeMarket.source === 'ArcOdds on-chain odds' ? 'Odds are calculated directly from the YES and NO pools on the ArcOdds contract.' : 'Current discovery odds are refreshed from a public reference feed until the ArcOdds contract is deployed.'}</div>`;
+        <div style="font-size:13px;color:var(--text2);line-height:1.7">${activeMarket.source === 'PredictArc on-chain odds' ? 'Odds are calculated directly from the YES and NO pools on the PredictArc contract.' : 'Current discovery odds are refreshed from a public reference feed until the PredictArc contract is deployed.'}</div>`;
       document.querySelector('.activity-section').innerHTML = `<div class="activity-head">Arc Testnet Activity</div>
-        <div style="padding:28px 20px;color:var(--text3);font-size:13px;text-align:center">No confirmed ArcOdds trades for this market yet.</div>`;
+        <div style="padding:28px 20px;color:var(--text3);font-size:13px;text-align:center">No confirmed PredictArc trades for this market yet.</div>`;
       const aiContent = document.getElementById('aiBriefContent');
       aiContent.className = 'ai-empty';
       aiContent.textContent = 'Get a neutral AI summary with YES/NO arguments, risks, and what to watch before placing a testnet trade.';
@@ -831,11 +899,11 @@
     window.addEventListener('load', () => {
       const saved = localStorage.getItem('theme');
       if (saved) { document.documentElement.dataset.theme = saved; document.getElementById('themeBtn').textContent = saved === 'light' ? '☀️' : '🌙'; }
-      walletConnected = Boolean(localStorage.getItem('arcodds_wallet'));
+      walletConnected = Boolean(localStorage.getItem('PredictArc_wallet'));
       if (walletConnected) document.getElementById('walletWarn').style.display = 'none';
       hydrateMarket();
     });
-    window.addEventListener('arcodds:markets-updated', hydrateMarket);
+    window.addEventListener('PredictArc:markets-updated', hydrateMarket);
 
     document.getElementById('modalOverlay').addEventListener('click', function(e) {
       if (e.target === this) hideConfirm();

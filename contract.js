@@ -1,5 +1,5 @@
 (function () {
-// ArcOdds Contract Config
+// PredictArc Contract Config
 const CONTRACT_ADDRESS = "0x19D638Af6b2De9718Eff496fc27a304155D6Af44"; // Arc testnet deployment ke baad yahan contract address paste karein.
 
 const CONTRACT_ABI = [
@@ -249,4 +249,5 @@ window.ArcOddsContracts = {
   getWalletPositions,
   hasContractAddress,
 };
+window.PredictArcContracts = window.ArcOddsContracts;
 })();

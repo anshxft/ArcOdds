@@ -97,7 +97,7 @@ function buildBriefPrompt(market) {
   };
 
   return [
-    "Create a short, neutral prediction-market brief for this ArcOdds testnet market.",
+    "Create a short, neutral prediction-market brief for this PredictArc testnet market.",
     "Do not give financial advice. Do not tell the user what to buy.",
     "Return only valid JSON with keys: summary, yesCase, noCase, risks, watchlist, disclaimer.",
     "summary must be one sentence.",
@@ -129,7 +129,7 @@ async function requestOpenRouterBrief(market, model) {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
       "HTTP-Referer": "http://localhost:4173",
-      "X-Title": "ArcOdds Testnet",
+      "X-Title": "PredictArc Testnet",
     },
     body: JSON.stringify({
       model,
@@ -268,7 +268,7 @@ async function handleAiBrief(req, res) {
 
 function serveStatic(req, res) {
   const url = new URL(req.url, `http://localhost:${PORT}`);
-  const cleanPath = decodeURIComponent(url.pathname === "/" ? "/arcodds.html" : url.pathname);
+  const cleanPath = decodeURIComponent(url.pathname === "/" ? "/predictarc.html" : url.pathname);
   const filePath = path.normalize(path.join(ROOT, cleanPath));
   if (!filePath.startsWith(ROOT)) {
     res.writeHead(403);
@@ -311,5 +311,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`ArcOdds AI server running at http://localhost:${PORT}`);
+  console.log(`PredictArc AI server running at http://localhost:${PORT}`);
 });
