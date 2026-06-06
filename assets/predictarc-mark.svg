@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="PredictArc mark">
+  <defs>
+    <linearGradient id="PredictArc-stroke" x1="12" y1="84" x2="84" y2="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8b5cf6"/>
+      <stop offset="0.52" stop-color="#22c55e"/>
+      <stop offset="1" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+  <path
+    d="M14 76V31L38 68V10L58 50L82 31V76L58 50L38 68L14 76Z"
+    fill="none"
+    stroke="url(#PredictArc-stroke)"
+    stroke-width="6"
+    stroke-linecap="square"
+    stroke-linejoin="miter"
+    vector-effect="non-scaling-stroke"
+  />
+</svg>
