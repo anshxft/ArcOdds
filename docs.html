@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Docs - PredictArc</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <script src="assets/vendor/ethers.umd.min.js"></script>
+  <script src="contract.js?v=20260606f"></script>
+  <script src="app.js?v=20260606f"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root, [data-theme="dark"] {
+      --bg:#0d0d12; --surface:#13131a; --surface2:#1a1a24; --purple:#6d28d9; --purple-light:#8b5cf6; --purple-faint:rgba(109,40,217,0.12);
+      --text:#f4f4f6; --text2:#a0a0b0; --text3:#5a5a70; --border:#1e1e2c; --border2:#252535; --green:#22c55e; --green-faint:rgba(34,197,94,0.1); --nav-bg:rgba(13,13,18,0.92);
+    }
+    [data-theme="light"] {
+      --bg:#f4f5f7; --surface:#fff; --surface2:#eef0f3; --purple:#6d28d9; --purple-light:#7c3aed; --purple-faint:rgba(109,40,217,0.08);
+      --text:#15151b; --text2:#555866; --text3:#8a8e9c; --border:#e2e4e9; --border2:#cfd3dc; --green:#15803d; --green-faint:rgba(21,128,61,0.08); --nav-bg:rgba(244,245,247,0.94);
+    }
+    body { background:var(--bg); color:var(--text); font-family:Inter,sans-serif; min-height:100vh; -webkit-font-smoothing:antialiased; }
+    nav { position:fixed; top:0; left:0; right:0; z-index:200; height:60px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; background:var(--nav-bg); backdrop-filter:blur(20px); border-bottom:1px solid var(--border); }
+    .nav-left { display:flex; align-items:center; gap:36px; }
+    .nav-logo { display:flex; align-items:center; gap:9px; text-decoration:none; color:var(--text); font-size:17px; font-weight:700; letter-spacing:-0.3px; }
+    .nav-logo img { width:34px; height:34px; object-fit:contain; filter:invert(1); }
+    [data-theme="light"] .nav-logo img { filter:none; }
+    .nav-logo span span { color:var(--purple-light); }
+    .nav-links { display:flex; gap:2px; list-style:none; }
+    .nav-links a { font-size:14px; color:var(--text2); text-decoration:none; padding:6px 12px; border-radius:8px; transition:all .15s; font-weight:500; }
+    .nav-links a:hover, .nav-links a.active { color:var(--text); background:var(--surface2); }
+    .nav-right { display:flex; align-items:center; gap:10px; }
+    .network-badge { display:flex; align-items:center; gap:7px; padding:6px 12px; background:var(--surface2); border:1px solid var(--border2); border-radius:8px; font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--text2); }
+    .net-dot { width:6px; height:6px; border-radius:50%; background:var(--green); box-shadow:0 0 6px var(--green); }
+    .theme-toggle { width:36px; height:36px; border-radius:8px; border:1px solid var(--border2); background:var(--surface2); color:var(--text2); font-size:16px; cursor:pointer; }
+    .btn-connect { padding:8px 18px; background:var(--purple); border:none; border-radius:8px; color:white; font-weight:600; font-size:13px; cursor:pointer; }
+    .btn-faucet, .x-btn, .doc-action { padding:9px 14px; background:var(--surface2); border:1px solid var(--border2); border-radius:9px; color:var(--text2); font-weight:700; font-size:13px; text-decoration:none; cursor:pointer; transition:all .18s; display:inline-flex; align-items:center; justify-content:center; gap:8px; }
+    .btn-faucet:hover, .x-btn:hover, .doc-action:hover { border-color:var(--purple-light); color:var(--text); transform:translateY(-1px); }
+    main { padding-top:60px; }
+    .page { max-width:1100px; margin:0 auto; padding:38px 32px 110px; }
+    .hero { display:grid; grid-template-columns:1.2fr .8fr; gap:22px; align-items:stretch; margin-bottom:22px; }
+    .hero-main, .side-card, .doc-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; }
+    .hero-main { padding:28px; }
+    .kicker { color:var(--purple-light); font-family:"JetBrains Mono",monospace; font-size:12px; font-weight:700; letter-spacing:.7px; text-transform:uppercase; margin-bottom:12px; }
+    h1 { font-size:34px; line-height:1.15; letter-spacing:-1px; margin-bottom:12px; }
+    .lead { color:var(--text2); font-size:15px; line-height:1.75; max-width:660px; }
+    .side-card { padding:22px; display:flex; flex-direction:column; gap:14px; }
+    .side-title { font-size:15px; font-weight:700; }
+    .side-copy { color:var(--text2); font-size:13px; line-height:1.65; }
+    .doc-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; }
+    .doc-card { padding:22px; }
+    .doc-card h2 { font-size:17px; letter-spacing:-0.3px; margin-bottom:10px; }
+    .doc-card p { color:var(--text2); font-size:14px; line-height:1.75; margin-bottom:12px; }
+    .doc-list { list-style:none; display:grid; gap:9px; color:var(--text2); font-size:13px; line-height:1.6; }
+    .doc-list li { position:relative; padding-left:16px; }
+    .doc-list li::before { content:''; position:absolute; left:0; top:8px; width:6px; height:6px; border-radius:50%; background:var(--purple-light); }
+    .code-line { font-family:"JetBrains Mono",monospace; color:var(--text); background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:9px 10px; font-size:12px; overflow:auto; }
+    .bottom-nav { display:none; position:fixed; bottom:0; left:0; right:0; z-index:200; background:var(--nav-bg); backdrop-filter:blur(20px); border-top:1px solid var(--border); padding:8px 0 20px; }
+    .bottom-nav-inner { display:flex; justify-content:space-around; align-items:center; }
+    .bnav-item { display:flex; flex-direction:column; align-items:center; gap:4px; padding:4px 16px; text-decoration:none; border-radius:10px; }
+    .bnav-icon { width:22px; height:22px; color:var(--text3); }
+    .bnav-label { font-size:10px; color:var(--text3); font-weight:500; }
+    .bnav-item.active .bnav-label, .bnav-item.active .bnav-icon { color:var(--purple-light); }
+    @media(max-width:900px) {
+      nav { padding:0 20px; }
+      .nav-links, .network-badge { display:none; }
+      .page { padding:26px 16px 110px; }
+      .hero, .doc-grid { grid-template-columns:1fr; }
+      .bottom-nav { display:block; }
+    }
+    @media(max-width:520px) {
+      nav { padding:0 14px; }
+      .nav-left { gap:12px; }
+      .nav-logo { font-size:16px; }
+      .nav-logo img { width:31px; height:31px; }
+      .btn-faucet { display:none; }
+      .btn-connect { padding:8px 12px; font-size:12px; }
+      .theme-toggle { width:34px; height:34px; }
+      .hero-main, .side-card, .doc-card { padding:20px; }
+      h1 { font-size:28px; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-left">
+      <a class="nav-logo" href="predictarc.html"><img src="assets/predictarc-bird.png" alt="PredictArc"/><span>Predict<span>Arc</span></span></a>
+      <ul class="nav-links">
+        <li><a href="predictarc.html">Home</a></li>
+        <li><a href="markets.html">Markets</a></li>
+        <li><a href="portfolio.html">Portfolio</a></li>
+        <li><a href="leaderboard.html">Status</a></li>
+        <li><a href="docs.html" class="active">Docs</a></li>
+      </ul>
+    </div>
+    <div class="nav-right">
+      <div class="network-badge"><div class="net-dot"></div>Arc Testnet</div>
+      <button class="btn-faucet" onclick="openArcFaucet()">Claim Faucet</button>
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">T</button>
+      <button class="btn-connect" onclick="connectWallet()" id="connectBtn">Connect Wallet</button>
+    </div>
+  </nav>
+
+  <main>
+    <div class="page">
+      <section class="hero">
+        <div class="hero-main">
+          <div class="kicker">PredictArc Docs</div>
+          <h1>Arc Testnet prediction markets with clean USDC flows.</h1>
+          <p class="lead">PredictArc is a testnet-first prediction market interface built around Arc Testnet. It combines public reference odds, wallet-based testnet trading, portfolio tracking, and AI market summaries in one lightweight product.</p>
+        </div>
+        <aside class="side-card">
+          <div class="side-title">Follow the builder</div>
+          <p class="side-copy">Updates, experiments, and launch notes will be shared from Alan's X account.</p>
+          <a class="x-btn" href="https://x.com/imalanxx" target="_blank" rel="noopener noreferrer">Open @imalanxx on X</a>
+        </aside>
+      </section>
+
+      <section class="doc-grid">
+        <article class="doc-card">
+          <h2>About Arc</h2>
+          <p>Arc Testnet is used here as the execution layer for wallet connection, testnet USDC movement, and prediction-market settlement experiments.</p>
+          <ul class="doc-list">
+            <li>Network name: Arc Testnet</li>
+            <li>RPC: https://rpc.testnet.arc.network</li>
+            <li>Chain ID: 5042002</li>
+            <li>Native token: USDC</li>
+          </ul>
+        </article>
+
+        <article class="doc-card">
+          <h2>How PredictArc Works</h2>
+          <p>Users browse markets, choose YES or NO, enter testnet USDC, and submit a position from a connected wallet.</p>
+          <ul class="doc-list">
+            <li>Reference probabilities help users understand current market sentiment.</li>
+            <li>Testnet positions are tracked in the Portfolio page.</li>
+            <li>Resolved winning positions can be claimed from the app flow.</li>
+          </ul>
+        </article>
+
+        <article class="doc-card">
+          <h2>Reference Odds</h2>
+          <p>Discovery markets use a public read-only reference feed. PredictArc does not pretend this feed is its own liquidity.</p>
+          <ul class="doc-list">
+            <li>Reference data can update as public market probabilities move.</li>
+            <li>Displayed testnet volume is separate from real-money market volume.</li>
+            <li>Arc testnet trading remains independent from the reference source.</li>
+          </ul>
+        </article>
+
+        <article class="doc-card">
+          <h2>Wallet And Faucet</h2>
+          <p>Connect a wallet, add Arc Testnet when prompted, then claim test USDC from the faucet.</p>
+          <div class="code-line">Faucet: https://faucet.circle.com</div>
+          <p style="margin-top:12px">The app button can connect and disconnect locally. To revoke wallet permissions completely, use MetaMask connected sites settings.</p>
+        </article>
+
+        <article class="doc-card">
+          <h2>AI Briefs</h2>
+          <p>The market detail page can generate neutral summaries with YES cases, NO cases, risks, and watchlists.</p>
+          <ul class="doc-list">
+            <li>OpenRouter can be used for the hosted free-model route.</li>
+            <li>If the API is missing, PredictArc shows a local preview instead of breaking.</li>
+            <li>AI output is informational only, not financial advice.</li>
+          </ul>
+        </article>
+
+        <article class="doc-card">
+          <h2>Testnet Safety</h2>
+          <p>PredictArc is built for testing product flow, not for real-money trading.</p>
+          <ul class="doc-list">
+            <li>Use a dedicated test wallet.</li>
+            <li>Do not upload private keys or API keys to GitHub.</li>
+            <li>Verify contract address, market rules, and resolution source before trading.</li>
+          </ul>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <div class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <a class="bnav-item" href="predictarc.html"><svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="bnav-label">Home</span></a>
+      <a class="bnav-item" href="markets.html"><svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="bnav-label">Markets</span></a>
+      <a class="bnav-item" href="portfolio.html"><svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span class="bnav-label">Portfolio</span></a>
+      <a class="bnav-item" href="leaderboard.html"><svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg><span class="bnav-label">Status</span></a>
+      <a class="bnav-item active" href="docs.html"><svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4v15.5A2.5 2.5 0 0 1 6.5 22H20V6a2 2 0 0 0-2-2H4z"/></svg><span class="bnav-label">Docs</span></a>
+    </div>
+  </div>
+
+  <script>
+    async function connectWallet() {
+      if (localStorage.getItem('PredictArc_wallet')) {
+        window.PredictArcApp.disconnectWallet();
+        return;
+      }
+      try { await window.PredictArcApp.ensureArcWallet(); }
+      catch (err) { alert(err.message || 'Wallet connection failed'); }
+    }
+    function toggleTheme() {
+      const html = document.documentElement;
+      const isDark = html.dataset.theme === 'dark';
+      html.dataset.theme = isDark ? 'light' : 'dark';
+      document.getElementById('themeBtn').textContent = 'T';
+      localStorage.setItem('theme', html.dataset.theme);
+    }
+    window.addEventListener('load', () => {
+      const saved = localStorage.getItem('theme');
+      if (saved) {
+        document.documentElement.dataset.theme = saved;
+        document.getElementById('themeBtn').textContent = 'T';
+      }
+    });
+  </script>
+</body>
+</html>

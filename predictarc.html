@@ -340,7 +340,7 @@
         <li><a href="markets.html">Markets</a></li>
         <li><a href="portfolio.html">Portfolio</a></li>
         <li><a href="leaderboard.html">Status</a></li>
-        <li><a href="#">Docs</a></li>
+        <li><a href="docs.html">Docs</a></li>
       </ul>
     </div>
     <div class="nav-right">
@@ -363,7 +363,7 @@
     <a href="portfolio.html">Portfolio</a>
     <a href="leaderboard.html">Status</a>
     <a href="#" onclick="openArcFaucet(); return false;">Claim Faucet</a>
-    <a href="#">Docs</a>
+    <a href="docs.html">Docs</a>
     <div class="mobile-menu-footer">
       <div class="network-badge" style="display:flex"><div class="net-dot"></div>Arc Testnet</div>
       <button class="theme-toggle" onclick="toggleTheme()" style="margin-left:auto">🌙</button>
@@ -460,7 +460,7 @@
       <li><a href="markets.html">Markets</a></li>
       <li><a href="portfolio.html">Portfolio</a></li>
       <li><a href="leaderboard.html">Status</a></li>
-      <li><a href="#">Docs</a></li>
+      <li><a href="docs.html">Docs</a></li>
       <li><a href="#">GitHub</a></li>
       <li><a href="#">Discord</a></li>
     </ul>
@@ -519,6 +519,10 @@
 
     // Wallet
     async function connectWallet(){
+      if (localStorage.getItem('PredictArc_wallet')) {
+        window.PredictArcApp.disconnectWallet();
+        return;
+      }
       try {
         await window.PredictArcApp.ensureArcWallet();
       } catch (err) {
@@ -652,9 +656,9 @@
         <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
         <span class="bnav-label">Status</span>
       </a>
-      <a class="bnav-item" href="#" onclick="toggleTheme(); return false;" id="themeBnavItem">
-        <svg class="bnav-icon" id="themeIconBottom" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-        <span class="bnav-label">Theme</span>
+      <a class="bnav-item" href="docs.html">
+        <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4v15.5A2.5 2.5 0 0 1 6.5 22H20V6a2 2 0 0 0-2-2H4z"/></svg>
+        <span class="bnav-label">Docs</span>
       </a>
     </div>
   </div>

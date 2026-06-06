@@ -204,6 +204,7 @@ function setConnectedWallet(address) {
   localStorage.setItem("PredictArc_wallet", address);
   document.querySelectorAll(".btn-connect").forEach((button) => {
     button.textContent = formatShortAddress(address);
+    button.title = "Disconnect wallet";
     button.style.cssText = "background:var(--surface2);border:1px solid var(--border2);font-family:JetBrains Mono,monospace;font-size:12px;box-shadow:none";
   });
 }
@@ -223,8 +224,14 @@ function clearConnectedWallet() {
   localStorage.removeItem("PredictArc_wallet");
   document.querySelectorAll(".btn-connect").forEach((button) => {
     button.textContent = "Connect Wallet";
+    button.title = "Connect wallet";
     button.removeAttribute("style");
   });
+}
+
+function disconnectWallet() {
+  clearConnectedWallet();
+  window.dispatchEvent(new CustomEvent("PredictArc:wallet-disconnected"));
 }
 
 async function ensureArcWallet() {
@@ -249,6 +256,16 @@ async function ensureArcWallet() {
 function restoreWalletLabel() {
   const saved = localStorage.getItem("PredictArc_wallet");
   if (saved) setConnectedWallet(saved);
+}
+
+function updateLogoFallbacks() {
+  document.querySelectorAll('img[src*="predictarc-bird.png"]').forEach((img) => {
+    img.onerror = () => {
+      img.onerror = null;
+      img.src = "assets/predictarc-mark.svg";
+      img.style.filter = "none";
+    };
+  });
 }
 
 function openArcFaucet() {
@@ -280,13 +297,16 @@ window.PredictArcApp = {
   restoreWalletLabel,
   setConnectedWallet,
   clearConnectedWallet,
+  disconnectWallet,
   updateNetworkLabels,
+  updateLogoFallbacks,
 };
 
 window.openArcFaucet = openArcFaucet;
 
 window.addEventListener("DOMContentLoaded", () => {
   migrateBrandStorage();
+  updateLogoFallbacks();
   restoreWalletLabel();
   updateNetworkLabels();
   const loadMarkets = window.PredictArcContracts && window.PredictArcContracts.hasContractAddress()

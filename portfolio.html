@@ -211,7 +211,7 @@
         <li><a href="markets.html">Markets</a></li>
         <li><a href="#" class="active">Portfolio</a></li>
         <li><a href="leaderboard.html">Status</a></li>
-        <li><a href="#">Docs</a></li>
+        <li><a href="docs.html">Docs</a></li>
       </ul>
     </div>
     <div class="nav-right">
@@ -469,6 +469,11 @@
     }
 
     async function connectWallet() {
+      if (localStorage.getItem('PredictArc_wallet')) {
+        window.PredictArcApp.disconnectWallet();
+        await renderRealPortfolio();
+        return;
+      }
       try {
         await window.PredictArcApp.ensureArcWallet();
         document.getElementById('connectPrompt').classList.remove('show');

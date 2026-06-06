@@ -368,7 +368,7 @@
         <li><a href="#" class="active">Markets</a></li>
         <li><a href="portfolio.html">Portfolio</a></li>
         <li><a href="leaderboard.html">Status</a></li>
-        <li><a href="#">Docs</a></li>
+        <li><a href="docs.html">Docs</a></li>
       </ul>
     </div>
     <div class="nav-right">
@@ -468,7 +468,7 @@
     <ul class="footer-links">
       <li><a href="#">Markets</a></li>
       <li><a href="portfolio.html">Portfolio</a></li>
-      <li><a href="#">Docs</a></li>
+      <li><a href="docs.html">Docs</a></li>
       <li><a href="#">GitHub</a></li>
       <li><a href="#">Discord</a></li>
     </ul>
@@ -592,6 +592,10 @@
     }
 
     async function connectWallet() {
+      if (localStorage.getItem('PredictArc_wallet')) {
+        window.PredictArcApp.disconnectWallet();
+        return;
+      }
       try {
         await window.PredictArcApp.ensureArcWallet();
       } catch (err) {

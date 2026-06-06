@@ -92,7 +92,7 @@
         <li><a href="markets.html">Markets</a></li>
         <li><a href="portfolio.html">Portfolio</a></li>
         <li><a href="#" class="active">Status</a></li>
-        <li><a href="#">Docs</a></li>
+        <li><a href="docs.html">Docs</a></li>
       </ul>
     </div>
     <div class="nav-right">
@@ -136,6 +136,10 @@
 
   <script>
     async function connectWallet() {
+      if (localStorage.getItem('PredictArc_wallet')) {
+        window.PredictArcApp.disconnectWallet();
+        return;
+      }
       try { await window.PredictArcApp.ensureArcWallet(); }
       catch (err) { alert(err.message || 'Wallet connection failed'); }
     }
