@@ -7,8 +7,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="assets/vendor/ethers.umd.min.js"></script>
-  <script src="contract.js?v=20260606h"></script>
-  <script src="app.js?v=20260606h"></script>
+  <script src="contract.js?v=20260606i"></script>
+  <script src="app.js?v=20260606i"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root, [data-theme="dark"] {
@@ -351,6 +351,14 @@
     let pnlChart = null;
     let pieChart = null;
     let lastEnrichedPositions = [];
+    let portfolioRenderId = 0;
+
+    function withTimeout(promise, ms, label) {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out`)), ms)),
+      ]);
+    }
 
     function switchTab(tab, el) {
       document.querySelectorAll('.table-tab').forEach(t => t.classList.remove('active'));
@@ -484,6 +492,7 @@
     }
 
     async function renderRealPortfolio() {
+      const renderId = ++portfolioRenderId;
       document.querySelector('.stats-row').style.display = 'none';
       document.querySelector('.grid-2').style.display = 'none';
       document.querySelector('.table-card').style.display = 'none';
@@ -496,11 +505,14 @@
         return;
       }
       document.getElementById('connectPrompt').classList.remove('show');
+      state.style.display = 'block';
+      state.innerHTML = `<h3>Loading portfolio</h3><p>Reading your Arc Testnet positions. This usually takes a few seconds.</p>`;
       const localPositions = JSON.parse(localStorage.getItem('PredictArc_positions') || '[]');
       let positions = localPositions;
       if (account && window.PredictArcContracts.hasContractAddress()) {
         try {
-          const onchainPositions = await window.PredictArcContracts.getWalletPositions(account);
+          const onchainPositions = await withTimeout(window.PredictArcContracts.getWalletPositions(account), 5500, 'Portfolio');
+          if (renderId !== portfolioRenderId) return;
           positions = onchainPositions.map((position) => {
             const match = localPositions.find((item) => Number(item.marketId) === Number(position.marketId) && item.side === position.side);
             return { ...position, entryOdds: match?.entryOdds, txHash: match?.txHash, timestamp: match?.timestamp };
@@ -509,6 +521,7 @@
           console.warn('Unable to load on-chain positions:', error.message);
         }
       }
+      if (renderId !== portfolioRenderId) return;
       state.style.display = 'block';
       if (!positions.length) {
         state.innerHTML = `<h3>No testnet positions yet</h3><p>Once a trade is confirmed on Arc Testnet, the position and its current on-chain odds will appear here.</p><button class="btn-primary" onclick="window.location.href='markets.html'">Explore Markets</button>`;

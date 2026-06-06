@@ -196,10 +196,10 @@ async function claimWinnings(marketId) {
 async function getOnchainMarkets() {
   const contract = getReadContract();
   const count = Number((await contract.marketCount()).toString());
-  const markets = [];
-  for (let id = 1; id <= count; id += 1) {
+  const ids = Array.from({ length: count }, (_, index) => index + 1);
+  return Promise.all(ids.map(async (id) => {
     const [market, odds] = await Promise.all([contract.getMarket(id), contract.getOdds(id)]);
-    markets.push({
+    return {
       id,
       question: market.question,
       category: market.category,
@@ -210,21 +210,21 @@ async function getOnchainMarkets() {
       creator: market.creator,
       yesOdds: Number(odds.yesOdds.toString()),
       noOdds: Number(odds.noOdds.toString()),
-    });
-  }
-  return markets;
+    };
+  }));
 }
 
 async function getWalletPositions(account) {
   const contract = getReadContract();
   const count = Number((await contract.marketCount()).toString());
-  const positions = [];
-  for (let id = 1; id <= count; id += 1) {
-    const [market, position] = await Promise.all([contract.getMarket(id), contract.getPosition(id, account)]);
+  const ids = Array.from({ length: count }, (_, index) => index + 1);
+  const positions = await Promise.all(ids.map(async (id) => {
+    const position = await contract.getPosition(id, account);
     const yesAmount = Number(formatNative(position.yesAmount));
     const noAmount = Number(formatNative(position.noAmount));
     if (yesAmount > 0 || noAmount > 0) {
-      positions.push({
+      const market = await contract.getMarket(id);
+      return {
         marketId: id,
         question: market.question,
         side: yesAmount > 0 ? "YES" : "NO",
@@ -232,10 +232,11 @@ async function getWalletPositions(account) {
         claimed: position.hasClaimed,
         status: Number(market.status),
         outcome: market.outcome ? "YES" : "NO",
-      });
+      };
     }
-  }
-  return positions;
+    return null;
+  }));
+  return positions.filter(Boolean);
 }
 
 window.ArcOddsContracts = {
