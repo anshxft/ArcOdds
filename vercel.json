@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm install --prefix app",
+  "buildCommand": "npm run build --prefix app",
+  "outputDirectory": "app/dist",
+  "redirects": [
+    { "source": "/market-detail.html", "has": [{ "type": "query", "key": "id", "value": "(?<id>[0-9]+)" }], "destination": "/market/v1-:id", "permanent": true },
+    { "source": "/market-detail.html", "destination": "/markets", "permanent": true },
+    { "source": "/(predictarc|arcodds|index).html", "destination": "/", "permanent": true },
+    { "source": "/markets.html", "destination": "/markets", "permanent": true },
+    { "source": "/portfolio.html", "destination": "/portfolio", "permanent": true },
+    { "source": "/leaderboard.html", "destination": "/status", "permanent": true },
+    { "source": "/docs.html", "destination": "/docs", "permanent": true }
+  ],
+  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }]
+}

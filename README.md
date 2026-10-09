@@ -10,7 +10,7 @@ npm install
 npm run dev
 ```
 
-Deploy (Vercel): import the repo, set **Root Directory** to `app` (framework: Vite), and add the `OPENROUTER_API_KEY` environment variable for AI briefs. `app/vercel.json` sends every non-`/api` path to the SPA; `app/api/ai-brief.js` is the AI brief function.
+Deploy (Vercel project `arc-odds`, domain arcpredict.xyz): pushes to `main` on GitHub deploy automatically. The root `vercel.json` builds `app/` and serves `app/dist`, sends app routes to the SPA, and redirects the old `.html` URLs. `api/ai-brief.js` is the AI brief function; set `OPENROUTER_API_KEY` in the Vercel project for live briefs.
 
 Owner tools: connect the contract owner's wallet and open `/admin` to create v2 markets, resolve closed ones, or cancel (refund) a market.
 
