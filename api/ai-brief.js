@@ -1,8 +1,10 @@
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "google/gemma-4-26b-a4b-it:free";
+// Free OpenRouter models come and go, so try several (checked against /api/v1/models, Oct 2026).
 const OPENROUTER_FALLBACK_MODELS = [
   OPENROUTER_MODEL,
+  "google/gemma-4-26b-a4b-it:free",
   "google/gemma-4-31b-it:free",
-  "openai/gpt-oss-20b:free",
+  "nvidia/nemotron-3-super-120b-a12b:free",
 ].filter((model, index, models) => model && models.indexOf(model) === index);
 
 function buildBriefPrompt(market) {
@@ -94,8 +96,8 @@ async function createBrief(market) {
       return await requestOpenRouterBrief(market, model);
     } catch (error) {
       lastError = error;
-      const message = String(error.message || "").toLowerCase();
-      if (error.status !== 429 && !message.includes("rate-limited")) break;
+      // A bad key won't work on any model; anything else (retired model, rate limit, bad output) tries the next.
+      if (error.status === 401 || error.status === 403) break;
     }
   }
   throw lastError || new Error("OpenRouter request failed");
