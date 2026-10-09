@@ -18,6 +18,7 @@ function setup(canvas) {
   canvas.setAttribute("role", "img");
   if (!canvas.hasAttribute("aria-label")) canvas.setAttribute("aria-label", "Loading");
   canvas._orb = { ctx: canvas.getContext("2d"), size, dpr };
+  paint(canvas, performance.now() / 1000); // first frame right away, before the observer reports
   observer.observe(canvas);
 }
 
