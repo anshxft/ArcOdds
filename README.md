@@ -14,7 +14,10 @@ PredictArc is a simple prediction market MVP built for Arc Testnet.
 
 Market discovery questions and displayed probabilities refresh from Polymarket's public read-only Gamma API. PredictArc testnet trades, volume, and settlement remain separate.
 
-Current Arc Testnet deployment: `0x19D638Af6b2De9718Eff496fc27a304155D6Af44`
+Arc Testnet deployments (both verified on the explorer):
+
+- `PredictArcV2` (current): `0xfadbE0877379F3a6CBC8A612b9B28b1B25baa796`. Rules on-chain, cancel + refunds, auto-refund for one-sided markets, 30-day stale-market escape hatch, two-step ownership. Deploy with `npx hardhat run scripts/deploy-v2.js --network arcTestnet` (markets in `scripts/markets-v2.js`).
+- `ArcOdds` (legacy v1): `0x19D638Af6b2De9718Eff496fc27a304155D6Af44`. Existing positions stay claimable; no new bets from the new app.
 
 ## Arc Testnet
 
@@ -61,7 +64,9 @@ Includes a check that the website's payout estimate matches the contract's real 
 After its deadline, resolve a market from the owner wallet:
 
 ```bash
-MARKET=1 OUTCOME=yes npm run resolve:arc
+MARKET=1 OUTCOME=yes npm run resolve:arc            # v1
+VERSION=2 MARKET=1 OUTCOME=yes npm run resolve:arc  # v2
+VERSION=2 MARKET=1 CANCEL="reason" npm run resolve:arc  # v2: void, bettors refund
 ```
 
 Winning users can then claim from the Portfolio page.

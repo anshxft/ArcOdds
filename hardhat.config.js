@@ -22,4 +22,16 @@ module.exports = {
       accounts: DEPLOYER_KEY ? [DEPLOYER_KEY] : [],
     },
   },
+  // Arc's explorer is Blockscout: `npx hardhat verify --network arcTestnet <address>`
+  etherscan: {
+    apiKey: { arcTestnet: "blockscout" },
+    customChains: [
+      {
+        network: "arcTestnet",
+        chainId: 5042002,
+        urls: { apiURL: "https://explorer.testnet.arc.io/api", browserURL: "https://explorer.testnet.arc.io" },
+      },
+    ],
+  },
+  sourcify: { enabled: false },
 };
