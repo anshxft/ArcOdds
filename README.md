@@ -61,7 +61,7 @@ Includes a check that the website's payout estimate matches the contract's real 
 After its deadline, resolve a market from the owner wallet:
 
 ```bash
-npm run resolve:arc -- 1 yes
+MARKET=1 OUTCOME=yes npm run resolve:arc
 ```
 
 Winning users can then claim from the Portfolio page.
