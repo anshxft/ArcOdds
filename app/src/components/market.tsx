@@ -5,9 +5,9 @@ import { Asterisk, Label, Orb } from '@/components/site'
 import type { Bet, Market } from '@/lib/chain'
 import { formatDate, formatUsdc, marketImage, marketState, stateLabel } from '@/lib/markets'
 
-export function Halftone({ src, alt = '', className = '', parallax = false, eager = false }: { src: string; alt?: string; className?: string; parallax?: boolean; eager?: boolean }) {
+export function Halftone({ src, alt = '', className = '', parallax = false, eager = false, color = false }: { src: string; alt?: string; className?: string; parallax?: boolean; eager?: boolean; color?: boolean }) {
   return (
-    <div className={`halftone ${className}`}>
+    <div className={`halftone ${color ? 'in-color' : ''} ${className}`}>
       <img src={src} alt={alt} loading={eager ? 'eager' : 'lazy'} decoding="async" className={parallax ? 'scale-[1.15]' : ''} data-parallax={parallax || undefined} />
     </div>
   )
@@ -66,7 +66,7 @@ export function MarketCard({ market, bettors, featured = false }: { market: Mark
           gridSize={10}
           pixelColor="#0b0b0b"
           animationStepDuration={0.35}
-          firstContent={<Halftone src={marketImage(market.id)} className="size-full" />}
+          firstContent={<Halftone src={marketImage(market.id)} className="size-full" color />}
           secondContent={
             <div className="flex size-full flex-col justify-between bg-ink p-4 text-paper">
               <span className="label">Pool odds</span>
@@ -76,7 +76,7 @@ export function MarketCard({ market, bettors, featured = false }: { market: Mark
           }
         />
       ) : (
-        <Halftone src={marketImage(market.id)} className="aspect-[16/9] border-b border-line" />
+        <Halftone src={marketImage(market.id)} className="aspect-[16/9] border-b border-line" color />
       )}
       <CardBody market={market} bettors={bettors} />
     </Link>

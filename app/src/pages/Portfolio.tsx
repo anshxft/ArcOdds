@@ -108,7 +108,7 @@ export default function Portfolio() {
           <section className="frame border-t-0">
             {rows.length ? rows.map((row) => (
               <div key={`${row.marketId}-${row.side}`} className="cell grid grid-cols-[64px_1fr] items-center gap-4 p-4 md:grid-cols-[88px_1fr_90px_140px_140px_150px]" data-reveal>
-                <Halftone src={marketImage(row.marketId)} className="aspect-square" />
+                <Halftone src={marketImage(row.marketId)} className="aspect-square" color />
                 <Link to={`/market/${row.marketId}`} className="min-w-0 hover:underline">
                   <span className="block truncate font-medium">{row.market.question}</span>
                   <Label>{row.market.category} · {stateLabel(row.market)}</Label>
