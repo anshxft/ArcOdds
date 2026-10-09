@@ -2,10 +2,10 @@ import { useMemo, useRef, useState } from 'react'
 import SplitText from '@/components/SplitText'
 import { Decode, Label, Orb } from '@/components/site'
 import { MarketCard } from '@/components/market'
-import { bettorCount, marketState, useMarkets } from '@/lib/markets'
+import { bettorCount, byRelevance, marketState, useMarkets } from '@/lib/markets'
 import { useBoot, useScrollMotion } from '@/lib/motion'
 
-const SORTS = { volume: 'Volume', closing: 'Closing soon', yes: 'Yes %' } as const
+const SORTS = { volume: 'Featured', closing: 'Closing soon', yes: 'Yes %' } as const
 type Sort = keyof typeof SORTS
 
 export default function Markets() {
@@ -21,9 +21,9 @@ export default function Markets() {
   const list = markets
     .filter((market) => (category === 'all' || market.category === category) && market.question.toLowerCase().includes(query.toLowerCase()))
     .sort((a, b) => {
-      if (sort === 'closing') return a.deadline - b.deadline
+      if (sort === 'closing') return Number(marketState(a) !== 'open') - Number(marketState(b) !== 'open') || a.deadline - b.deadline
       if (sort === 'yes') return b.yesOdds - a.yesOdds
-      return b.volume - a.volume
+      return byRelevance(a, b)
     })
   const open = markets.filter((market) => marketState(market) === 'open').length
 
@@ -85,7 +85,7 @@ export default function Markets() {
         )}
         {error && !markets.length && <p className="cell col-span-full p-10 text-sm">Could not reach Arc Testnet: {error}</p>}
         {!loading && !list.length && !error && <p className="cell col-span-full p-10 text-sm text-muted">No markets match. Try another search or category.</p>}
-        {list.map((market) => <MarketCard key={market.id} market={market} bettors={bettorCount(bets, market.id)} />)}
+        {list.map((market) => <MarketCard key={market.key} market={market} bettors={bettorCount(bets, market.key)} />)}
       </section>
     </div>
   )

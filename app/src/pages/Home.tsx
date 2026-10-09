@@ -8,15 +8,15 @@ import SplitText from '@/components/SplitText'
 import { Asterisk, Decode, Label, Orb } from '@/components/site'
 import { Halftone, MarketCard } from '@/components/market'
 import { ARC, txUrl } from '@/lib/chain'
-import { bettorCount, marketImage, marketState, shortAddress, timeAgo, useMarkets } from '@/lib/markets'
+import { bettorCount, byRelevance, marketImage, marketState, shortAddress, timeAgo, useMarkets } from '@/lib/markets'
 import { useBoot, useInView, useMarquee, useScrollMotion } from '@/lib/motion'
 
 function Ticker() {
   const { markets } = useMarkets()
   const track = useRef<HTMLDivElement>(null)
   useMarquee(track, markets.length > 0)
-  const items = markets.map((market) => (
-    <Link key={market.id} to={`/market/${market.id}`} className="label flex shrink-0 items-center gap-3 px-6 py-3 hover:bg-ink hover:text-paper">
+  const items = markets.filter((market) => marketState(market) === 'open').sort(byRelevance).map((market) => (
+    <Link key={market.key} to={`/market/${market.key}`} className="label flex shrink-0 items-center gap-3 px-6 py-3 hover:bg-ink hover:text-paper">
       <Asterisk className="size-3" />
       <span className="normal-case tracking-normal">{market.question}</span>
       <span className="bg-ink px-1.5 text-paper">{market.yesOdds}%</span>
@@ -62,8 +62,9 @@ export default function Home() {
   useBoot(scope)
   useScrollMotion(scope, ready)
 
-  const featured = [...markets].sort((a, b) => b.volume - a.volume).slice(0, 3)
+  const featured = markets.filter((market) => marketState(market) === 'open').sort(byRelevance).slice(0, 3)
   const awaiting = markets.filter((market) => marketState(market) === 'closed')
+  const resolved = markets.filter((market) => market.status === 1).sort((a, b) => b.deadline - a.deadline).slice(0, 4)
   const stats = [
     ['Markets', markets.length, '', 'On the Arc contract'],
     ['Volume', Math.round(markets.reduce((sum, m) => sum + m.volume, 0)), ' USDC', 'Test USDC in pools'],
@@ -86,14 +87,14 @@ export default function Home() {
       {/* Boot strip: scans and captions, as in the reference header row */}
       <section className="frame grid grid-cols-2 border-t-0 md:grid-cols-12">
         <div className="cell col-span-1 h-28 md:col-span-4" data-boot>
-          <Halftone src={marketImage(1)} className="size-full" eager />
+          <Halftone src={marketImage({ question: 'bitcoin', category: 'crypto' })} className="size-full" eager />
           <Label className="absolute right-2 bottom-2 bg-paper px-1">Market 01 / crypto</Label>
         </div>
         <div className="cell hidden items-center justify-center md:col-span-4 md:flex" data-boot>
           <Decode text="Final / Market / Design 2026" className="text-muted" />
         </div>
         <div className="cell col-span-1 h-28 md:col-span-4" data-boot>
-          <Halftone src={marketImage(10)} className="size-full" eager />
+          <Halftone src={marketImage({ question: 'world cup', category: 'sports' })} className="size-full" eager />
           <Label className="absolute top-2 left-2 bg-paper px-1">Market 10 / sports</Label>
         </div>
       </section>
@@ -164,11 +165,11 @@ export default function Home() {
       <Ticker />
 
       <div className="mt-20" />
-      <SectionHead kicker="Most traded / live pools" title="Featured predictions" action={<Link to="/markets" className="press label hover-ink border border-line-strong px-4 py-2.5">All markets</Link>} />
+      <SectionHead kicker="Live / v2 contract / rules on-chain" title="Fresh predictions" action={<Link to="/markets" className="press label hover-ink border border-line-strong px-4 py-2.5">All markets</Link>} />
       <section className="frame grid border-t-0 md:grid-cols-3">
         {loading
           ? <div className="cell col-span-full flex items-center justify-center gap-3 p-16"><Orb state="searching" label="Loading markets" /><Label>Reading Arc Testnet…</Label></div>
-          : featured.map((market) => <MarketCard key={market.id} market={market} bettors={bettorCount(bets, market.id)} featured />)}
+          : featured.map((market) => <MarketCard key={market.key} market={market} bettors={bettorCount(bets, market.key)} featured />)}
       </section>
 
       {awaiting.length > 0 && (
@@ -176,7 +177,17 @@ export default function Home() {
           <div className="mt-20" />
           <SectionHead kicker="Deadline passed / trading closed" title="Awaiting resolution" />
           <section className="frame grid border-t-0 sm:grid-cols-2 xl:grid-cols-4">
-            {awaiting.map((market) => <MarketCard key={market.id} market={market} bettors={bettorCount(bets, market.id)} />)}
+            {awaiting.map((market) => <MarketCard key={market.key} market={market} bettors={bettorCount(bets, market.key)} />)}
+          </section>
+        </>
+      )}
+
+      {resolved.length > 0 && (
+        <>
+          <div className="mt-20" />
+          <SectionHead kicker="Settled / outcome on-chain" title="Recently resolved" />
+          <section className="frame grid border-t-0 sm:grid-cols-2 xl:grid-cols-4">
+            {resolved.map((market) => <MarketCard key={market.key} market={market} bettors={bettorCount(bets, market.key)} />)}
           </section>
         </>
       )}
@@ -187,11 +198,11 @@ export default function Home() {
         <div className="cell" data-reveal>
           <div className="label border-b border-line px-5 py-3 text-muted">Latest bets</div>
           {latest.length ? latest.map((bet, index) => {
-            const market = markets.find((m) => m.id === bet.marketId)
+            const market = markets.find((m) => m.key === bet.key)
             return (
               <a key={index} href={bet.txHash ? txUrl(bet.txHash) : undefined} target="_blank" rel="noreferrer" className="grid grid-cols-[52px_1fr_auto] items-center gap-3 border-b border-line px-5 py-3 last:border-b-0 hover:bg-paper-2">
                 <span className={`label px-1.5 py-0.5 text-center ${bet.side === 'YES' ? 'bg-ink text-paper' : 'bg-signal text-on-signal'}`}>{bet.side}</span>
-                <span className="truncate text-sm"><span className="font-mono">{shortAddress(bet.user)}</span> · {market?.question ?? `Market ${bet.marketId}`}</span>
+                <span className="truncate text-sm"><span className="font-mono">{shortAddress(bet.user)}</span> · {market?.question ?? bet.key}</span>
                 <span className="label text-muted">{bet.amount} USDC · {timeAgo(bet.time)}</span>
               </a>
             )

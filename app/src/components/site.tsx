@@ -7,7 +7,7 @@ import { ThinkingOrb } from 'thinking-orbs'
 import Noise from '@/components/Noise'
 import VariableProximity from '@/components/VariableProximity'
 import DecryptedText from '@/components/DecryptedText'
-import { ARC } from '@/lib/chain'
+import { ARC, CONTRACTS } from '@/lib/chain'
 import { shortAddress } from '@/lib/markets'
 import { gsap, reducedMotion } from '@/lib/motion'
 import { connect, disconnect, useWallet, walletOptions, type WalletOption } from '@/lib/wallet'
@@ -203,7 +203,7 @@ function Footer() {
         </div>
         <div className="cell flex flex-col gap-2 p-6">
           <Label>Elsewhere</Label>
-          <a href={`${ARC.explorer}/address/0x19D638Af6b2De9718Eff496fc27a304155D6Af44`} target="_blank" rel="noreferrer" className="link-line w-fit">Contract</a>
+          <a href={`${ARC.explorer}/address/${CONTRACTS[2].address}`} target="_blank" rel="noreferrer" className="link-line w-fit">Contract</a>
           <a href={ARC.faucet} target="_blank" rel="noreferrer" className="link-line w-fit">Faucet</a>
           <a href="https://x.com/imalanxx" target="_blank" rel="noreferrer" className="link-line w-fit">X (Twitter)</a>
         </div>

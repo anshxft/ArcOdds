@@ -2,11 +2,29 @@
 import { useSyncExternalStore } from 'react'
 import { fetchBets, fetchMarkets, type Bet, type Market } from './chain'
 
-const IMAGES = [
-  'classic-btc', 'market-eth-v3', 'classic-finance', 'classic-gold-fixed', 'classic-ai-fixed', 'market-apple-v3',
-  'classic-us-politics', 'classic-nato', 'classic-football-action', 'market-fifa-v3', 'classic-gta-wall', 'classic-cinema',
+// Picked from the question so any market, v1 or v2, gets a fitting photo.
+const IMAGE_RULES: [RegExp, string][] = [
+  [/bitcoin|btc/i, 'classic-btc'],
+  [/ethereum|\beth\b/i, 'market-eth-v3'],
+  [/gold/i, 'classic-gold-fixed'],
+  [/fed|rate|recession/i, 'classic-finance'],
+  [/house|senate|congress|midterm/i, 'classic-congress'],
+  [/nato/i, 'classic-nato'],
+  [/united states|election|president/i, 'classic-us-politics'],
+  [/gta|grand theft/i, 'classic-gta-wall'],
+  [/movie|film|box office/i, 'classic-cinema'],
+  [/apple|iphone/i, 'market-apple-v3'],
+  [/\bai\b|model|gemini|gpt|claude/i, 'classic-ai-fixed'],
+  [/world cup|fifa/i, 'market-fifa-v3'],
+  [/champions league|liga|premier|club/i, 'classic-football-action'],
 ]
-export const marketImage = (id: number) => `/markets/${IMAGES[(id - 1) % IMAGES.length]}.jpg`
+const CATEGORY_IMAGES: Record<string, string> = {
+  crypto: 'crypto', finance: 'finance', politics: 'politics', sports: 'sports', tech: 'tech', entertainment: 'entertainment',
+}
+export function marketImage(market: { question: string; category: string }) {
+  const hit = IMAGE_RULES.find(([pattern]) => pattern.test(market.question))
+  return `/markets/${hit?.[1] ?? CATEGORY_IMAGES[market.category] ?? 'finance'}.jpg`
+}
 
 export type MarketState = 'open' | 'closed' | 'resolved' | 'cancelled'
 export function marketState(market: Market, now = Date.now()): MarketState {
@@ -18,7 +36,7 @@ export function stateLabel(market: Market) {
   const state = marketState(market)
   if (state === 'resolved') return `Resolved ${market.outcome}`
   if (state === 'closed') return 'Awaiting resolution'
-  if (state === 'cancelled') return 'Cancelled'
+  if (state === 'cancelled') return 'Cancelled · refunds open'
   return 'Open'
 }
 
@@ -75,6 +93,9 @@ export function useMarkets() {
   return useSyncExternalStore(subscribe, () => snapshot)
 }
 
-export function bettorCount(bets: Bet[], marketId?: number) {
-  return new Set(bets.filter((bet) => marketId === undefined || bet.marketId === marketId).map((bet) => bet.user)).size
+export function bettorCount(bets: Bet[], key?: string) {
+  return new Set(bets.filter((bet) => key === undefined || bet.key === key).map((bet) => bet.user)).size
 }
+
+/** Newest contract first, then the busiest pools. */
+export const byRelevance = (a: Market, b: Market) => b.version - a.version || b.volume - a.volume

@@ -5,11 +5,11 @@ import SplitText from '@/components/SplitText'
 import CountUp from '@/components/CountUp'
 import { Decode, Label, Orb, WalletButton } from '@/components/site'
 import { Halftone } from '@/components/market'
-import { fetchPositions, txUrl, type Position } from '@/lib/chain'
+import { fetchPositions, txUrl, type Position, type Version } from '@/lib/chain'
 import { formatUsdc, marketImage, marketState, refreshMarkets, stateLabel, useMarkets } from '@/lib/markets'
 import { poolPayout } from '@/lib/payout'
 import { useBoot, useScrollMotion } from '@/lib/motion'
-import { claimWinnings, useWallet } from '@/lib/wallet'
+import { claimWinnings, refund, useWallet } from '@/lib/wallet'
 
 export default function Portfolio() {
   const scope = useRef<HTMLDivElement>(null)
@@ -33,29 +33,30 @@ export default function Portfolio() {
   }, [account, version])
 
   const rows = (positions ?? []).flatMap((position) => {
-    const market = markets.find((m) => m.id === position.marketId)
+    const market = markets.find((m) => m.key === position.key)
     if (!market) return []
     const sidePool = position.side === 'YES' ? market.yesPool : market.noPool
     const otherPool = position.side === 'YES' ? market.noPool : market.yesPool
     const ifRight = poolPayout(position.amount, sidePool, otherPool) || position.amount
     const resolved = market.status === 1
     const won = resolved && market.outcome === position.side
-    return [{ ...position, market, ifRight, resolved, won, claimable: won && !position.claimed }]
+    const refundable = market.status === 2 && !position.claimed
+    return [{ ...position, market, ifRight, resolved, won, refundable, claimable: won && !position.claimed }]
   })
   const staked = rows.reduce((sum, row) => sum + row.amount, 0)
   // Only one side of a market can win, so count the best side per market.
-  const best = Object.values(rows.filter((row) => !row.resolved).reduce<Record<number, number>>((map, row) => {
-    map[row.marketId] = Math.max(map[row.marketId] ?? 0, row.ifRight)
+  const best = Object.values(rows.filter((row) => !row.resolved && row.market.status !== 2).reduce<Record<string, number>>((map, row) => {
+    map[row.key] = Math.max(map[row.key] ?? 0, row.ifRight)
     return map
   }, {})).reduce((sum, value) => sum + value, 0)
   const claimable = rows.filter((row) => row.claimable).reduce((sum, row) => sum + row.ifRight, 0)
 
-  async function claim(marketId: number) {
-    const run = claimWinnings(marketId)
+  async function claim(version: Version, marketId: number, isRefund: boolean) {
+    const run = isRefund ? refund(marketId) : claimWinnings(version, marketId)
     toast.promise(run, {
-      loading: 'Claiming winnings…',
-      success: (hash) => ({ message: 'Winnings claimed', action: { label: 'View tx', onClick: () => window.open(txUrl(hash), '_blank', 'noopener') } }),
-      error: (error) => (error as Error).message?.split('(')[0] || 'Claim failed',
+      loading: isRefund ? 'Refunding your stake…' : 'Claiming winnings…',
+      success: (hash) => ({ message: isRefund ? 'Stake refunded' : 'Winnings claimed', action: { label: 'View tx', onClick: () => window.open(txUrl(hash), '_blank', 'noopener') } }),
+      error: (error) => (error as Error).message?.split('(')[0] || 'Transaction failed',
     })
     try {
       await run
@@ -107,20 +108,22 @@ export default function Portfolio() {
           </section>
           <section className="frame border-t-0">
             {rows.length ? rows.map((row) => (
-              <div key={`${row.marketId}-${row.side}`} className="cell grid grid-cols-[64px_1fr] items-center gap-4 p-4 md:grid-cols-[88px_1fr_90px_140px_140px_150px]" data-reveal>
-                <Halftone src={marketImage(row.marketId)} className="aspect-square" color />
-                <Link to={`/market/${row.marketId}`} className="min-w-0 hover:underline">
+              <div key={`${row.key}-${row.side}`} className="cell grid grid-cols-[64px_1fr] items-center gap-4 p-4 md:grid-cols-[88px_1fr_90px_140px_140px_150px]" data-reveal>
+                <Halftone src={marketImage(row.market)} className="aspect-square" color />
+                <Link to={`/market/${row.key}`} className="min-w-0 hover:underline">
                   <span className="block truncate font-medium">{row.market.question}</span>
-                  <Label>{row.market.category} · {stateLabel(row.market)}</Label>
+                  <Label>{row.market.category} · {stateLabel(row.market)}{row.version === 1 ? ' · legacy' : ''}</Label>
                 </Link>
                 <span className={`label w-fit px-2 py-0.5 ${row.side === 'YES' ? 'bg-ink text-paper' : 'bg-signal text-on-signal'}`}>{row.side}</span>
                 <div><Label>Staked</Label><div className="font-mono text-sm">{formatUsdc(row.amount)}</div></div>
                 <div><Label>{row.resolved ? 'Payout' : 'If right'}</Label><div className="font-mono text-sm">{row.resolved && !row.won ? '0 USDC' : formatUsdc(row.ifRight)}</div></div>
                 <div className="col-span-2 md:col-span-1">
-                  {row.claimable ? (
-                    <button type="button" onClick={() => claim(row.marketId)} className="press label w-full bg-signal px-3 py-3 text-on-signal">Claim</button>
+                  {row.claimable || row.refundable ? (
+                    <button type="button" onClick={() => claim(row.version, row.marketId, row.refundable)} className="press label w-full bg-signal px-3 py-3 text-on-signal">
+                      {row.refundable ? 'Refund stake' : 'Claim'}
+                    </button>
                   ) : (
-                    <span className="label text-muted">{row.claimed ? 'Claimed' : row.resolved ? (row.won ? 'Won' : 'Lost') : marketState(row.market) === 'closed' ? 'Awaiting resolution' : 'Open'}</span>
+                    <span className="label text-muted">{row.claimed ? (row.market.status === 2 ? 'Refunded' : 'Claimed') : row.resolved ? (row.won ? 'Won' : 'Lost') : marketState(row.market) === 'closed' ? 'Awaiting resolution' : 'Open'}</span>
                   )}
                 </div>
               </div>

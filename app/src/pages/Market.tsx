@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import SplitText from '@/components/SplitText'
 import { Asterisk, Decode, Label, Orb, WalletButton } from '@/components/site'
 import { BigOdds, Halftone, OddsBar, PoolChart } from '@/components/market'
-import { addressUrl, txUrl, type Market as MarketT, type Side } from '@/lib/chain'
+import { addressUrl, marketKey, parseMarketKey, txUrl, type Market as MarketT, type Side } from '@/lib/chain'
 import { bettorCount, formatDate, formatUsdc, marketImage, marketState, refreshMarkets, shortAddress, stateLabel, timeAgo, useMarkets } from '@/lib/markets'
 import { quote } from '@/lib/payout'
 import { useBoot, useScrollMotion } from '@/lib/motion'
@@ -99,7 +99,7 @@ function TradePanel({ market }: { market: MarketT }) {
   async function submit() {
     if (!(stake > 0)) return
     setPending(true)
-    const run = placeBet(market.id, side === 'YES', stake)
+    const run = placeBet(market.version, market.id, side === 'YES', stake)
     toast.promise(run, {
       loading: `Placing ${stake} USDC on ${side}…`,
       success: (hash) => ({ message: 'Bet confirmed on Arc Testnet', action: { label: 'View tx', onClick: () => window.open(txUrl(hash), '_blank', 'noopener') } }),
@@ -170,7 +170,11 @@ function TradePanel({ market }: { market: MarketT }) {
           ))}
         </dl>
         {state !== 'open' ? (
-          <p className="label bg-ink p-3 text-paper">{state === 'resolved' ? `Resolved ${market.outcome}. Winners claim from Portfolio.` : 'Trading closed. Waiting for the owner to resolve.'}</p>
+          <p className="label bg-ink p-3 text-paper">
+            {state === 'resolved' ? `Resolved ${market.outcome}. Winners claim from Portfolio.` : state === 'cancelled' ? 'Cancelled. Every bettor can refund their full stake from Portfolio.' : 'Trading closed. Waiting for the owner to resolve.'}
+          </p>
+        ) : market.version === 1 ? (
+          <p className="label border border-line-strong p-3">Legacy contract: new bets are closed here. Existing positions stay claimable. <Link to="/markets" className="underline">See live v2 markets</Link></p>
         ) : account ? (
           <button
             type="button"
@@ -191,10 +195,12 @@ function TradePanel({ market }: { market: MarketT }) {
 }
 
 export default function Market() {
-  const { id } = useParams()
+  const { id = '' } = useParams()
+  const parsed = parseMarketKey(id)
+  const key = parsed ? marketKey(parsed.version, parsed.id) : ''
   const scope = useRef<HTMLDivElement>(null)
   const { markets, bets, loading } = useMarkets()
-  const market = markets.find((item) => item.id === Number(id))
+  const market = markets.find((item) => item.key === key)
   useBoot(scope, Boolean(market))
   useScrollMotion(scope, Boolean(market))
 
@@ -208,16 +214,16 @@ export default function Market() {
     )
   }
 
-  const marketBets = bets.filter((bet) => bet.marketId === market.id)
+  const marketBets = bets.filter((bet) => bet.key === market.key)
   return (
     <div ref={scope}>
       <section className="frame grid border-t-0 md:grid-cols-12">
         <div className="cell label flex items-center gap-2 px-5 py-3 md:col-span-12" data-boot>
-          <Link to="/markets" className="hover:underline">Markets</Link> / <span>#{String(market.id).padStart(2, '0')}</span> / <span>{market.category}</span>
+          <Link to="/markets" className="hover:underline">Markets</Link> / <span>v{market.version} #{String(market.id).padStart(2, '0')}</span> / <span>{market.category}</span>{market.version === 1 && <span className="text-muted">/ legacy</span>}
           <span className="ml-auto flex items-center gap-2">{marketState(market) === 'closed' && <Orb state="solving" size={20} />}{stateLabel(market)}</span>
         </div>
         <div className="cell h-48 overflow-hidden md:col-span-4 md:h-auto" data-boot>
-          <Halftone src={marketImage(market.id)} className="size-full" parallax eager />
+          <Halftone src={marketImage(market)} className="size-full" parallax eager />
         </div>
         <div className="cell flex flex-col justify-between gap-6 p-6 md:col-span-8 md:p-8" data-boot>
           <span className="flex items-center gap-2"><Asterisk /><Decode text={`Market ${String(market.id).padStart(2, '0')} / ${market.category}`} /></span>
@@ -225,7 +231,7 @@ export default function Market() {
           <div className="grid grid-cols-2 gap-px bg-line sm:grid-cols-4">
             {[
               ['Volume', formatUsdc(market.volume)],
-              ['Traders', String(bettorCount(bets, market.id))],
+              ['Traders', String(bettorCount(bets, market.key))],
               ['Closes', formatDate(market.deadline)],
               ['Creator', shortAddress(market.creator)],
             ].map(([term, value]) => (
@@ -243,6 +249,11 @@ export default function Market() {
           <div data-reveal><BigOdds market={market} /></div>
           <div className="cell p-5" data-reveal>
             <OddsBar yes={market.yesOdds} />
+          </div>
+          <div className="cell p-5" data-reveal>
+            <span className="flex items-center gap-2"><Asterisk className="size-3" /><Label className="text-ink">Resolution rules</Label>{market.rules && <Label>· stored on-chain</Label>}</span>
+            <p className="mt-3 max-w-2xl leading-relaxed">{market.rules ?? 'Legacy market: resolved by the contract owner from the plain wording of the question after the deadline.'}</p>
+            {market.version === 2 && <p className="mt-2 text-sm text-muted">If the owner does not resolve within 30 days of the deadline, anyone can cancel the market and every bettor gets a full refund.</p>}
           </div>
           <div className="cell p-5" data-reveal>
             <Label className="text-ink">Pool odds history</Label>

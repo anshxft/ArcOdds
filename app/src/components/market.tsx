@@ -43,7 +43,10 @@ function CardBody({ market, bettors }: { market: Market; bettors: number }) {
     <div className="flex flex-1 flex-col gap-4 p-4">
       <div className="flex items-center justify-between gap-2">
         <Label>#{String(market.id).padStart(2, '0')} / {market.category}</Label>
-        <StateBadge market={market} />
+        <span className="flex items-center gap-1.5">
+          {market.version === 1 && <span className="label px-1.5 py-0.5 text-muted" title="Older ArcOdds contract: positions stay claimable, new bets go to v2 markets">Legacy</span>}
+          <StateBadge market={market} />
+        </span>
       </div>
       <h3 className="text-lg font-medium leading-snug text-balance">{market.question}</h3>
       <OddsBar yes={market.yesOdds} className="mt-auto" />
@@ -59,14 +62,14 @@ function CardBody({ market, bettors }: { market: Market; bettors: number }) {
 /** Featured variant swaps photo for live odds through a pixel dissolve on hover. */
 export function MarketCard({ market, bettors, featured = false }: { market: Market; bettors: number; featured?: boolean }) {
   return (
-    <Link to={`/market/${market.id}`} className="cell hover-lift group flex flex-col bg-paper" data-reveal>
+    <Link to={`/market/${market.key}`} className="cell hover-lift group flex flex-col bg-paper" data-reveal>
       {featured ? (
         <PixelTransition
           aspectRatio="62%"
           gridSize={10}
           pixelColor="#0b0b0b"
           animationStepDuration={0.35}
-          firstContent={<Halftone src={marketImage(market.id)} className="size-full" color />}
+          firstContent={<Halftone src={marketImage(market)} className="size-full" color />}
           secondContent={
             <div className="flex size-full flex-col justify-between bg-ink p-4 text-paper">
               <span className="label">Pool odds</span>
@@ -76,7 +79,7 @@ export function MarketCard({ market, bettors, featured = false }: { market: Mark
           }
         />
       ) : (
-        <Halftone src={marketImage(market.id)} className="aspect-[16/9] border-b border-line" color />
+        <Halftone src={marketImage(market)} className="aspect-[16/9] border-b border-line" color />
       )}
       <CardBody market={market} bettors={bettors} />
     </Link>

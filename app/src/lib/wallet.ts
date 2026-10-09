@@ -1,7 +1,7 @@
 // Injected-wallet connection (EIP-6963 discovery, window.ethereum fallback) and signed actions.
 import { useSyncExternalStore } from 'react'
 import { BrowserProvider, Contract, parseEther } from 'ethers'
-import { ABI, ARC, CONTRACT_ADDRESS } from './chain'
+import { ARC, CONTRACTS, type Version } from './chain'
 
 interface Eip1193 {
   request(args: { method: string; params?: unknown[] }): Promise<unknown>
@@ -98,23 +98,30 @@ export function disconnect() {
   set({ account: null, provider: null })
 }
 
-async function signedContract() {
+async function signedContract(version: Version) {
   const provider = state.provider ?? walletOptions()[0]?.provider
   if (!provider) throw new Error('No browser wallet found. Install MetaMask, Rabby or OKX Wallet.')
   await provider.request({ method: 'eth_requestAccounts' })
   await ensureArc(provider) // never sign on the wrong network
   const signer = await new BrowserProvider(provider).getSigner()
-  return new Contract(CONTRACT_ADDRESS, ABI, signer)
+  return new Contract(CONTRACTS[version].address, CONTRACTS[version].abi, signer)
 }
 
-export async function placeBet(marketId: number, side: boolean, amount: number) {
-  const tx = await (await signedContract()).placeBet(marketId, side, { value: parseEther(String(amount)) })
+export async function placeBet(version: Version, marketId: number, side: boolean, amount: number) {
+  const tx = await (await signedContract(version)).placeBet(marketId, side, { value: parseEther(String(amount)) })
   await tx.wait()
   return tx.hash as string
 }
 
-export async function claimWinnings(marketId: number) {
-  const tx = await (await signedContract()).claimWinnings(marketId)
+export async function claimWinnings(version: Version, marketId: number) {
+  const tx = await (await signedContract(version)).claimWinnings(marketId)
+  await tx.wait()
+  return tx.hash as string
+}
+
+/** v2 only: take back both sides of a stake from a cancelled market. */
+export async function refund(marketId: number) {
+  const tx = await (await signedContract(2)).refund(marketId)
   await tx.wait()
   return tx.hash as string
 }

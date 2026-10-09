@@ -15,7 +15,7 @@ async function probe(check: () => Promise<unknown>) {
 
 const CHECKS = [
   ['Arc network', 'Public RPC answering', () => fetch(ARC.rpc, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }) }).then((r) => { if (!r.ok) throw new Error() })],
-  ['PredictArc contract', 'Markets readable on-chain', () => fetchMarkets()],
+  ['PredictArc contracts', 'v2 + legacy v1 readable on-chain', () => fetchMarkets()],
   ['Arc explorer', 'Trade history source', () => fetch(`${ARC.explorer}/api/v2/stats`).then((r) => { if (!r.ok) throw new Error() })],
 ] as const
 
@@ -56,7 +56,7 @@ export default function Status() {
       <section className="frame grid border-t-0 md:grid-cols-3">
         {[
           ['Trading closes', "Automatically at each market's deadline, enforced by the contract."],
-          ['Resolution', 'The contract owner sets the outcome after the deadline. There is no oracle yet.'],
+          ['Resolution', 'The owner sets the outcome per the on-chain rules. One-sided markets auto-refund; unresolved after 30 days, anyone can cancel. No oracle yet.'],
           ['Claiming', 'Winners claim their share of the pool from Portfolio. 2% of the losing pool is the fee.'],
         ].map(([title, body]) => (
           <div key={title} className="cell p-5" data-reveal>
