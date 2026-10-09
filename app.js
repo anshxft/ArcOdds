@@ -3,7 +3,7 @@ const ARC_TESTNET = {
   chainName: "Arc Testnet",
   nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
   rpcUrls: ["https://rpc.testnet.arc.network"],
-  blockExplorerUrls: [],
+  blockExplorerUrls: ["https://explorer.testnet.arc.io"],
 };
 
 const ARC_FAUCET_URL = "https://faucet.circle.com";
@@ -39,16 +39,45 @@ const MARKET_IMAGES = [
   "assets/markets/classic-cinema.jpg",
 ];
 
-const DISPLAY_VOLUME_BASES = [128, 245, 386, 472, 620, 755, 890, 1040, 1215, 1380, 1660, 1945];
-const DISPLAY_BETTOR_BASES = [42, 57, 68, 76, 84, 93, 105, 116, 124, 132, 141, 149];
+const FEE_BPS = 200; // mirrors ArcOdds.FEE_BPS: 2% of the losing pool
 
 function getSeedMarketImage(index) {
   return MARKET_IMAGES[index] || CATEGORY_IMAGES.finance;
 }
 
 function formatDisplayVolume(value) {
-  if (value >= 1000) return `$${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}K`;
-  return `$${Math.round(value)}`;
+  if (value >= 1000) return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}K USDC`;
+  return `${Number(value.toFixed(2))} USDC`;
+}
+
+// Parimutuel payout for `stake` on a side if that side wins. `sidePool` must
+// already include the stake. Mirrors ArcOdds.claimWinnings.
+function poolPayout(stake, sidePool, otherPool) {
+  if (!(stake > 0) || !(sidePool > 0)) return 0;
+  const fee = (otherPool * FEE_BPS) / 10000;
+  return (stake * (sidePool + otherPool - fee)) / sidePool;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[char]);
+}
+
+// "open" | "closed" (deadline passed, awaiting resolution) | "resolved" | "cancelled"
+function marketState(market) {
+  if (market.status === 1) return "resolved";
+  if (market.status === 2) return "cancelled";
+  if (market.deadline && Date.now() / 1000 >= market.deadline) return "closed";
+  return "open";
+}
+
+function marketStateLabel(market) {
+  const state = marketState(market);
+  if (state === "resolved") return `Resolved ${market.outcome}`;
+  if (state === "closed") return "Closed - awaiting resolution";
+  if (state === "cancelled") return "Cancelled";
+  return "Open";
 }
 
 const FALLBACK_MARKETS = [
@@ -67,16 +96,19 @@ const FALLBACK_MARKETS = [
 ];
 
 const ARC_MARKETS = FALLBACK_MARKETS.map(([q, cat, yes, icon, closes], index) => {
-  const volume = DISPLAY_VOLUME_BASES[index] || 420;
   return {
     id: index + 1,
     cat,
     q,
     yes,
-    vol: formatDisplayVolume(volume),
-    volume,
-    liquidity: formatDisplayVolume(Math.round(volume * (0.38 + ((index % 4) * 0.04)))),
-    bettors: String(DISPLAY_BETTOR_BASES[index] || 64),
+    vol: "-",
+    volume: 0,
+    yesPool: 0,
+    noPool: 0,
+    bettors: "-",
+    bets: [],
+    deadline: Math.floor(Date.parse(`${closes} 23:59:59 UTC`) / 1000) || 0,
+    status: 0,
     closes,
     closeShort: closes.replace(", 2026", ""),
     icon,
@@ -113,7 +145,7 @@ function parseJsonArray(value) {
 function formatCloseDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "TBD";
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
 async function loadReferenceMarkets() {
@@ -147,6 +179,7 @@ async function loadReferenceMarkets() {
         yes,
         icon: categoryIcon(cat),
         image: getSeedMarketImage(index),
+        deadline: Math.floor(Date.parse(market.endDate || market.endDateIso) / 1000) || 0,
         closes,
         closeShort: closes.replace(", 2026", ""),
         rule: market.description || ARC_MARKETS[index].rule,
@@ -167,20 +200,23 @@ async function loadOnchainMarkets() {
   try {
     const markets = await window.PredictArcContracts.getOnchainMarkets();
     markets.forEach((market, index) => {
-      if (!ARC_MARKETS[index]) return;
-      const realVolume = Number(market.yesPool) + Number(market.noPool);
-      const hasTradeLiquidity = realVolume > 0;
-      const displayVolume = (DISPLAY_VOLUME_BASES[index] || 420) + realVolume;
+      if (!ARC_MARKETS[index]) ARC_MARKETS[index] = { ...ARC_MARKETS[0], bets: [], bettors: "-" };
+      const volume = market.yesPool + market.noPool;
+      const hasTradeLiquidity = volume > 0;
       const closes = formatCloseDate(market.deadline * 1000);
       Object.assign(ARC_MARKETS[index], {
+        id: market.id,
         q: market.question,
         cat: market.category,
+        icon: categoryIcon(market.category) || ARC_MARKETS[index].icon,
         image: getSeedMarketImage(index),
-        yes: hasTradeLiquidity ? market.yesOdds : ARC_MARKETS[index].yes,
-        vol: formatDisplayVolume(displayVolume),
-        volume: displayVolume,
-        liquidity: formatDisplayVolume(Math.round(displayVolume * (0.38 + ((index % 4) * 0.04)))),
-        bettors: String((DISPLAY_BETTOR_BASES[index] || 64) + Math.floor(realVolume * 2)),
+        yes: hasTradeLiquidity ? Math.max(1, Math.min(99, market.yesOdds)) : ARC_MARKETS[index].yes,
+        vol: formatDisplayVolume(volume),
+        volume,
+        yesPool: market.yesPool,
+        noPool: market.noPool,
+        deadline: market.deadline,
+        outcome: market.outcome,
         closes,
         closeShort: closes.replace(", 2026", ""),
         creator: formatShortAddress(market.creator),
@@ -189,10 +225,24 @@ async function loadOnchainMarkets() {
       });
     });
     window.dispatchEvent(new CustomEvent("PredictArc:markets-updated"));
+    loadBettorCounts();
     return ARC_MARKETS;
   } catch (error) {
     console.warn("Unable to load PredictArc contract markets:", error.message);
     return ARC_MARKETS;
+  }
+}
+
+async function loadBettorCounts() {
+  try {
+    const bets = await window.PredictArcContracts.getAllBets();
+    ARC_MARKETS.forEach((market) => {
+      market.bets = bets.filter((bet) => bet.marketId === market.id);
+      market.bettors = String(new Set(market.bets.map((bet) => bet.user)).size);
+    });
+    window.dispatchEvent(new CustomEvent("PredictArc:markets-updated"));
+  } catch (error) {
+    console.warn("Unable to load PredictArc bet history:", error.message);
   }
 }
 
@@ -216,6 +266,7 @@ function setConnectedWallet(address) {
     button.title = "Disconnect wallet";
     button.style.cssText = "background:var(--surface2);border:1px solid var(--border2);font-family:JetBrains Mono,monospace;font-size:12px;box-shadow:none";
   });
+  watchWalletAccounts();
   window.PredictArcSupabase?.upsertProfile(address).catch((error) => console.warn("Supabase profile skipped:", error.message));
   window.PredictArcSupabase?.recordActivity("wallet_connected", { wallet: address }).catch(() => {});
 }
@@ -276,6 +327,18 @@ function getInjectedProviders() {
   });
 
   return providers;
+}
+
+let watchedProvider = null;
+function watchWalletAccounts() {
+  const provider = getSelectedWalletProvider();
+  if (!provider || provider === watchedProvider || typeof provider.on !== "function") return;
+  watchedProvider = provider;
+  provider.on("accountsChanged", (accounts) => {
+    if (accounts && accounts[0]) setConnectedWallet(accounts[0]);
+    else clearConnectedWallet();
+    window.dispatchEvent(new CustomEvent("PredictArc:wallet-changed"));
+  });
 }
 
 function getSelectedWalletProvider() {
@@ -442,6 +505,11 @@ window.PredictArcApp = {
   ARC_MARKETS,
   getMarketById,
   getMarketFromUrl,
+  poolPayout,
+  escapeHtml,
+  marketState,
+  marketStateLabel,
+  formatDisplayVolume,
   loadReferenceMarkets,
   loadOnchainMarkets,
   ensureArcWallet,
@@ -481,11 +549,4 @@ window.addEventListener("DOMContentLoaded", () => {
     wallet: localStorage.getItem("PredictArc_wallet"),
     path: location.pathname,
   }).catch(() => {});
-
-  if (window.ethereum && typeof window.ethereum.on === "function") {
-    window.ethereum.on("accountsChanged", (accounts) => {
-      if (accounts && accounts[0]) setConnectedWallet(accounts[0]);
-      else clearConnectedWallet();
-    });
-  }
 });

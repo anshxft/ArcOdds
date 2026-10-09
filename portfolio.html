@@ -10,10 +10,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="assets/vendor/ethers.umd.min.js"></script>
-  <script src="contract.js?v=20260606l"></script>
-  <script src="supabase.js?v=20260606l"></script>
-  <script src="app.js?v=20260606l"></script>
-  <script src="premium.js?v=20260730a"></script>
+  <script src="contract.js?v=20261010d"></script>
+  <script src="supabase.js?v=20261010d"></script>
+  <script src="app.js?v=20261010d"></script>
+  <script src="premium.js?v=20261010d"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root, [data-theme="dark"] {
@@ -283,8 +283,8 @@
       <div class="grid-2">
         <div class="chart-card">
           <div class="card-header">
-            <div class="card-title">Portfolio Movement</div>
-            <div class="card-kicker" id="pnlChartNote">Live mark-to-market</div>
+            <div class="card-title">Staked vs Payout</div>
+            <div class="card-kicker" id="pnlChartNote">Per position, from on-chain pools</div>
           </div>
           <div class="chart-wrap">
             <canvas id="pnlChart"></canvas>
@@ -380,42 +380,27 @@
       const isDark = document.documentElement.dataset.theme === 'dark';
       const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
       const tickColor = isDark ? '#5a5a70' : '#90909a';
-      const totalCost = positions.reduce((sum, position) => sum + position.amount, 0);
-      const totalValue = positions.reduce((sum, position) => sum + position.currentValue, 0);
-      const totalPnl = totalValue - totalCost;
-      const points = [-0.22, -0.12, -0.04, 0.03, 0.08, 0.14, 0.2].map((factor, index) => {
-        const drift = totalPnl * (0.6 + index * 0.08);
-        return Number(Math.max(0, totalCost + drift + (totalCost * factor * 0.08)).toFixed(4));
-      });
-      points[points.length - 1] = Number(totalValue.toFixed(4));
-      document.getElementById('pnlChartNote').textContent = `${totalPnl >= 0 ? '+' : ''}${fmt(totalPnl)} USDC unrealized`;
-      const ctx = canvas.getContext('2d');
-      const grad = ctx.createLinearGradient(0, 0, 0, 180);
-      grad.addColorStop(0, totalPnl >= 0 ? 'rgba(34,197,94,0.16)' : 'rgba(239,68,68,0.14)');
-      grad.addColorStop(1, 'rgba(34,197,94,0)');
-      pnlChart = new Chart(ctx, {
-        type: 'line',
+      const labels = positions.map((position) => `#${position.marketId} ${position.side}`);
+      pnlChart = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
         data: {
-          labels: ['Open','T-5','T-4','T-3','T-2','T-1','Now'],
-          datasets: [{
-            data: points,
-            borderColor: totalPnl >= 0 ? '#22c55e' : '#ef4444',
-            backgroundColor: grad,
-            borderWidth: 2, pointRadius: 0, pointHoverRadius: 5,
-            tension: 0.4, fill: true,
-          }]
+          labels,
+          datasets: [
+            { label: 'Staked', data: positions.map((position) => Number(position.amount.toFixed(4))), backgroundColor: '#8b5cf6', borderRadius: 4 },
+            { label: 'Payout if right', data: positions.map((position) => Number(position.currentValue.toFixed(4))), backgroundColor: '#22c55e', borderRadius: 4 },
+          ]
         },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: {
-            legend: { display: false },
+            legend: { display: true, labels: { color: tickColor, boxWidth: 10, font: { family: 'JetBrains Mono', size: 10 } } },
             tooltip: {
               backgroundColor: isDark ? '#13131a' : '#fff',
               borderColor: isDark ? '#252535' : '#e0e0ec',
               borderWidth: 1,
               bodyColor: isDark ? '#f4f4f6' : '#111118',
               bodyFont: { family: 'JetBrains Mono', size: 12, weight: '600' },
-              callbacks: { label: ctx => ` ${fmt(ctx.parsed.y)} USDC` }
+              callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.parsed.y)} USDC` }
             }
           },
           scales: {
@@ -433,7 +418,7 @@
       const colors = ['#8b5cf6','#22c55e','#60a5fa','#f87171','#fb923c','#14b8a6'];
       const grouped = positions.reduce((map, position) => {
         const category = position.market.cat || 'other';
-        map[category] = (map[category] || 0) + position.currentValue;
+        if (position.status !== 1) map[category] = (map[category] || 0) + position.amount;
         return map;
       }, {});
       const entries = Object.entries(grouped).filter(([, value]) => value > 0);
@@ -550,8 +535,11 @@
       const open = enriched.filter((position) => position.status !== 1);
       const history = enriched.filter((position) => position.status === 1);
       const totalCost = enriched.reduce((sum, position) => sum + position.amount, 0);
-      const totalValue = enriched.reduce((sum, position) => sum + position.currentValue, 0);
-      const totalPnl = totalValue - totalCost;
+      const openCost = open.reduce((sum, position) => sum + position.amount, 0);
+      // Only one side of a market can win, so take the best side per market.
+      const bestByMarket = {};
+      open.forEach((position) => { bestByMarket[position.marketId] = Math.max(bestByMarket[position.marketId] || 0, position.currentValue); });
+      const openIfRight = Object.values(bestByMarket).reduce((sum, value) => sum + value, 0);
       const claimable = enriched.filter((position) => position.claimable).reduce((sum, position) => sum + position.currentValue, 0);
 
       state.style.display = 'none';
@@ -559,8 +547,8 @@
       document.querySelector('.grid-2').style.display = 'grid';
       document.querySelector('.table-card').style.display = 'block';
       const statCards = document.querySelectorAll('.stat-card');
-      setStat(statCards[0], 'Portfolio Value', `${fmt(totalValue)} USDC`, `${enriched.length} total position${enriched.length === 1 ? '' : 's'}`, 'purple');
-      setStat(statCards[1], 'Open P&L', `${totalPnl >= 0 ? '+' : ''}${fmt(totalPnl)} USDC`, `${totalCost ? (totalPnl / totalCost * 100).toFixed(1) : '0.0'}% overall`, totalPnl >= 0 ? 'green' : 'red');
+      setStat(statCards[0], 'Total Staked', `${fmt(totalCost)} USDC`, `${enriched.length} total position${enriched.length === 1 ? '' : 's'}`, 'purple');
+      setStat(statCards[1], 'Open: Best-Case Payout',`${fmt(openIfRight)} USDC`, `on ${fmt(openCost)} USDC staked`, openIfRight >= openCost ? 'green' : '');
       setStat(statCards[2], 'Open Positions', String(open.length), `${history.length} resolved`, '');
       setStat(statCards[3], 'Claimable', `${fmt(claimable)} USDC`, claimable > 0 ? 'Ready to claim' : 'No winnings yet', claimable > 0 ? 'green' : '');
 
@@ -584,30 +572,34 @@
       }
     }
 
+    // Pool-based: "currentValue" is what the position pays if its side wins
+    // (or the settled payout once resolved).
     function enrichPosition(position) {
-      const market = window.PredictArcApp.getMarketById(position.marketId) || window.PredictArcApp.ARC_MARKETS[0];
+      const app = window.PredictArcApp;
+      const market = app.getMarketById(position.marketId) || app.ARC_MARKETS[0];
       const side = String(position.side || 'YES').toUpperCase();
       const amount = Number(position.amount || 0);
       const currentOdds = side === 'YES' ? market.yes : 100 - market.yes;
-      const fallbackEntry = Math.max(5, Math.min(95, currentOdds + ((Number(position.marketId) % 2 ? -6 : 5))));
-      const entryOdds = Number(position.entryOdds || fallbackEntry);
-      const shares = entryOdds > 0 ? amount / (entryOdds / 100) : amount;
-      const currentValue = position.status === 1
-        ? (position.outcome === side ? shares : 0)
-        : shares * (currentOdds / 100);
+      const yesPool = Number(position.yesPool ?? market.yesPool ?? 0);
+      const noPool = Number(position.noPool ?? market.noPool ?? 0);
+      const ifRight = app.poolPayout(amount, side === 'YES' ? yesPool : noPool, side === 'YES' ? noPool : yesPool) || amount;
+      const status = Number(position.status ?? market.status ?? 0);
+      const resolved = status === 1;
+      const currentValue = resolved ? (position.outcome === side ? ifRight : 0) : ifRight;
       const pnl = currentValue - amount;
       return {
         ...position,
         market,
         side,
         amount,
-        entryOdds,
+        status,
+        entryOdds: position.entryOdds ?? null,
         currentOdds,
-        shares,
+        state: app.marketStateLabel({ ...market, status, outcome: position.outcome, deadline: position.deadline ?? market.deadline }),
         currentValue,
         pnl,
         pnlPct: amount ? (pnl / amount) * 100 : 0,
-        claimable: position.status === 1 && position.outcome === side && !position.claimed,
+        claimable: resolved && position.outcome === side && !position.claimed,
       };
     }
 
@@ -623,13 +615,13 @@
 
     function renderActiveTable(positions) {
       const table = document.getElementById('activeTable');
-      table.innerHTML = `<div class="table-head"><div>Market</div><div>Side</div><div>Cost</div><div>Avg</div><div>Now</div><div>Value</div><div>P&L</div></div>` +
+      table.innerHTML = `<div class="table-head"><div>Market</div><div>Side</div><div>Staked</div><div>Entry</div><div>Now</div><div>If right</div><div>Profit if right</div></div>` +
         (positions.length ? positions.map(positionRow).join('') : `<div style="padding:28px 20px;color:var(--text3);font-size:13px;text-align:center">No open positions.</div>`);
     }
 
     function renderHistoryTable(positions) {
       const table = document.getElementById('historyTable');
-      table.innerHTML = `<div class="history-head"><div>Market</div><div>Side</div><div>Cost</div><div>Avg</div><div>Value</div><div>Result</div></div>` +
+      table.innerHTML = `<div class="history-head"><div>Market</div><div>Side</div><div>Staked</div><div>Entry</div><div>Payout</div><div>Result</div></div>` +
         (positions.length ? positions.map(historyRow).join('') : `<div style="padding:28px 20px;color:var(--text3);font-size:13px;text-align:center">No resolved positions yet.</div>`);
     }
 
@@ -637,13 +629,13 @@
       return `<div class="table-row" onclick="window.location.href='market-detail.html?id=${position.marketId}'">
         <div class="position-market">
           <img class="position-img" src="${position.market.image}" alt=""/>
-          <div class="position-copy"><div class="tr-market">${escapeHtml(position.question || position.market.q)}</div><div class="tr-market-sub">${escapeHtml(position.market.cat)} · ${escapeHtml(position.market.closes)}</div></div>
+          <div class="position-copy"><div class="tr-market">${escapeHtml(position.question || position.market.q)}</div><div class="tr-market-sub">${escapeHtml(position.market.cat)} · ${escapeHtml(position.state)} · ${escapeHtml(position.market.closes)}</div></div>
         </div>
         <div><span class="tr-side ${position.side.toLowerCase()}">${position.side}</span></div>
         <div class="tr-val">${fmt(position.amount)} USDC</div>
-        <div><span class="price-pill">${position.entryOdds}%</span></div>
+        <div><span class="price-pill">${position.entryOdds == null ? '-' : position.entryOdds + '%'}</span></div>
         <div><span class="price-pill">${position.currentOdds}%</span></div>
-        <div class="tr-val">${fmt(position.currentValue)} USDC<span class="muted-mini">${fmt(position.shares)} shares</span></div>
+        <div class="tr-val">${fmt(position.currentValue)} USDC</div>
         <div class="tr-pnl ${position.pnl >= 0 ? 'pos' : 'neg'}">${position.pnl >= 0 ? '+' : ''}${fmt(position.pnl)}<span class="muted-mini">${position.pnlPct >= 0 ? '+' : ''}${position.pnlPct.toFixed(1)}%</span></div>
       </div>`;
     }
@@ -657,7 +649,7 @@
         </div>
         <div><span class="tr-side ${position.side.toLowerCase()}">${position.side}</span></div>
         <div class="tr-val">${fmt(position.amount)} USDC</div>
-        <div><span class="price-pill">${position.entryOdds}%</span></div>
+        <div><span class="price-pill">${position.entryOdds == null ? '-' : position.entryOdds + '%'}</span></div>
         <div class="tr-pnl ${position.pnl >= 0 ? 'pos' : 'neg'}">${fmt(position.currentValue)} USDC</div>
         <div>${status}</div>
       </div>`;
@@ -691,6 +683,7 @@
       renderRealPortfolio();
     });
     window.addEventListener('PredictArc:markets-updated', renderRealPortfolio);
+    window.addEventListener('PredictArc:wallet-changed', renderRealPortfolio);
   </script>
 </body>
 </html>

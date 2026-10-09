@@ -44,3 +44,39 @@ describe("ArcOdds", function () {
     expect(await contract.accruedFees()).to.equal(ethers.parseEther("0.02"));
   });
 });
+
+describe("frontend payout estimate", function () {
+  // Loads app.js in a stub browser context so the UI formula is checked against the real contract.
+  function loadPoolPayout() {
+    const fs = require("fs");
+    const path = require("path");
+    const vm = require("vm");
+    const window = { addEventListener() {}, dispatchEvent() {} };
+    const context = { window, Event: class {}, CustomEvent: class {}, console };
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8"), context);
+    return window.PredictArcApp.poolPayout;
+  }
+
+  it("matches claimWinnings for an uneven pool", async function () {
+    const poolPayout = loadPoolPayout();
+    const [, alice, bob, carol] = await ethers.getSigners();
+    const ArcOdds = await ethers.getContractFactory("ArcOdds");
+    const contract = await ArcOdds.deploy();
+    const deadline = (await ethers.provider.getBlock("latest")).timestamp + 3600;
+    await contract.createMarket("Uneven pool", "tech", deadline);
+    await contract.connect(alice).placeBet(1, false, { value: ethers.parseEther("10") });
+    await contract.connect(bob).placeBet(1, false, { value: ethers.parseEther("5") });
+    await contract.connect(carol).placeBet(1, true, { value: ethers.parseEther("106") });
+
+    await ethers.provider.send("evm_setNextBlockTimestamp", [deadline]);
+    await ethers.provider.send("evm_mine");
+    await contract.resolveMarket(1, false);
+
+    const before = await ethers.provider.getBalance(alice.address);
+    const tx = await contract.connect(alice).claimWinnings(1);
+    const receipt = await tx.wait();
+    const paid = (await ethers.provider.getBalance(alice.address)) - before + receipt.gasUsed * receipt.gasPrice;
+
+    expect(Number(ethers.formatEther(paid))).to.be.closeTo(poolPayout(10, 15, 106), 1e-9);
+  });
+});

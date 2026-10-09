@@ -101,145 +101,195 @@ const CONTRACT_ABI = [
   }
 ];
 
+const ARC_RPC_URL = "https://rpc.testnet.arc.network";
+const ARC_CHAIN_ID = 5042002;
+const ARC_EXPLORER = "https://explorer.testnet.arc.io";
+const BET_PLACED_TOPIC = "0x4af71b021e799c62c158bd54636ca8da2fa26115a21a2dc6efe486ec104fd15f";
+const MULTICALL3 = "0xcA11bde05977b3631167028862bE2a173976CA11";
+const MULTICALL3_ABI = ["function aggregate3((address target, bool allowFailure, bytes callData)[] calls) view returns ((bool success, bytes returnData)[] returnData)"];
+let readProvider = null;
+let betsCache = null;
+
 function hasContractAddress() {
   return /^0x[a-fA-F0-9]{40}$/.test(CONTRACT_ADDRESS);
 }
 
+function getInjectedProvider() {
+  const app = window.PredictArcApp;
+  return app && app.getSelectedWalletProvider ? app.getSelectedWalletProvider() : window.ethereum;
+}
+
+async function ensureArcChain(injectedProvider) {
+  const chainId = await injectedProvider.request({ method: "eth_chainId" });
+  if (Number(chainId) === ARC_CHAIN_ID) return;
+  const arc = window.PredictArcApp && window.PredictArcApp.ARC_TESTNET;
+  try {
+    await injectedProvider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x" + ARC_CHAIN_ID.toString(16) }] });
+  } catch (error) {
+    if (error.code !== 4902 || !arc) throw new Error("Please switch your wallet to Arc Testnet.");
+    await injectedProvider.request({ method: "wallet_addEthereumChain", params: [arc] });
+  }
+}
+
 async function getProviderAndSigner() {
-  const injectedProvider = window.PredictArcApp && window.PredictArcApp.getSelectedWalletProvider
-    ? window.PredictArcApp.getSelectedWalletProvider()
-    : window.ethereum;
-  if (typeof injectedProvider === "undefined") {
+  const injectedProvider = getInjectedProvider();
+  if (!injectedProvider) {
     throw new Error("No browser wallet found. Please install MetaMask, OKX Wallet, Rabby, Trust Wallet, or open this in a wallet browser.");
   }
-
   const accounts = await injectedProvider.request({ method: "eth_requestAccounts" });
-  const provider = ethers.providers
-    ? new ethers.providers.Web3Provider(injectedProvider)
-    : new ethers.BrowserProvider(injectedProvider);
+  await ensureArcChain(injectedProvider);
+  const provider = new ethers.BrowserProvider(injectedProvider);
   const signer = await provider.getSigner();
   return { provider, signer, account: accounts[0] };
 }
 
 function getContract(signer) {
-  if (!hasContractAddress()) {
-    throw new Error("Contract address not configured yet");
-  }
+  if (!hasContractAddress()) throw new Error("Contract address not configured yet");
   return new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 }
 
 function getReadContract() {
   if (!hasContractAddress()) throw new Error("Contract address not configured yet");
-  const provider = ethers.providers
-    ? new ethers.providers.JsonRpcProvider("https://rpc.testnet.arc.network")
-    : new ethers.JsonRpcProvider("https://rpc.testnet.arc.network");
-  return new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+  // Arc RPC mishandles JSON-RPC batches (random CALL_EXCEPTIONs), so send calls one by one.
+  readProvider = readProvider || new ethers.JsonRpcProvider(ARC_RPC_URL, ARC_CHAIN_ID, { staticNetwork: true, batchMaxCount: 1 });
+  return new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, readProvider);
 }
 
-function formatNative(value) {
-  return ethers.utils ? ethers.utils.formatEther(value) : ethers.formatEther(value);
+function toNumber(value) {
+  return Number(ethers.formatEther(value));
+}
+
+function txUrl(hash) {
+  return `${ARC_EXPLORER}/tx/${hash}`;
 }
 
 // Contract wallet connection. Keep this name distinct from page-level connectWallet handlers.
 async function connectContractWallet() {
-  if (typeof window.ethereum !== 'undefined') {
-    try {
-      const { provider, signer, account } = await getProviderAndSigner();
-      const contract = hasContractAddress() ? getContract(signer) : null;
-      
-      console.log("Wallet connected:", account);
-      if (contract) console.log("Contract ready!");
-      else console.warn("Contract address not configured yet.");
-      
-      return { provider, signer, contract, account };
-    } catch (err) {
-      console.error("Connection failed:", err);
-      throw err;
-    }
-  } else {
-    alert('MetaMask not found! Please install MetaMask or open this in a wallet browser.');
-    throw new Error("MetaMask not found");
-  }
+  const { provider, signer, account } = await getProviderAndSigner();
+  const contract = hasContractAddress() ? getContract(signer) : null;
+  return { provider, signer, contract, account };
 }
 
-// Place bet
 async function placeBet(marketId, side, usdcAmount) {
-  const wallet = await connectContractWallet();
-  const contract = wallet && wallet.contract;
+  const { contract } = await connectContractWallet();
   if (!contract) throw new Error("Contract address not configured yet");
-  const value = ethers.utils
-    ? ethers.utils.parseEther(usdcAmount.toString())
-    : ethers.parseEther(usdcAmount.toString());
-  const tx = await contract.placeBet(marketId, side, {
-    value
-  });
+  const tx = await contract.placeBet(marketId, side, { value: ethers.parseEther(String(usdcAmount)) });
   await tx.wait();
-  console.log("Bet placed!", tx.hash);
+  betsCache = null;
   return tx;
 }
 
-// Get odds
 async function getOdds(marketId) {
-  const wallet = await connectContractWallet();
-  const contract = wallet && wallet.contract;
-  if (!contract) throw new Error("Contract address not configured yet");
-  const [yesOdds, noOdds] = await contract.getOdds(marketId);
+  const [yesOdds, noOdds] = await getReadContract().getOdds(marketId);
   return { yes: yesOdds.toString(), no: noOdds.toString() };
 }
 
 async function claimWinnings(marketId) {
-  const wallet = await connectContractWallet();
-  const contract = wallet && wallet.contract;
+  const { contract } = await connectContractWallet();
   if (!contract) throw new Error("Contract address not configured yet");
   const tx = await contract.claimWinnings(marketId);
   await tx.wait();
   return tx;
 }
 
-async function getOnchainMarkets() {
+// Reads every call in one eth_call through Multicall3 (deployed on Arc Testnet),
+// so a page load costs 2 RPC requests instead of 25+ (the public RPC rate-limits).
+async function readMany(calls) {
   const contract = getReadContract();
-  const count = Number((await contract.marketCount()).toString());
-  const ids = Array.from({ length: count }, (_, index) => index + 1);
-  return Promise.all(ids.map(async (id) => {
-    const [market, odds] = await Promise.all([contract.getMarket(id), contract.getOdds(id)]);
-    return {
-      id,
-      question: market.question,
-      category: market.category,
-      deadline: Number(market.deadline.toString()),
-      yesPool: formatNative(market.yesPool),
-      noPool: formatNative(market.noPool),
-      status: Number(market.status),
-      creator: market.creator,
-      yesOdds: Number(odds.yesOdds.toString()),
-      noOdds: Number(odds.noOdds.toString()),
-    };
-  }));
+  const multicall = new ethers.Contract(MULTICALL3, MULTICALL3_ABI, readProvider);
+  const results = await multicall.aggregate3(calls.map(([fn, args]) => ({
+    target: CONTRACT_ADDRESS,
+    allowFailure: false,
+    callData: contract.interface.encodeFunctionData(fn, args),
+  })));
+  return results.map((result, index) => contract.interface.decodeFunctionResult(calls[index][0], result.returnData));
 }
 
+async function getMarketIds() {
+  const count = Number(await getReadContract().marketCount());
+  return Array.from({ length: count }, (_, index) => index + 1);
+}
+
+function parseMarket(id, market) {
+  const total = market.yesPool + market.noPool;
+  const yesOdds = total === 0n ? 50 : Number((market.yesPool * 100n) / total); // same math as ArcOdds.getOdds
+  return {
+    id,
+    question: market.question,
+    category: market.category,
+    deadline: Number(market.deadline),
+    yesPool: toNumber(market.yesPool),
+    noPool: toNumber(market.noPool),
+    outcome: market.outcome ? "YES" : "NO",
+    status: Number(market.status),
+    creator: market.creator,
+    yesOdds,
+    noOdds: 100 - yesOdds,
+  };
+}
+
+async function getOnchainMarkets() {
+  const ids = await getMarketIds();
+  const markets = await readMany(ids.map((id) => ["getMarket", [id]]));
+  return markets.map((market, index) => parseMarket(ids[index], market));
+}
+
+// One entry per side: a wallet can hold both YES and NO in the same market.
 async function getWalletPositions(account) {
-  const contract = getReadContract();
-  const count = Number((await contract.marketCount()).toString());
-  const ids = Array.from({ length: count }, (_, index) => index + 1);
-  const positions = await Promise.all(ids.map(async (id) => {
-    const position = await contract.getPosition(id, account);
-    const yesAmount = Number(formatNative(position.yesAmount));
-    const noAmount = Number(formatNative(position.noAmount));
-    if (yesAmount > 0 || noAmount > 0) {
-      const market = await contract.getMarket(id);
-      return {
+  const ids = await getMarketIds();
+  const results = await readMany(ids.flatMap((id) => [["getPosition", [id, account]], ["getMarket", [id]]]));
+  return ids.flatMap((id, index) => {
+    const position = results[index * 2];
+    const market = parseMarket(id, results[index * 2 + 1]);
+    return [["YES", toNumber(position.yesAmount)], ["NO", toNumber(position.noAmount)]]
+      .filter(([, amount]) => amount > 0)
+      .map(([side, amount]) => ({
         marketId: id,
         question: market.question,
-        side: yesAmount > 0 ? "YES" : "NO",
-        amount: yesAmount > 0 ? yesAmount : noAmount,
+        side,
+        amount,
         claimed: position.hasClaimed,
-        status: Number(market.status),
-        outcome: market.outcome ? "YES" : "NO",
-      };
-    }
-    return null;
-  }));
-  return positions.filter(Boolean);
+        status: market.status,
+        outcome: market.outcome,
+        deadline: market.deadline,
+        yesPool: market.yesPool,
+        noPool: market.noPool,
+      }));
+  });
+}
+
+// Bet history comes from the Arc explorer (the public RPC prunes old logs).
+async function fetchAllBets() {
+  const bets = [];
+  let params = "";
+  for (let page = 0; page < 20; page += 1) {
+    const response = await fetch(`${ARC_EXPLORER}/api/v2/addresses/${CONTRACT_ADDRESS}/logs${params}`);
+    if (!response.ok) throw new Error(`Explorer request failed: ${response.status}`);
+    const data = await response.json();
+    (data.items || []).forEach((log) => {
+      if (log.topics?.[0] !== BET_PLACED_TOPIC) return;
+      const [side, amount] = ethers.AbiCoder.defaultAbiCoder().decode(["bool", "uint256"], log.data);
+      bets.push({
+        marketId: Number(BigInt(log.topics[1])),
+        user: ethers.getAddress("0x" + log.topics[2].slice(26)),
+        side: side ? "YES" : "NO",
+        amount: toNumber(amount),
+        time: Date.parse(log.block_timestamp),
+        txHash: log.transaction_hash || null,
+      });
+    });
+    if (!data.next_page_params) break;
+    params = "?" + new URLSearchParams(data.next_page_params);
+  }
+  return bets.sort((a, b) => a.time - b.time);
+}
+
+function getAllBets() {
+  if (!hasContractAddress()) return Promise.resolve([]);
+  if (!betsCache || Date.now() - betsCache.at > 60000) {
+    betsCache = { at: Date.now(), promise: fetchAllBets().catch((error) => { betsCache = null; throw error; }) };
+  }
+  return betsCache.promise;
 }
 
 window.ArcOddsContracts = {
@@ -251,7 +301,10 @@ window.ArcOddsContracts = {
   getOdds,
   getOnchainMarkets,
   getWalletPositions,
+  getAllBets,
   hasContractAddress,
+  txUrl,
+  ARC_EXPLORER,
 };
 window.PredictArcContracts = window.ArcOddsContracts;
 })();

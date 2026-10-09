@@ -472,10 +472,10 @@
   </footer>
 
   <script src="assets/vendor/ethers.umd.min.js"></script>
-  <script src="contract.js?v=20260606l"></script>
-  <script src="supabase.js?v=20260606l"></script>
-  <script src="app.js?v=20260606l"></script>
-  <script src="premium.js?v=20260730a"></script>
+  <script src="contract.js?v=20261010d"></script>
+  <script src="supabase.js?v=20261010d"></script>
+  <script src="app.js?v=20261010d"></script>
+  <script src="premium.js?v=20261010d"></script>
   <script>
     // Particles
     (function(){
@@ -539,6 +539,7 @@
 
     // Nav Search
     const ALL_MARKETS = window.PredictArcApp.ARC_MARKETS;
+    const esc = window.PredictArcApp.escapeHtml;
 
     const TAG_COLORS = {
       crypto:'background:rgba(109,40,217,0.12);color:#8b5cf6',
@@ -558,9 +559,9 @@
         dd.innerHTML = '<div class="search-empty">No markets found</div>';
       } else {
         dd.innerHTML = results.map(m => `
-          <div class="search-item" onmousedown="window.location.href='markets.html'">
-            <span class="search-item-tag" style="${TAG_COLORS[m.cat]}">${m.cat}</span>
-            <span class="search-item-q">${m.q}</span>
+          <div class="search-item" onmousedown="window.location.href='market-detail.html?id=${m.id}'">
+            <span class="search-item-tag" style="${TAG_COLORS[m.cat]}">${esc(m.cat)}</span>
+            <span class="search-item-q">${esc(m.q)}</span>
             <span class="search-item-pct">${m.yes}%</span>
           </div>`).join('');
       }
@@ -580,16 +581,16 @@
       const markets = window.PredictArcApp.ARC_MARKETS;
       const featured = markets[0];
       document.querySelector('.ticker-inner').innerHTML = [...markets.slice(0, 8), ...markets.slice(0, 8)].map(m =>
-        `<div class="tick">${m.q.slice(0, 38)} <span class="tick-sep">·</span><span class="${m.yes >= 50 ? 'up' : 'dn'}">${m.yes}%</span></div>`
+        `<div class="tick">${esc(m.q.slice(0, 38))} <span class="tick-sep">·</span><span class="${m.yes >= 50 ? 'up' : 'dn'}">${m.yes}%</span></div>`
       ).join('');
 
       document.querySelector('.featured').innerHTML = `
         <div>
-          <div class="feat-tag">Live reference odds</div>
-          <div class="feat-q">${featured.q}</div>
+          <div class="feat-tag">${featured.source === 'PredictArc on-chain odds' ? 'On-chain pool odds' : 'Live reference odds'}</div>
+          <div class="feat-q">${esc(featured.q)}</div>
           <div class="feat-stats">
             <div class="fstat"><div class="fstat-label">Testnet volume</div><div class="fstat-val purple">${featured.vol}</div></div>
-            <div class="fstat"><div class="fstat-label">YES reference</div><div class="fstat-val green">${featured.yes}%</div></div>
+            <div class="fstat"><div class="fstat-label">YES odds</div><div class="fstat-val green">${featured.yes}%</div></div>
             <div class="fstat"><div class="fstat-label">Closes</div><div class="fstat-val" style="color:var(--text2);font-size:14px;font-weight:500;">${featured.closeShort}</div></div>
           </div>
           <div class="prog-track"><div class="prog-fill" style="width:${featured.yes}%"></div></div>
@@ -603,7 +604,7 @@
       document.querySelector('.markets').innerHTML = markets.slice(1, 7).map(m => `
         <div class="mcard" onclick="window.location.href='market-detail.html?id=${m.id}'">
           <img class="mcard-visual" src="${m.image}" alt="" loading="lazy"/>
-          <div class="mtag mtag-${m.cat}">${m.cat}</div><div class="mq">${m.q}</div>
+          <div class="mtag mtag-${m.cat}">${esc(m.cat)}</div><div class="mq">${esc(m.q)}</div>
           <div class="mbets"><button class="btn-yes">YES ${m.yes}%</button><button class="btn-no">NO ${100-m.yes}%</button></div>
           <div class="mbar-track"><div class="mbar-fill" style="width:${m.yes}%"></div></div>
           <div class="mfooter"><span>Testnet: <strong>${m.vol}</strong></span><span>${m.closeShort}</span></div>

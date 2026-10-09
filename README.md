@@ -8,7 +8,8 @@ Current Arc Testnet deployment: `0x19D638Af6b2De9718Eff496fc27a304155D6Af44`
 
 ## Arc Testnet
 
-- RPC: `https://rpc.testnet.arc.network`
+- RPC: `https://rpc.testnet.arc.network` (does not handle JSON-RPC batches; the app reads through Multicall3 instead)
+- Explorer: `https://explorer.testnet.arc.io` (also the source of on-chain trade history)
 - Chain ID: `5042002`
 - Native gas token: `USDC`
 - Faucet: `https://faucet.circle.com` (select Arc Testnet and claim test USDC)
@@ -36,6 +37,14 @@ Current Arc Testnet deployment: `0x19D638Af6b2De9718Eff496fc27a304155D6Af44`
    ```
 
 The deploy script now creates the seeded markets and updates `contract.js` automatically.
+
+## Test
+
+```bash
+npm test
+```
+
+Includes a check that the website's payout estimate matches the contract's real `claimWinnings` payout.
 
 ## Resolve A Market
 
