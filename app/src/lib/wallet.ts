@@ -1,7 +1,7 @@
 // Injected-wallet connection (EIP-6963 discovery, window.ethereum fallback) and signed actions.
 import { useEffect, useState, useSyncExternalStore } from 'react'
-import { BrowserProvider, Contract, parseEther } from 'ethers'
-import { ARC, CONTRACTS, fetchOwner, type Version } from './chain'
+import { createWalletClient, custom, parseEther, type Address } from 'viem'
+import { ARC, CONTRACTS, arcTestnet, fetchOwner, publicClient, type Version } from './chain'
 
 interface Eip1193 {
   request(args: { method: string; params?: unknown[] }): Promise<unknown>
@@ -98,53 +98,44 @@ export function disconnect() {
   set({ account: null, provider: null })
 }
 
-async function signedContract(version: Version) {
+/** Sends one contract call from the connected wallet and waits for it to be mined. */
+async function write(version: Version, functionName: string, args: unknown[], value?: bigint) {
   const provider = state.provider ?? walletOptions()[0]?.provider
   if (!provider) throw new Error('No browser wallet found. Install MetaMask, Rabby or OKX Wallet.')
-  await provider.request({ method: 'eth_requestAccounts' })
+  const [account] = (await provider.request({ method: 'eth_requestAccounts' })) as Address[]
   await ensureArc(provider) // never sign on the wrong network
-  const signer = await new BrowserProvider(provider).getSigner()
-  return new Contract(CONTRACTS[version].address, CONTRACTS[version].abi, signer)
+  const wallet = createWalletClient({ account, chain: arcTestnet, transport: custom(provider) })
+  const { address, abi } = CONTRACTS[version]
+  const hash = await wallet.writeContract({ address, abi, functionName, args, value } as never)
+  const receipt = await publicClient.waitForTransactionReceipt({ hash })
+  if (receipt.status !== 'success') throw new Error('Transaction reverted on-chain')
+  return hash
 }
 
-export async function placeBet(version: Version, marketId: number, side: boolean, amount: number) {
-  const tx = await (await signedContract(version)).placeBet(marketId, side, { value: parseEther(String(amount)) })
-  await tx.wait()
-  return tx.hash as string
+/** Short, human message for a failed wallet/contract call (viem errors are long). */
+export function errorText(error: unknown, fallback = 'Transaction failed') {
+  const e = error as { shortMessage?: string; message?: string }
+  const text = e?.shortMessage || e?.message || fallback
+  return text.split('\n')[0].slice(0, 160)
 }
 
-export async function claimWinnings(version: Version, marketId: number) {
-  const tx = await (await signedContract(version)).claimWinnings(marketId)
-  await tx.wait()
-  return tx.hash as string
-}
+export const placeBet = (version: Version, marketId: number, side: boolean, amount: number) =>
+  write(version, 'placeBet', [BigInt(marketId), side], parseEther(String(amount)))
+
+export const claimWinnings = (version: Version, marketId: number) => write(version, 'claimWinnings', [BigInt(marketId)])
 
 /** v2 only: take back both sides of a stake from a cancelled market. */
-export async function refund(marketId: number) {
-  const tx = await (await signedContract(2)).refund(marketId)
-  await tx.wait()
-  return tx.hash as string
-}
+export const refund = (marketId: number) => write(2, 'refund', [BigInt(marketId)])
 
 // ---- owner actions (the contract rejects anyone else) ----
 
-export async function createMarket(question: string, category: string, rules: string, deadline: number) {
-  const tx = await (await signedContract(2)).createMarket(question, category, rules, deadline)
-  await tx.wait()
-  return tx.hash as string
-}
+export const createMarket = (question: string, category: string, rules: string, deadline: number) =>
+  write(2, 'createMarket', [question, category, rules, BigInt(deadline)])
 
-export async function resolveMarket(version: Version, marketId: number, outcome: boolean) {
-  const tx = await (await signedContract(version)).resolveMarket(marketId, outcome)
-  await tx.wait()
-  return tx.hash as string
-}
+export const resolveMarket = (version: Version, marketId: number, outcome: boolean) =>
+  write(version, 'resolveMarket', [BigInt(marketId), outcome])
 
-export async function cancelMarket(marketId: number, reason: string) {
-  const tx = await (await signedContract(2)).cancelMarket(marketId, reason)
-  await tx.wait()
-  return tx.hash as string
-}
+export const cancelMarket = (marketId: number, reason: string) => write(2, 'cancelMarket', [BigInt(marketId), reason])
 
 let ownerRequest: Promise<string> | null = null
 /** True when the connected wallet owns the v2 contract (gates the admin page; the contract enforces it). */

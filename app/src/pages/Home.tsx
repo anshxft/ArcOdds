@@ -1,9 +1,7 @@
-import { useRef } from 'react'
+import { Suspense, lazy, useRef } from 'react'
 import { Link } from 'react-router'
 import Shuffle from '@/components/Shuffle'
 import CountUp from '@/components/CountUp'
-import DotGrid from '@/components/DotGrid'
-import FaultyTerminal from '@/components/FaultyTerminal'
 import SplitText from '@/components/SplitText'
 import { Asterisk, Decode, Label, Orb } from '@/components/site'
 import { Halftone, MarketCard } from '@/components/market'
@@ -45,6 +43,10 @@ function SectionHead({ kicker, title, action }: { kicker: string; title: string;
     </div>
   )
 }
+
+// Decorative canvas effects load after the page, so they never block first paint.
+const DotGrid = lazy(() => import('@/components/DotGrid'))
+const FaultyTerminal = lazy(() => import('@/components/FaultyTerminal'))
 
 // "predictarc" in Tektur 800 is ~4.73em wide; size it to fill the frame edge to edge.
 const WORDMARK_SIZE = 'clamp(48px, calc((min(100vw, 1440px) - 76px) / 4.85), 290px)'
@@ -136,13 +138,13 @@ export default function Home() {
           </div>
         </div>
         <div ref={gridCell} className="cell relative hidden min-h-64 md:col-span-3 md:block" data-boot>
-          {gridOn && <DotGrid dotSize={4} gap={18} baseColor="#9a9a94" activeColor="#ff3b1f" proximity={110} shockRadius={200} shockStrength={4} />}
+          {gridOn && <Suspense fallback={null}><DotGrid dotSize={4} gap={18} baseColor="#9a9a94" activeColor="#ff3b1f" proximity={110} shockRadius={200} shockStrength={4} /></Suspense>}
           <Label className="absolute bottom-3 left-3 bg-paper px-1">Move / click</Label>
         </div>
         <div className="md:col-span-4" data-boot>
           <div ref={terminalCell} className="cell relative h-56 overflow-hidden bg-signal md:h-[calc(100%-41px)]">
             <div className="absolute inset-0 mix-blend-screen">
-              <FaultyTerminal pause={!terminalOn} scale={1.6} gridMul={TERMINAL_GRID} digitSize={1.3} timeScale={0.4} scanlineIntensity={0.25} glitchAmount={0.6} flickerAmount={0.4} curvature={0} brightness={1.1} mouseStrength={0.3} />
+              <Suspense fallback={null}><FaultyTerminal pause={!terminalOn} scale={1.6} gridMul={TERMINAL_GRID} digitSize={1.3} timeScale={0.4} scanlineIntensity={0.25} glitchAmount={0.6} flickerAmount={0.4} curvature={0} brightness={1.1} mouseStrength={0.3} /></Suspense>
             </div>
           </div>
           <div className="cell label flex h-[41px] items-center justify-center gap-2">Predict / Stake / Claim</div>

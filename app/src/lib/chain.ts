@@ -1,6 +1,6 @@
-// Read-side access to the PredictArc contracts on Arc Testnet.
+// Read-side access to the PredictArc contracts on Arc Testnet (viem).
 // v2 (PredictArcV2) is current; v1 (ArcOdds) is legacy: its positions stay readable and claimable.
-import { AbiCoder, Contract, Interface, JsonRpcProvider, formatEther, getAddress } from 'ethers'
+import { createPublicClient, decodeAbiParameters, defineChain, formatEther, getAddress, http, parseAbi, type Address } from 'viem'
 
 export const ARC = {
   chainId: 5042002,
@@ -10,35 +10,43 @@ export const ARC = {
   explorer: 'https://explorer.testnet.arc.io',
   faucet: 'https://faucet.circle.com',
 }
-const MULTICALL3 = '0xcA11bde05977b3631167028862bE2a173976CA11'
 const BET_PLACED_TOPIC = '0x4af71b021e799c62c158bd54636ca8da2fa26115a21a2dc6efe486ec104fd15f' // same event in v1 and v2
 
-const SHARED_ABI = [
+export const arcTestnet = defineChain({
+  id: ARC.chainId,
+  name: ARC.name,
+  nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
+  rpcUrls: { default: { http: [ARC.rpc] } },
+  blockExplorers: { default: { name: 'Arc Explorer', url: ARC.explorer } },
+  contracts: { multicall3: { address: '0xcA11bde05977b3631167028862bE2a173976CA11' } },
+})
+
+// Arc RPC mishandles JSON-RPC batches, so keep transport batching off; reads fold into Multicall3 instead.
+export const publicClient = createPublicClient({ chain: arcTestnet, transport: http(ARC.rpc, { batch: false }) })
+
+const SHARED = [
   'function marketCount() view returns (uint256)',
   'function owner() view returns (address)',
-  'function resolveMarket(uint256, bool)',
   'function getPosition(uint256, address) view returns (uint256 yesAmount, uint256 noAmount, bool hasClaimed)',
   'function placeBet(uint256, bool) payable',
   'function claimWinnings(uint256)',
-]
+  'function resolveMarket(uint256, bool)',
+] as const
+const ABI_V2 = parseAbi([
+  ...SHARED,
+  'function getMarket(uint256) view returns ((string question, string category, string rules, uint256 deadline, uint256 yesPool, uint256 noPool, bool outcome, uint8 status, address creator))',
+  'function refund(uint256)',
+  'function createMarket(string question, string category, string rules, uint256 deadline) returns (uint256)',
+  'function cancelMarket(uint256, string reason)',
+])
+const ABI_V1 = parseAbi([
+  ...SHARED,
+  'function getMarket(uint256) view returns (string question, string category, uint256 deadline, uint256 yesPool, uint256 noPool, bool outcome, uint8 status, address creator)',
+])
+
 export const CONTRACTS = {
-  2: {
-    address: '0xfadbE0877379F3a6CBC8A612b9B28b1B25baa796',
-    abi: [
-      ...SHARED_ABI,
-      'function getMarket(uint256) view returns (tuple(string question, string category, string rules, uint256 deadline, uint256 yesPool, uint256 noPool, bool outcome, uint8 status, address creator))',
-      'function refund(uint256)',
-      'function createMarket(string question, string category, string rules, uint256 deadline) returns (uint256)',
-      'function cancelMarket(uint256, string reason)',
-    ],
-  },
-  1: {
-    address: '0x19D638Af6b2De9718Eff496fc27a304155D6Af44',
-    abi: [
-      ...SHARED_ABI,
-      'function getMarket(uint256) view returns (string question, string category, uint256 deadline, uint256 yesPool, uint256 noPool, bool outcome, uint8 status, address creator)',
-    ],
-  },
+  2: { address: '0xfadbE0877379F3a6CBC8A612b9B28b1B25baa796' as Address, abi: ABI_V2 },
+  1: { address: '0x19D638Af6b2De9718Eff496fc27a304155D6Af44' as Address, abi: ABI_V1 },
 } as const
 export type Version = keyof typeof CONTRACTS
 const VERSIONS: Version[] = [2, 1]
@@ -81,37 +89,35 @@ export const marketKey = (version: Version, id: number) => `v${version}-${id}`
 /** "v2-3" -> v2 market 3; a bare "3" is an old v1 link. */
 export function parseMarketKey(key: string): { version: Version; id: number } | null {
   const match = /^(?:v([12])-)?(\d+)$/.exec(key)
-  return match ? { version: (Number(match[1] ?? 1) as Version), id: Number(match[2]) } : null
+  return match ? { version: Number(match[1] ?? 1) as Version, id: Number(match[2]) } : null
 }
-
-// Arc RPC mishandles JSON-RPC batches, so send calls one by one and fold reads into Multicall3.
-const provider = new JsonRpcProvider(ARC.rpc, ARC.chainId, { staticNetwork: true, batchMaxCount: 1 })
-const multicall = new Contract(
-  MULTICALL3,
-  ['function aggregate3((address target, bool allowFailure, bytes callData)[] calls) view returns ((bool success, bytes returnData)[] returnData)'],
-  provider,
-)
-const ifaces = { 1: new Interface(CONTRACTS[1].abi), 2: new Interface(CONTRACTS[2].abi) }
 
 const toNumber = (value: bigint) => Number(formatEther(value))
 export const txUrl = (hash: string) => `${ARC.explorer}/tx/${hash}`
 export const addressUrl = (address: string) => `${ARC.explorer}/address/${address}`
 
-async function readMany(version: Version, calls: [string, unknown[]][]) {
-  const { address } = CONTRACTS[version]
-  const iface = ifaces[version]
-  const results = await multicall.aggregate3(
-    calls.map(([fn, args]) => ({ target: address, allowFailure: false, callData: iface.encodeFunctionData(fn, args) })),
-  )
-  return results.map((result: { returnData: string }, index: number) => iface.decodeFunctionResult(calls[index][0], result.returnData))
+// One eth_call per batch through Multicall3; results come back in call order.
+async function readMany(version: Version, functionName: string, argsList: unknown[][]): Promise<unknown[]> {
+  const { address, abi } = CONTRACTS[version]
+  return publicClient.multicall({
+    allowFailure: false,
+    contracts: argsList.map((args) => ({ address, abi, functionName, args })) as never,
+  }) as Promise<unknown[]>
 }
 
 async function marketIds(version: Version) {
-  const [count] = await readMany(version, [['marketCount', []]])
-  return Array.from({ length: Number(count[0]) }, (_, index) => index + 1)
+  const { address, abi } = CONTRACTS[version]
+  const count = (await publicClient.readContract({ address, abi, functionName: 'marketCount' } as never)) as bigint
+  return Array.from({ length: Number(count) }, (_, index) => index + 1)
 }
 
-interface RawMarket { question: string; category: string; rules?: string; deadline: bigint; yesPool: bigint; noPool: bigint; outcome: boolean; status: bigint; creator: string }
+interface RawMarket { question: string; category: string; rules?: string; deadline: bigint; yesPool: bigint; noPool: bigint; outcome: boolean; status: number; creator: string }
+
+function toRaw(version: Version, row: unknown): RawMarket {
+  if (version === 2) return row as RawMarket // single struct output decodes to an object
+  const [question, category, deadline, yesPool, noPool, outcome, status, creator] = row as [string, string, bigint, bigint, bigint, boolean, number, string]
+  return { question, category, deadline, yesPool, noPool, outcome, status, creator }
+}
 
 function parseMarket(version: Version, id: number, raw: RawMarket): Market {
   const total = raw.yesPool + raw.noPool
@@ -135,37 +141,35 @@ function parseMarket(version: Version, id: number, raw: RawMarket): Market {
   }
 }
 
-async function fetchVersionMarkets(version: Version) {
-  const ids = await marketIds(version)
-  const rows = await readMany(version, ids.map((id) => ['getMarket', [id]]))
-  // v2 returns one struct, v1 returns the fields flat
-  return rows.map((row: { [k: number]: RawMarket } & RawMarket, index: number) => parseMarket(version, ids[index], version === 2 ? row[0] : row))
-}
-
 export async function fetchBalance(address: string) {
-  return toNumber(await provider.getBalance(address))
+  return toNumber(await publicClient.getBalance({ address: address as Address }))
 }
 
 /** Owner of the current (v2) contract; the admin page only opens for this wallet. */
 export async function fetchOwner(): Promise<string> {
-  const [result] = await readMany(2, [['owner', []]])
-  return result[0]
+  const { address, abi } = CONTRACTS[2]
+  return (await publicClient.readContract({ address, abi, functionName: 'owner' })) as string
 }
 
 export async function fetchMarkets(): Promise<Market[]> {
-  return (await Promise.all(VERSIONS.map(fetchVersionMarkets))).flat()
+  const perVersion = await Promise.all(VERSIONS.map(async (version) => {
+    const ids = await marketIds(version)
+    const rows = await readMany(version, 'getMarket', ids.map((id) => [BigInt(id)]))
+    return rows.map((row, index) => parseMarket(version, ids[index], toRaw(version, row)))
+  }))
+  return perVersion.flat()
 }
 
 /** One entry per side: a wallet can hold both YES and NO in the same market. */
 export async function fetchPositions(account: string): Promise<Position[]> {
   const perVersion = await Promise.all(VERSIONS.map(async (version) => {
     const ids = await marketIds(version)
-    const rows = await readMany(version, ids.map((id) => ['getPosition', [id, account]]))
+    const rows = (await readMany(version, 'getPosition', ids.map((id) => [BigInt(id), account]))) as [bigint, bigint, boolean][]
     return ids.flatMap((id, index) => {
-      const row = rows[index]
-      return ([['YES', toNumber(row.yesAmount)], ['NO', toNumber(row.noAmount)]] as [Side, number][])
+      const [yesAmount, noAmount, claimed] = rows[index]
+      return ([['YES', toNumber(yesAmount)], ['NO', toNumber(noAmount)]] as [Side, number][])
         .filter(([, amount]) => amount > 0)
-        .map(([side, amount]) => ({ key: marketKey(version, id), version, marketId: id, side, amount, claimed: row.hasClaimed }))
+        .map(([side, amount]) => ({ key: marketKey(version, id), version, marketId: id, side, amount, claimed }))
     })
   }))
   return perVersion.flat()
@@ -181,7 +185,7 @@ async function fetchVersionBets(version: Version): Promise<Bet[]> {
     const data = await response.json()
     for (const log of data.items ?? []) {
       if (log.topics?.[0] !== BET_PLACED_TOPIC) continue
-      const [side, amount] = AbiCoder.defaultAbiCoder().decode(['bool', 'uint256'], log.data)
+      const [side, amount] = decodeAbiParameters([{ type: 'bool' }, { type: 'uint256' }], log.data)
       bets.push({
         key: marketKey(version, Number(BigInt(log.topics[1]))),
         user: getAddress('0x' + log.topics[2].slice(26)),

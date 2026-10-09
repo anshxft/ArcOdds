@@ -9,7 +9,7 @@ import { fetchPositions, txUrl, type Position, type Version } from '@/lib/chain'
 import { formatUsdc, marketImage, marketState, refreshMarkets, stateLabel, useMarkets } from '@/lib/markets'
 import { poolPayout } from '@/lib/payout'
 import { useBoot, useScrollMotion } from '@/lib/motion'
-import { claimWinnings, refund, useWallet } from '@/lib/wallet'
+import { claimWinnings, refund, useWallet, errorText } from '@/lib/wallet'
 
 export default function Portfolio() {
   const scope = useRef<HTMLDivElement>(null)
@@ -56,7 +56,7 @@ export default function Portfolio() {
     toast.promise(run, {
       loading: isRefund ? 'Refunding your stake…' : 'Claiming winnings…',
       success: (hash) => ({ message: isRefund ? 'Stake refunded' : 'Winnings claimed', action: { label: 'View tx', onClick: () => window.open(txUrl(hash), '_blank', 'noopener') } }),
-      error: (error) => (error as Error).message?.split('(')[0] || 'Transaction failed',
+      error: (error) => errorText(error, 'Transaction failed'),
     })
     try {
       await run

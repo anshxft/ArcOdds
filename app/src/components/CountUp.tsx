@@ -1,117 +1,41 @@
-'use client';
-
-import { useInView, useMotionValue, useSpring } from 'motion/react';
-import { useCallback, useEffect, useRef } from 'react';
+// Counts from 0 up to `to` the first time it scrolls into view.
+// Same props as the React Bits CountUp it replaces, but built on NumberFlow (already used
+// for odds) so the app no longer ships the motion library just for this.
+import { useEffect, useRef, useState } from 'react'
+import NumberFlow from '@number-flow/react'
 
 interface CountUpProps {
-  to: number;
-  from?: number;
-  direction?: 'up' | 'down';
-  delay?: number;
-  duration?: number;
-  className?: string;
-  startWhen?: boolean;
-  separator?: string;
-  onStart?: () => void;
-  onEnd?: () => void;
+  to: number
+  duration?: number // seconds
+  separator?: string
+  className?: string
 }
 
-export default function CountUp({
-  to,
-  from = 0,
-  direction = 'up',
-  delay = 0,
-  duration = 2,
-  className = '',
-  startWhen = true,
-  separator = '',
-  onStart,
-  onEnd
-}: CountUpProps) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const motionValue = useMotionValue(direction === 'down' ? to : from);
-
-  const damping = 20 + 40 * (1 / duration);
-  const stiffness = 100 * (1 / duration);
-
-  const springValue = useSpring(motionValue, {
-    damping,
-    stiffness
-  });
-
-  const isInView = useInView(ref, { once: true, margin: '0px' });
-
-  const getDecimalPlaces = (num: number): number => {
-    const str = num.toString();
-    if (str.includes('.')) {
-      const decimals = str.split('.')[1];
-      if (parseInt(decimals) !== 0) {
-        return decimals.length;
-      }
-    }
-    return 0;
-  };
-
-  const maxDecimals = Math.max(getDecimalPlaces(from), getDecimalPlaces(to));
-
-  const formatValue = useCallback(
-    (latest: number) => {
-      const hasDecimals = maxDecimals > 0;
-
-      const options: Intl.NumberFormatOptions = {
-        useGrouping: !!separator,
-        minimumFractionDigits: hasDecimals ? maxDecimals : 0,
-        maximumFractionDigits: hasDecimals ? maxDecimals : 0
-      };
-
-      const formattedNumber = Intl.NumberFormat('en-US', options).format(latest);
-
-      return separator ? formattedNumber.replace(/,/g, separator) : formattedNumber;
-    },
-    [maxDecimals, separator]
-  );
+export default function CountUp({ to, duration = 1, separator = '', className = '' }: CountUpProps) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [value, setValue] = useState(0)
+  const [seen, setSeen] = useState(false)
 
   useEffect(() => {
-    if (ref.current) {
-      ref.current.textContent = formatValue(direction === 'down' ? to : from);
-    }
-  }, [from, to, direction, formatValue]);
+    if (!ref.current) return
+    const observer = new IntersectionObserver(([entry]) => entry.isIntersecting && setSeen(true))
+    observer.observe(ref.current)
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
-    if (isInView && startWhen) {
-      if (typeof onStart === 'function') {
-        onStart();
-      }
+    if (seen) setValue(to)
+  }, [seen, to])
 
-      const timeoutId = setTimeout(() => {
-        motionValue.set(direction === 'down' ? from : to);
-      }, delay * 1000);
-
-      const durationTimeoutId = setTimeout(
-        () => {
-          if (typeof onEnd === 'function') {
-            onEnd();
-          }
-        },
-        delay * 1000 + duration * 1000
-      );
-
-      return () => {
-        clearTimeout(timeoutId);
-        clearTimeout(durationTimeoutId);
-      };
-    }
-  }, [isInView, startWhen, motionValue, direction, from, to, delay, onStart, onEnd, duration]);
-
-  useEffect(() => {
-    const unsubscribe = springValue.on('change', (latest: number) => {
-      if (ref.current) {
-        ref.current.textContent = formatValue(latest);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [springValue, formatValue]);
-
-  return <span className={className} ref={ref} />;
+  const decimals = Math.min(2, (String(to).split('.')[1] ?? '').length)
+  return (
+    <span ref={ref} className={className}>
+      <NumberFlow
+        value={value}
+        format={{ useGrouping: Boolean(separator), minimumFractionDigits: decimals, maximumFractionDigits: decimals }}
+        transformTiming={{ duration: duration * 1000, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' }}
+        spinTiming={{ duration: duration * 1000, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' }}
+      />
+    </span>
+  )
 }

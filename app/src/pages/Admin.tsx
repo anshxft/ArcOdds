@@ -6,7 +6,7 @@ import { Asterisk, Decode, Label, Orb, WalletButton } from '@/components/site'
 import { fetchBalance, txUrl, type Market } from '@/lib/chain'
 import { formatDate, formatUsdc, marketState, refreshMarkets, useMarkets } from '@/lib/markets'
 import { useBoot } from '@/lib/motion'
-import { cancelMarket, createMarket, resolveMarket, useIsOwner, useWallet } from '@/lib/wallet'
+import { cancelMarket, createMarket, resolveMarket, useIsOwner, useWallet, errorText } from '@/lib/wallet'
 
 const CATEGORIES = ['crypto', 'finance', 'politics', 'sports', 'tech', 'entertainment']
 const RESOLUTION_WINDOW = 30 * 86400 // PredictArcV2: after deadline + this, anyone can cancel
@@ -22,7 +22,7 @@ async function run(label: string, action: () => Promise<string>) {
   toast.promise(pending, {
     loading: `${label}…`,
     success: (hash) => ({ message: `${label}: confirmed`, action: { label: 'View tx', onClick: () => window.open(txUrl(hash), '_blank', 'noopener') } }),
-    error: (error) => (error as Error).message?.split('(')[0] || `${label} failed`,
+    error: (error) => errorText(error, `${label} failed`),
   })
   try {
     await pending

@@ -8,7 +8,7 @@ import { ARC, addressUrl, fetchBalance, marketKey, parseMarketKey, txUrl, type M
 import { bettorCount, formatDate, formatUsdc, marketImage, marketState, refreshMarkets, shortAddress, stateLabel, timeAgo, useMarkets } from '@/lib/markets'
 import { quote } from '@/lib/payout'
 import { useBoot, useScrollMotion } from '@/lib/motion'
-import { placeBet, useWallet } from '@/lib/wallet'
+import { placeBet, useWallet, errorText } from '@/lib/wallet'
 
 interface Brief {
   summary: string
@@ -116,7 +116,7 @@ function TradePanel({ market }: { market: MarketT }) {
     toast.promise(run, {
       loading: `Placing ${stake} USDC on ${side}…`,
       success: (hash) => ({ message: 'Bet confirmed on Arc Testnet', action: { label: 'View tx', onClick: () => window.open(txUrl(hash), '_blank', 'noopener') } }),
-      error: (error) => (error as Error).message?.split('(')[0] || 'Bet failed',
+      error: (error) => errorText(error, 'Bet failed'),
     })
     try {
       await run
