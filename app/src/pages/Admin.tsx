@@ -9,6 +9,12 @@ import { useBoot } from '@/lib/motion'
 import { cancelMarket, createMarket, resolveMarket, useIsOwner, useWallet } from '@/lib/wallet'
 
 const CATEGORIES = ['crypto', 'finance', 'politics', 'sports', 'tech', 'entertainment']
+const RESOLUTION_WINDOW = 30 * 86400 // PredictArcV2: after deadline + this, anyone can cancel
+
+function daysFrom(seconds: number) {
+  const days = Math.round((seconds * 1000 - Date.now()) / 86400000)
+  return days === 0 ? 'today' : days > 0 ? `in ${days}d` : `${-days}d ago`
+}
 
 /** Wraps an owner transaction in a toast and refreshes the markets afterwards. */
 async function run(label: string, action: () => Promise<string>) {
@@ -100,7 +106,10 @@ function MarketRow({ market }: { market: Market }) {
     <div className="cell grid gap-3 p-4 md:grid-cols-[1fr_auto] md:items-center">
       <div className="min-w-0">
         <Link to={`/market/${market.key}`} className="font-medium hover:underline">{market.question}</Link>
-        <Label className="block">{market.key} · {state === 'closed' ? 'awaiting resolution' : state} · closes {formatDate(market.deadline)} · {formatUsdc(market.volume)}</Label>
+        <Label className="block">
+          {market.key} · {state === 'closed' ? 'awaiting resolution' : state} · closes {formatDate(market.deadline)} ({daysFrom(market.deadline)})
+          {market.version === 2 && ` · resolve by ${formatDate(market.deadline + RESOLUTION_WINDOW)}`} · {formatUsdc(market.volume)}
+        </Label>
       </div>
       <div className="flex flex-wrap gap-2">
         {state === 'closed' && (
@@ -130,7 +139,7 @@ export default function Admin() {
   }, [account, isOwner, markets])
 
   const needsAction = markets.filter((market) => marketState(market) === 'closed')
-  const live = markets.filter((market) => market.version === 2 && marketState(market) === 'open')
+  const upcoming = markets.filter((market) => marketState(market) === 'open').sort((a, b) => a.deadline - b.deadline)
 
   return (
     <div ref={scope}>
@@ -161,8 +170,8 @@ export default function Admin() {
           <section className="frame mt-12 grid lg:grid-cols-2">
             <CreateForm />
             <div className="min-w-0">
-              <div className="label cell px-5 py-3 text-ink">Live v2 markets ({live.length})</div>
-              {live.map((market) => <MarketRow key={market.key} market={market} />)}
+              <div className="label cell px-5 py-3 text-ink">Upcoming deadlines ({upcoming.length})</div>
+              {upcoming.map((market) => <MarketRow key={market.key} market={market} />)}
             </div>
           </section>
         </>
