@@ -3,3 +3,4 @@ node_modules/
 artifacts/
 cache/
 deployment.json
+deployment-v2.json

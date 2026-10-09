@@ -2,17 +2,25 @@
   <defs>
     <linearGradient id="PredictArc-stroke" x1="12" y1="84" x2="84" y2="12" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#8b5cf6"/>
-      <stop offset="0.52" stop-color="#22c55e"/>
+      <stop offset="0.54" stop-color="#06b6d4"/>
       <stop offset="1" stop-color="#06b6d4"/>
     </linearGradient>
+    <linearGradient id="PredictArc-fill" x1="20" y1="80" x2="76" y2="16" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6d28d9"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <filter id="PredictArc-glow" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="3.6" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.55 0 0 0 0 0.36 0 0 0 0 0.96 0 0 0 0.55 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
-  <path
-    d="M14 76V31L38 68V10L58 50L82 31V76L58 50L38 68L14 76Z"
-    fill="none"
-    stroke="url(#PredictArc-stroke)"
-    stroke-width="6"
-    stroke-linecap="square"
-    stroke-linejoin="miter"
-    vector-effect="non-scaling-stroke"
-  />
+  <rect x="8" y="8" width="80" height="80" rx="20" fill="url(#PredictArc-fill)"/>
+  <path d="M21 64C32 39 48 27 75 24" fill="none" stroke="url(#PredictArc-stroke)" stroke-width="6" stroke-linecap="round" filter="url(#PredictArc-glow)"/>
+  <path d="M21 70L39 48L50 58L75 25" fill="none" stroke="#f8fafc" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="75" cy="25" r="8" fill="#22c55e" stroke="#f8fafc" stroke-width="4"/>
+  <path d="M23 28H42M23 40H34" stroke="#a78bfa" stroke-width="5" stroke-linecap="round" opacity="0.9"/>
 </svg>

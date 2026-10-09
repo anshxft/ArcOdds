@@ -9,9 +9,10 @@
   <link rel="apple-touch-icon" href="assets/favicon-180.png"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <script src="assets/vendor/ethers.umd.min.js"></script>
-  <script src="contract.js?v=20260606l"></script>
-  <script src="supabase.js?v=20260606l"></script>
-  <script src="app.js?v=20260606l"></script>
+  <script src="contract.js?v=20261010d"></script>
+  <script src="supabase.js?v=20261010d"></script>
+  <script src="app.js?v=20261010d"></script>
+  <script src="premium.js?v=20261010d"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root, [data-theme="dark"] {
@@ -83,12 +84,16 @@
       .profit { font-size:20px; }
     }
   </style>
+  <link rel="stylesheet" href="premium.css?v=20260730a"/>
+  <link rel="stylesheet" href="assets/vendor/lenis/lenis.css"/>
+  <script src="assets/vendor/lenis/lenis.min.js" defer></script>
+  <script src="smooth-scroll.js?v=20261010f" defer></script>
 </head>
 <body>
   <nav>
     <div class="nav-left">
       <a class="nav-logo" href="predictarc.html">
-        <img class="nav-logo-mark" src="assets/predictarc-bird.png" alt=""/>
+        <img class="nav-logo-mark" src="assets/predictarc-mark.svg" alt=""/>
         <span>Predict<span>Arc</span></span>
       </a>
       <ul class="nav-links">
@@ -101,7 +106,7 @@
     </div>
     <div class="nav-right">
       <div class="network-badge"><div class="net-dot"></div>Arc Testnet</div>
-      <button class="btn-faucet" onclick="openArcFaucet()">Claim Faucet</button>
+      <button class="btn-faucet" onclick="openArcFaucet()">Claim Free Test USDC</button>
       <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙</button>
       <button class="btn-connect" onclick="connectWallet()">Connect Wallet</button>
     </div>
@@ -121,7 +126,7 @@
       <div class="table">
         <div class="table-head"><div>Step</div><div>Flow</div><div>Status</div><div>Network</div><div>Type</div></div>
         <div class="table-row"><div>01</div><div class="addr">Connect wallet</div><div class="profit" style="font-size:14px">Ready</div><div>Arc</div><div><span class="pill">Wallet</span></div></div>
-        <div class="table-row"><div>02</div><div class="addr">Claim faucet USDC</div><div class="profit" style="font-size:14px">Ready</div><div>Circle</div><div><span class="pill">Faucet</span></div></div>
+        <div class="table-row"><div>02</div><div class="addr">Claim free test USDC</div><div class="profit" style="font-size:14px">Ready</div><div>Circle</div><div><span class="pill">Faucet</span></div></div>
         <div class="table-row"><div>03</div><div class="addr">Browse live reference odds</div><div class="profit" style="font-size:14px">Live</div><div>Public API</div><div><span class="pill">Data</span></div></div>
         <div class="table-row"><div>04</div><div class="addr">Submit testnet position</div><div class="profit" style="font-size:14px">Contract</div><div>Arc</div><div><span class="pill">Trade</span></div></div>
       </div>
@@ -164,7 +169,7 @@
       document.querySelector('.table').innerHTML = `
         <div class="table-head"><div>Step</div><div>Flow</div><div>Status</div><div>Network</div><div>Type</div></div>
         <div class="table-row"><div>01</div><div class="addr">Connect wallet</div><div class="profit" style="font-size:14px">Ready</div><div>Arc</div><div><span class="pill">Wallet</span></div></div>
-        <div class="table-row"><div>02</div><div class="addr">Claim faucet USDC</div><div class="profit" style="font-size:14px">Ready</div><div>Circle</div><div><span class="pill">Faucet</span></div></div>
+        <div class="table-row"><div>02</div><div class="addr">Claim free test USDC</div><div class="profit" style="font-size:14px">Ready</div><div>Circle</div><div><span class="pill">Faucet</span></div></div>
         <div class="table-row"><div>03</div><div class="addr">Browse live reference odds</div><div class="profit" style="font-size:14px">Live</div><div>Public API</div><div><span class="pill">Data</span></div></div>
         <div class="table-row"><div>04</div><div class="addr">Submit testnet position</div><div class="profit" style="font-size:14px">Contract</div><div>Arc</div><div><span class="pill">Trade</span></div></div>`;
       document.querySelector('.podium').style.visibility = 'visible';

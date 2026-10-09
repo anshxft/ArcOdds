@@ -1,14 +1,32 @@
 # PredictArc
 
+## New site (app/)
+
+The redesigned React site lives in `app/` (Vite, React 19, Tailwind 4, GSAP, Lenis, anime.js, React Bits, thinking-orbs, Sonner). The HTML pages in this folder stay live until it replaces them.
+
+```bash
+cd app
+npm install
+npm run dev
+```
+
+Deploy (Vercel project `arc-odds`, domain arcpredict.xyz): pushes to `main` on GitHub deploy automatically. The root `vercel.json` builds `app/` and serves `app/dist`, sends app routes to the SPA, and redirects the old `.html` URLs. `api/ai-brief.js` is the AI brief function; set `OPENROUTER_API_KEY` in the Vercel project for live briefs.
+
+Owner tools: connect the contract owner's wallet and open `/admin` to create v2 markets, resolve closed ones, or cancel (refund) a market.
+
 PredictArc is a simple prediction market MVP built for Arc Testnet.
 
 Market discovery questions and displayed probabilities refresh from Polymarket's public read-only Gamma API. PredictArc testnet trades, volume, and settlement remain separate.
 
-Current Arc Testnet deployment: `0x19D638Af6b2De9718Eff496fc27a304155D6Af44`
+Arc Testnet deployments (both verified on the explorer):
+
+- `PredictArcV2` (current): `0xfadbE0877379F3a6CBC8A612b9B28b1B25baa796`. Rules on-chain, cancel + refunds, auto-refund for one-sided markets, 30-day stale-market escape hatch, two-step ownership. Deploy with `npx hardhat run scripts/deploy-v2.js --network arcTestnet` (markets in `scripts/markets-v2.js`).
+- `ArcOdds` (legacy v1): `0x19D638Af6b2De9718Eff496fc27a304155D6Af44`. Existing positions stay claimable; no new bets from the new app.
 
 ## Arc Testnet
 
-- RPC: `https://rpc.testnet.arc.network`
+- RPC: `https://rpc.testnet.arc.network` (does not handle JSON-RPC batches; the app reads through Multicall3 instead)
+- Explorer: `https://explorer.testnet.arc.io` (also the source of on-chain trade history)
 - Chain ID: `5042002`
 - Native gas token: `USDC`
 - Faucet: `https://faucet.circle.com` (select Arc Testnet and claim test USDC)
@@ -37,12 +55,22 @@ Current Arc Testnet deployment: `0x19D638Af6b2De9718Eff496fc27a304155D6Af44`
 
 The deploy script now creates the seeded markets and updates `contract.js` automatically.
 
+## Test
+
+```bash
+npm test
+```
+
+Includes a check that the website's payout estimate matches the contract's real `claimWinnings` payout.
+
 ## Resolve A Market
 
 After its deadline, resolve a market from the owner wallet:
 
 ```bash
-npm run resolve:arc -- 1 yes
+MARKET=1 OUTCOME=yes npm run resolve:arc            # v1
+VERSION=2 MARKET=1 OUTCOME=yes npm run resolve:arc  # v2
+VERSION=2 MARKET=1 CANCEL="reason" npm run resolve:arc  # v2: void, bettors refund
 ```
 
 Winning users can then claim from the Portfolio page.

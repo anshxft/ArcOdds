@@ -2,7 +2,7 @@
   const SUPABASE_URL = "https://gtweocaxvfoauqkvbtar.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0d2VvY2F4dmZvYXVxa3ZidGFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3MzQ0NDAsImV4cCI6MjA5NjMxMDQ0MH0.7bGc_bNcrHzgSV8muzn5MD0SHpUxUTcMh1gUhpfZtPM";
 
-  const enabled = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+  let enabled = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
   function isEnabled() {
     return enabled;
@@ -10,6 +10,7 @@
 
   async function request(path, options = {}) {
     if (!enabled) return null;
+    // Unreachable project (e.g. paused): turn Supabase off for this page instead of erroring on every call.
     const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
       ...options,
       headers: {
@@ -19,6 +20,9 @@
         Prefer: "return=minimal",
         ...(options.headers || {}),
       },
+    }).catch((error) => {
+      enabled = false;
+      throw error;
     });
     if (!response.ok) {
       const message = await response.text().catch(() => "");

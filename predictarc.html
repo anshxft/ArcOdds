@@ -33,7 +33,6 @@
       --shadow: rgba(0,0,0,0.08);
     }
 
-    html { scroll-behavior: smooth; }
     body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; overflow-x: hidden; -webkit-font-smoothing: antialiased; transition: background 0.3s, color 0.3s; }
 
     /* BG */
@@ -324,6 +323,10 @@
       .stat-box { padding: 16px; }
     }
   </style>
+  <link rel="stylesheet" href="premium.css?v=20260730a"/>
+  <link rel="stylesheet" href="assets/vendor/lenis/lenis.css"/>
+  <script src="assets/vendor/lenis/lenis.min.js" defer></script>
+  <script src="smooth-scroll.js?v=20261010f" defer></script>
 </head>
 <body>
   <div class="bg-glow"></div>
@@ -334,7 +337,7 @@
     <div class="nav-left">
       <a class="nav-logo" href="#">
         <div class="logo-img-wrap">
-          <img src="assets/predictarc-bird.png" alt="PredictArc logo"/>
+          <img src="assets/predictarc-mark.svg" alt="PredictArc logo"/>
         </div>
         <div class="nav-logo-text">Predict<span>Arc</span></div>
       </a>
@@ -348,7 +351,7 @@
     </div>
     <div class="nav-right">
       <div class="network-badge"><div class="net-dot"></div>Arc Testnet</div>
-      <button class="btn-faucet" onclick="openArcFaucet()">Claim Faucet</button>
+      <button class="btn-faucet" onclick="openArcFaucet()">Claim Free Test USDC</button>
       <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙</button>
       <button class="btn-connect" onclick="connectWallet()">Connect Wallet</button>
       <button class="hamburger" id="hamburger" onclick="toggleMenu()">
@@ -365,7 +368,7 @@
     <a href="markets.html">Markets</a>
     <a href="portfolio.html">Portfolio</a>
     <a href="leaderboard.html">Status</a>
-    <a href="#" onclick="openArcFaucet(); return false;">Claim Faucet</a>
+    <a href="#" onclick="openArcFaucet(); return false;">Claim Free Test USDC</a>
     <a href="docs.html">Docs</a>
     <div class="mobile-menu-footer">
       <div class="network-badge" style="display:flex"><div class="net-dot"></div>Arc Testnet</div>
@@ -382,7 +385,7 @@
         <p>PredictArc is a decentralized prediction market. Stake on real-world events, earn rewards, and let the crowd find the truth.</p>
         <div class="hero-actions">
           <button class="btn-primary" onclick="window.location.href='markets.html'">Explore Markets</button>
-          <button class="btn-outline" onclick="openArcFaucet()">Get Test USDC</button>
+          <button class="btn-outline" onclick="openArcFaucet()">Claim Free Test USDC</button>
         </div>
       </div>
       <div class="stats-grid">
@@ -456,7 +459,7 @@
 
   <footer>
     <div class="footer-logo">
-      <div class="logo-img-wrap"><img src="assets/predictarc-bird.png" alt=""/></div>
+      <div class="logo-img-wrap"><img src="assets/predictarc-mark.svg" alt=""/></div>
       <div class="footer-logo-text">Predict<span>Arc</span></div>
     </div>
     <ul class="footer-links">
@@ -471,9 +474,10 @@
   </footer>
 
   <script src="assets/vendor/ethers.umd.min.js"></script>
-  <script src="contract.js?v=20260606l"></script>
-  <script src="supabase.js?v=20260606l"></script>
-  <script src="app.js?v=20260606l"></script>
+  <script src="contract.js?v=20261010d"></script>
+  <script src="supabase.js?v=20261010d"></script>
+  <script src="app.js?v=20261010d"></script>
+  <script src="premium.js?v=20261010d"></script>
   <script>
     // Particles
     (function(){
@@ -537,6 +541,7 @@
 
     // Nav Search
     const ALL_MARKETS = window.PredictArcApp.ARC_MARKETS;
+    const esc = window.PredictArcApp.escapeHtml;
 
     const TAG_COLORS = {
       crypto:'background:rgba(109,40,217,0.12);color:#8b5cf6',
@@ -556,9 +561,9 @@
         dd.innerHTML = '<div class="search-empty">No markets found</div>';
       } else {
         dd.innerHTML = results.map(m => `
-          <div class="search-item" onmousedown="window.location.href='markets.html'">
-            <span class="search-item-tag" style="${TAG_COLORS[m.cat]}">${m.cat}</span>
-            <span class="search-item-q">${m.q}</span>
+          <div class="search-item" onmousedown="window.location.href='market-detail.html?id=${m.id}'">
+            <span class="search-item-tag" style="${TAG_COLORS[m.cat]}">${esc(m.cat)}</span>
+            <span class="search-item-q">${esc(m.q)}</span>
             <span class="search-item-pct">${m.yes}%</span>
           </div>`).join('');
       }
@@ -578,16 +583,16 @@
       const markets = window.PredictArcApp.ARC_MARKETS;
       const featured = markets[0];
       document.querySelector('.ticker-inner').innerHTML = [...markets.slice(0, 8), ...markets.slice(0, 8)].map(m =>
-        `<div class="tick">${m.q.slice(0, 38)} <span class="tick-sep">·</span><span class="${m.yes >= 50 ? 'up' : 'dn'}">${m.yes}%</span></div>`
+        `<div class="tick">${esc(m.q.slice(0, 38))} <span class="tick-sep">·</span><span class="${m.yes >= 50 ? 'up' : 'dn'}">${m.yes}%</span></div>`
       ).join('');
 
       document.querySelector('.featured').innerHTML = `
         <div>
-          <div class="feat-tag">Live reference odds</div>
-          <div class="feat-q">${featured.q}</div>
+          <div class="feat-tag">${featured.source === 'PredictArc on-chain odds' ? 'On-chain pool odds' : 'Live reference odds'}</div>
+          <div class="feat-q">${esc(featured.q)}</div>
           <div class="feat-stats">
             <div class="fstat"><div class="fstat-label">Testnet volume</div><div class="fstat-val purple">${featured.vol}</div></div>
-            <div class="fstat"><div class="fstat-label">YES reference</div><div class="fstat-val green">${featured.yes}%</div></div>
+            <div class="fstat"><div class="fstat-label">YES odds</div><div class="fstat-val green">${featured.yes}%</div></div>
             <div class="fstat"><div class="fstat-label">Closes</div><div class="fstat-val" style="color:var(--text2);font-size:14px;font-weight:500;">${featured.closeShort}</div></div>
           </div>
           <div class="prog-track"><div class="prog-fill" style="width:${featured.yes}%"></div></div>
@@ -601,7 +606,7 @@
       document.querySelector('.markets').innerHTML = markets.slice(1, 7).map(m => `
         <div class="mcard" onclick="window.location.href='market-detail.html?id=${m.id}'">
           <img class="mcard-visual" src="${m.image}" alt="" loading="lazy"/>
-          <div class="mtag mtag-${m.cat}">${m.cat}</div><div class="mq">${m.q}</div>
+          <div class="mtag mtag-${m.cat}">${esc(m.cat)}</div><div class="mq">${esc(m.q)}</div>
           <div class="mbets"><button class="btn-yes">YES ${m.yes}%</button><button class="btn-no">NO ${100-m.yes}%</button></div>
           <div class="mbar-track"><div class="mbar-fill" style="width:${m.yes}%"></div></div>
           <div class="mfooter"><span>Testnet: <strong>${m.vol}</strong></span><span>${m.closeShort}</span></div>

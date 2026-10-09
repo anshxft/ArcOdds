@@ -1,0 +1,246 @@
+@import "tailwindcss";
+@import "@fontsource-variable/tektur/standard.css"; /* adds the wdth axis used by the footer proximity effect */
+@import "@fontsource-variable/space-grotesk";
+@import "@fontsource/space-mono/400.css";
+@import "@fontsource/space-mono/700.css";
+
+/* Cybercore palette: grey paper, black ink, one signal red.
+   Red is a surface colour only; text on red is ink (5.4:1), never red text on paper (2.8:1). */
+:root {
+  --paper: #e4e4e0;
+  --paper-2: #d9d9d4;
+  --ink: #0b0b0b;
+  --ink-2: #2b2b29;
+  --muted: #5c5c58;
+  --line: rgb(11 11 11 / 0.2);
+  --line-strong: rgb(11 11 11 / 0.55);
+  --signal: #ff3b1f;
+  --on-signal: #0b0b0b;
+
+  /* Emil Kowalski curves: strong ease-out for entering UI, ease-in-out for on-screen movement */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --paper: #0d0d0c;
+  --paper-2: #171716;
+  --ink: #e8e8e3;
+  --ink-2: #c9c9c3;
+  --muted: #9a9a94;
+  --line: rgb(232 232 227 / 0.16);
+  --line-strong: rgb(232 232 227 / 0.5);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-signal: var(--signal);
+  --color-on-signal: var(--on-signal);
+  --font-display: "Tektur Variable", "Space Grotesk Variable", sans-serif;
+  --font-sans: "Space Grotesk Variable", system-ui, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, monospace;
+  --ease-out: var(--ease-out);
+  --ease-in-out: var(--ease-in-out);
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: var(--signal);
+  color: var(--on-signal);
+}
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+/* Small uppercase mono captions, the "HUMAN / EXPRESSION" labels of the reference */
+.label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Hairline grid: a container draws the top/left edge, every cell its right/bottom edge */
+.frame {
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+.cell {
+  position: relative;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+/* Pressable: instant press feedback (Emil: scale 0.97, 160ms ease-out) */
+.press {
+  transition: transform 160ms var(--ease-out), background-color 160ms ease, color 160ms ease;
+}
+.press:active {
+  transform: scale(0.97);
+}
+
+/* Halftone: photos become black-and-white dot prints, like the reference's scans */
+.halftone {
+  position: relative;
+  overflow: hidden;
+  background: var(--paper);
+}
+.halftone img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.9) brightness(1.08);
+  mix-blend-mode: multiply;
+}
+.halftone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, transparent 0.9px, var(--paper) 1.4px);
+  background-size: 3px 3px;
+  opacity: 0.55;
+}
+:root[data-theme="dark"] .halftone img {
+  mix-blend-mode: screen;
+  filter: grayscale(1) contrast(1.9) brightness(0.9) invert(1);
+}
+
+/* Hover only where hover exists, so taps on phones don't stick */
+@media (hover: hover) and (pointer: fine) {
+  .hover-ink:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .hover-lift .halftone img {
+    transition: transform 400ms var(--ease-out);
+  }
+  .hover-lift:hover .halftone img {
+    transform: scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Chart line draws once when it mounts (explanatory, so it may run longer than UI motion) */
+.draw-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 1.4s var(--ease-in-out);
+  @starting-style {
+    stroke-dashoffset: 1;
+  }
+}
+
+/* Modal: centred, so it scales from the centre; enter 240ms ease-out, exit faster */
+.wallet-dialog {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out), overlay 240ms allow-discrete, display 240ms allow-discrete;
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+.wallet-dialog::backdrop {
+  transition: opacity 240ms var(--ease-out);
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+/* Colour variant for market thumbnails: real colour, a faint dot screen keeps the print texture */
+.halftone.in-color img,
+:root[data-theme="dark"] .halftone.in-color img {
+  filter: saturate(1.15) contrast(1.05);
+  mix-blend-mode: normal;
+}
+.halftone.in-color::after {
+  background-image: radial-gradient(circle, transparent 1px, rgb(11 11 11 / 0.35) 1.4px);
+  opacity: 0.35;
+}
+
+/* Hover motion, mouse-only (Emil: gate hover so taps on phones don't stick) */
+@media (hover: hover) and (pointer: fine) {
+  /* Link underline grows from the left */
+  .link-line {
+    position: relative;
+  }
+  .link-line::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 100%;
+    height: 1px;
+    background: var(--signal);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 220ms var(--ease-out);
+  }
+  .link-line:hover::after {
+    transform: scaleX(1);
+  }
+
+  /* Step cards: number turns signal, copy lifts, arrow slides in */
+  .step {
+    transition: background-color 200ms ease;
+  }
+  .step:hover {
+    background: var(--paper-2);
+  }
+  .step .step-num,
+  .step .step-copy,
+  .step .step-arrow {
+    transition: transform 240ms var(--ease-out), color 200ms ease, opacity 200ms ease;
+  }
+  .step:hover .step-num {
+    color: var(--signal);
+    transform: translateX(6px);
+  }
+  .step:hover .step-copy {
+    transform: translateY(-4px);
+  }
+  .step .step-arrow {
+    opacity: 0;
+    transform: translate(-8px, 8px);
+  }
+  .step:hover .step-arrow {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}

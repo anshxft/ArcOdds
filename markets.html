@@ -358,12 +358,16 @@
       footer { padding-bottom: 96px; }
     }
   </style>
+  <link rel="stylesheet" href="premium.css?v=20260730a"/>
+  <link rel="stylesheet" href="assets/vendor/lenis/lenis.css"/>
+  <script src="assets/vendor/lenis/lenis.min.js" defer></script>
+  <script src="smooth-scroll.js?v=20261010f" defer></script>
 </head>
 <body>
   <nav>
     <div class="nav-left">
       <a class="nav-logo" href="predictarc.html">
-        <img class="nav-logo-mark" src="assets/predictarc-bird.png" alt=""/>
+        <img class="nav-logo-mark" src="assets/predictarc-mark.svg" alt=""/>
         <span>Predict<span>Arc</span></span>
       </a>
       <ul class="nav-links">
@@ -376,7 +380,7 @@
     </div>
     <div class="nav-right">
       <div class="network-badge"><div class="net-dot"></div>Arc Testnet</div>
-      <button class="btn-faucet" onclick="openArcFaucet()">Claim Faucet</button>
+      <button class="btn-faucet" onclick="openArcFaucet()">Claim Free Test USDC</button>
       <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">☀</button>
       <button class="btn-connect" onclick="connectWallet()">Connect Wallet</button>
     </div>
@@ -389,7 +393,7 @@
           <div class="page-title">Markets</div>
           <div class="page-sub">Live reference odds, settled on Arc Testnet with USDC</div>
         </div>
-        <div class="page-note">Prices shown as YES/NO cents</div>
+        <div class="page-note">Odds shown as share of each YES/NO pool</div>
       </div>
     </div>
 
@@ -479,9 +483,10 @@
   </footer>
 
   <script src="assets/vendor/ethers.umd.min.js"></script>
-  <script src="contract.js?v=20260606l"></script>
-  <script src="supabase.js?v=20260606l"></script>
-  <script src="app.js?v=20260606l"></script>
+  <script src="contract.js?v=20261010d"></script>
+  <script src="supabase.js?v=20261010d"></script>
+  <script src="app.js?v=20261010d"></script>
+  <script src="premium.js?v=20261010d"></script>
   <script>
     const MARKETS = window.PredictArcApp.ARC_MARKETS.map((market) => ({
       ...market,
@@ -508,6 +513,7 @@
     };
 
     let activeCategory = 'all';
+    const esc = window.PredictArcApp.escapeHtml;
 
     function setCategory(cat, el) {
       activeCategory = cat;
@@ -528,7 +534,7 @@
 
       if (sort === 'volume') filtered.sort((a,b) => b.volume - a.volume);
       else if (sort === 'yes') filtered.sort((a,b) => b.yes - a.yes);
-      else if (sort === 'closing') filtered.sort((a,b) => a.closes.localeCompare(b.closes));
+      else if (sort === 'closing') filtered.sort((a,b) => (a.deadline || Infinity) - (b.deadline || Infinity));
 
       renderMarkets(filtered);
     }
@@ -556,12 +562,12 @@
           <div class="mcard-body">
             <div class="mcard-topline">
               <span class="mtag ${TAG_CLASSES[m.cat]}">${m.cat}</span>
-              <span class="live-chip">${m.source && m.source.includes('on-chain') ? 'On-chain' : 'Reference'}</span>
+              <span class="live-chip">${window.PredictArcApp.marketState(m) === 'open' ? (m.source && m.source.includes('on-chain') ? 'On-chain' : 'Reference') : esc(window.PredictArcApp.marketStateLabel(m))}</span>
             </div>
-            <div class="mq">${m.q}</div>
+            <div class="mq">${esc(m.q)}</div>
             <div class="mbets">
-              <button class="btn-yes" onclick="openMarket(${m.id}, 'yes', event)">YES ${m.yes}c</button>
-              <button class="btn-no" onclick="openMarket(${m.id}, 'no', event)">NO ${100-m.yes}c</button>
+              <button class="btn-yes" onclick="openMarket(${m.id}, 'yes', event)">YES ${m.yes}%</button>
+              <button class="btn-no" onclick="openMarket(${m.id}, 'no', event)">NO ${100-m.yes}%</button>
             </div>
             <div class="mbar-track">
               <div class="mbar-fill" style="width:${m.yes}%"></div>
@@ -620,7 +626,7 @@
     document.getElementById('themeBtn').textContent = savedTheme === 'light' ? '☾' : '☀';
     filterMarkets();
     window.addEventListener('PredictArc:markets-updated', () => {
-      window.PredictArcApp.ARC_MARKETS.forEach((market, index) => Object.assign(MARKETS[index], market, { closes: market.closeShort || market.closes }));
+      window.PredictArcApp.ARC_MARKETS.forEach((market, index) => { MARKETS[index] = Object.assign(MARKETS[index] || {}, market, { closes: market.closeShort || market.closes }); });
       filterMarkets();
     });
   </script>
