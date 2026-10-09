@@ -5,6 +5,7 @@ import 'lenis/dist/lenis.css'
 import { Toaster, toast } from 'sonner'
 import { ThinkingOrb } from 'thinking-orbs'
 import Noise from '@/components/Noise'
+import VariableProximity from '@/components/VariableProximity'
 import DecryptedText from '@/components/DecryptedText'
 import { ARC } from '@/lib/chain'
 import { shortAddress } from '@/lib/markets'
@@ -186,6 +187,7 @@ function Header() {
 }
 
 function Footer() {
+  const wordmark = useRef<HTMLDivElement>(null)
   return (
     <footer className="mt-24">
       <div className="frame grid md:grid-cols-4">
@@ -196,19 +198,19 @@ function Footer() {
         <div className="cell flex flex-col gap-2 p-6">
           <Label>Explore</Label>
           {NAV.map(([to, label]) => (
-            <Link key={to} to={to} className="w-fit hover:underline">{label}</Link>
+            <Link key={to} to={to} className="link-line w-fit">{label}</Link>
           ))}
         </div>
         <div className="cell flex flex-col gap-2 p-6">
           <Label>Elsewhere</Label>
-          <a href={`${ARC.explorer}/address/0x19D638Af6b2De9718Eff496fc27a304155D6Af44`} target="_blank" rel="noreferrer" className="w-fit hover:underline">Contract</a>
-          <a href={ARC.faucet} target="_blank" rel="noreferrer" className="w-fit hover:underline">Faucet</a>
-          <a href="https://x.com/imalanxx" target="_blank" rel="noreferrer" className="w-fit hover:underline">X (Twitter)</a>
+          <a href={`${ARC.explorer}/address/0x19D638Af6b2De9718Eff496fc27a304155D6Af44`} target="_blank" rel="noreferrer" className="link-line w-fit">Contract</a>
+          <a href={ARC.faucet} target="_blank" rel="noreferrer" className="link-line w-fit">Faucet</a>
+          <a href="https://x.com/imalanxx" target="_blank" rel="noreferrer" className="link-line w-fit">X (Twitter)</a>
         </div>
-        <div className="cell overflow-hidden px-4 md:col-span-4">
-          <p className="font-display select-none text-center font-extrabold leading-[0.85] tracking-[-0.045em] lowercase"
-            style={{ fontSize: 'clamp(48px, calc((min(100vw, 1440px) - 44px) / 4.85), 290px)' }} aria-hidden="true" data-reveal>
-            predictarc
+        {/* Letters near the cursor thin out and condense (Tektur's wght + wdth axes) */}
+        <div ref={wordmark} className="cell overflow-hidden px-4 md:col-span-4" aria-hidden="true">
+          <p className="font-display select-none text-center leading-[0.85] tracking-[-0.045em] lowercase" style={{ fontSize: 'clamp(48px, calc((min(100vw, 1440px) - 44px) / 4.85), 290px)' }} data-reveal>
+            <VariableProximity label="predictarc" containerRef={wordmark} fromFontVariationSettings="'wght' 800, 'wdth' 100" toFontVariationSettings="'wght' 400, 'wdth' 75" radius={260} falloff="gaussian" />
           </p>
         </div>
       </div>

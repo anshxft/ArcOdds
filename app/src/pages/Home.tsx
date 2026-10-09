@@ -219,9 +219,12 @@ export default function Home() {
           ['Predict', 'Stake on YES or NO. Your stake joins that side of the pool.'],
           ['Claim', 'After the deadline the owner sets the outcome. Winners split the pool minus 2%.'],
         ].map(([title, body], index) => (
-          <div key={title} className="cell flex min-h-56 flex-col justify-between p-5" data-reveal>
-            <span className="font-display text-6xl font-extrabold text-line-strong">{String(index + 1).padStart(2, '0')}</span>
-            <div>
+          <div key={title} className="cell step flex min-h-56 flex-col justify-between p-5" data-reveal>
+            <div className="flex items-start justify-between">
+              <span className="step-num font-display text-6xl font-extrabold text-line-strong">{String(index + 1).padStart(2, '0')}</span>
+              <svg viewBox="0 0 24 24" className="step-arrow size-6 text-signal" aria-hidden="true"><path d="M6 18 18 6M8 6h10v10" fill="none" stroke="currentColor" strokeWidth="2.5" /></svg>
+            </div>
+            <div className="step-copy">
               <h3 className="font-display text-xl font-bold">{title}</h3>
               <p className="mt-2 text-sm text-muted">{body}</p>
             </div>
