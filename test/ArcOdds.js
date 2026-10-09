@@ -78,5 +78,10 @@ describe("frontend payout estimate", function () {
     const paid = (await ethers.provider.getBalance(alice.address)) - before + receipt.gasUsed * receipt.gasPrice;
 
     expect(Number(ethers.formatEther(paid))).to.be.closeTo(poolPayout(10, 15, 106), 1e-9);
+
+    // The React app (app/src/lib/payout.ts) must agree with the contract too.
+    const { poolPayout: appPoolPayout, quote } = await import(require("url").pathToFileURL(require("path").join(__dirname, "..", "app", "src", "lib", "payout.ts")).href);
+    expect(Number(ethers.formatEther(paid))).to.be.closeTo(appPoolPayout(10, 15, 106), 1e-9);
+    expect(quote(10, 5, 106).payout).to.be.closeTo(appPoolPayout(10, 15, 106), 1e-9);
   });
 });

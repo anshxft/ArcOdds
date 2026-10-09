@@ -1,5 +1,15 @@
 # PredictArc
 
+## New site (app/)
+
+The redesigned React site lives in `app/` (Vite, React 19, Tailwind 4, GSAP, Lenis, anime.js, React Bits, thinking-orbs, Sonner). The HTML pages in this folder stay live until it replaces them.
+
+```bash
+cd app
+npm install
+npm run dev
+```
+
 PredictArc is a simple prediction market MVP built for Arc Testnet.
 
 Market discovery questions and displayed probabilities refresh from Polymarket's public read-only Gamma API. PredictArc testnet trades, volume, and settlement remain separate.
