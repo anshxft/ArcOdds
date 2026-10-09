@@ -10,6 +10,7 @@ const Market = lazy(() => import('@/pages/Market'))
 const Portfolio = lazy(() => import('@/pages/Portfolio'))
 const Status = lazy(() => import('@/pages/Status'))
 const Docs = lazy(() => import('@/pages/Docs'))
+const Admin = lazy(() => import('@/pages/Admin'))
 
 try {
   const saved = localStorage.getItem('theme')
@@ -36,6 +37,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="portfolio" element={<Portfolio />} />
             <Route path="status" element={<Status />} />
             <Route path="docs" element={<Docs />} />
+            <Route path="admin" element={<Admin />} />
             <Route path="*" element={<Home />} />
           </Route>
         </Routes>

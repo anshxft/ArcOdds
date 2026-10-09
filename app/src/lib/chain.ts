@@ -15,6 +15,8 @@ const BET_PLACED_TOPIC = '0x4af71b021e799c62c158bd54636ca8da2fa26115a21a2dc6efe4
 
 const SHARED_ABI = [
   'function marketCount() view returns (uint256)',
+  'function owner() view returns (address)',
+  'function resolveMarket(uint256, bool)',
   'function getPosition(uint256, address) view returns (uint256 yesAmount, uint256 noAmount, bool hasClaimed)',
   'function placeBet(uint256, bool) payable',
   'function claimWinnings(uint256)',
@@ -26,6 +28,8 @@ export const CONTRACTS = {
       ...SHARED_ABI,
       'function getMarket(uint256) view returns (tuple(string question, string category, string rules, uint256 deadline, uint256 yesPool, uint256 noPool, bool outcome, uint8 status, address creator))',
       'function refund(uint256)',
+      'function createMarket(string question, string category, string rules, uint256 deadline) returns (uint256)',
+      'function cancelMarket(uint256, string reason)',
     ],
   },
   1: {
@@ -136,6 +140,16 @@ async function fetchVersionMarkets(version: Version) {
   const rows = await readMany(version, ids.map((id) => ['getMarket', [id]]))
   // v2 returns one struct, v1 returns the fields flat
   return rows.map((row: { [k: number]: RawMarket } & RawMarket, index: number) => parseMarket(version, ids[index], version === 2 ? row[0] : row))
+}
+
+export async function fetchBalance(address: string) {
+  return toNumber(await provider.getBalance(address))
+}
+
+/** Owner of the current (v2) contract; the admin page only opens for this wallet. */
+export async function fetchOwner(): Promise<string> {
+  const [result] = await readMany(2, [['owner', []]])
+  return result[0]
 }
 
 export async function fetchMarkets(): Promise<Market[]> {

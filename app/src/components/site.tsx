@@ -10,7 +10,7 @@ import DecryptedText from '@/components/DecryptedText'
 import { ARC, CONTRACTS } from '@/lib/chain'
 import { shortAddress } from '@/lib/markets'
 import { gsap, reducedMotion } from '@/lib/motion'
-import { connect, disconnect, useWallet, walletOptions, type WalletOption } from '@/lib/wallet'
+import { connect, disconnect, useIsOwner, useWallet, walletOptions, type WalletOption } from '@/lib/wallet'
 
 const NAV = [
   ['/markets', 'Markets'],
@@ -148,6 +148,7 @@ export function WalletButton({ className = '' }: { className?: string }) {
 }
 
 function Header() {
+  const isOwner = useIsOwner()
   return (
     <header className="sticky top-0 z-40 bg-paper/90 backdrop-blur-md">
       <div className="frame grid h-14 grid-cols-[auto_1fr_auto] border-t-0">
@@ -164,6 +165,11 @@ function Header() {
               {label}
             </NavLink>
           ))}
+          {isOwner && (
+            <NavLink to="/admin" className={({ isActive }) => `press label flex items-center gap-2 px-4 lg:px-5 ${isActive ? 'bg-signal text-on-signal' : 'hover-ink'}`}>
+              <Asterisk className="size-3" /> Admin
+            </NavLink>
+          )}
           <a href={ARC.faucet} target="_blank" rel="noreferrer" className="press label hover-ink ml-auto hidden items-center gap-2 border-l border-line px-5 whitespace-nowrap lg:flex">
             <Asterisk className="size-3" /> Free test USDC
           </a>

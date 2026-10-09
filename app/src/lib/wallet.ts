@@ -1,7 +1,7 @@
 // Injected-wallet connection (EIP-6963 discovery, window.ethereum fallback) and signed actions.
-import { useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { BrowserProvider, Contract, parseEther } from 'ethers'
-import { ARC, CONTRACTS, type Version } from './chain'
+import { ARC, CONTRACTS, fetchOwner, type Version } from './chain'
 
 interface Eip1193 {
   request(args: { method: string; params?: unknown[] }): Promise<unknown>
@@ -124,4 +124,38 @@ export async function refund(marketId: number) {
   const tx = await (await signedContract(2)).refund(marketId)
   await tx.wait()
   return tx.hash as string
+}
+
+// ---- owner actions (the contract rejects anyone else) ----
+
+export async function createMarket(question: string, category: string, rules: string, deadline: number) {
+  const tx = await (await signedContract(2)).createMarket(question, category, rules, deadline)
+  await tx.wait()
+  return tx.hash as string
+}
+
+export async function resolveMarket(version: Version, marketId: number, outcome: boolean) {
+  const tx = await (await signedContract(version)).resolveMarket(marketId, outcome)
+  await tx.wait()
+  return tx.hash as string
+}
+
+export async function cancelMarket(marketId: number, reason: string) {
+  const tx = await (await signedContract(2)).cancelMarket(marketId, reason)
+  await tx.wait()
+  return tx.hash as string
+}
+
+let ownerRequest: Promise<string> | null = null
+/** True when the connected wallet owns the v2 contract (gates the admin page; the contract enforces it). */
+export function useIsOwner() {
+  const { account } = useWallet()
+  const [owner, setOwner] = useState<string | null>(null)
+  useEffect(() => {
+    ownerRequest ??= fetchOwner()
+    ownerRequest.then(setOwner).catch(() => {
+      ownerRequest = null
+    })
+  }, [])
+  return Boolean(account && owner && account.toLowerCase() === owner.toLowerCase())
 }

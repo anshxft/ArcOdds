@@ -1,10 +1,10 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 import SplitText from '@/components/SplitText'
 import { Asterisk, Decode, Label, Orb, WalletButton } from '@/components/site'
 import { BigOdds, Halftone, OddsBar, PoolChart } from '@/components/market'
-import { addressUrl, marketKey, parseMarketKey, txUrl, type Market as MarketT, type Side } from '@/lib/chain'
+import { ARC, addressUrl, fetchBalance, marketKey, parseMarketKey, txUrl, type Market as MarketT, type Side } from '@/lib/chain'
 import { bettorCount, formatDate, formatUsdc, marketImage, marketState, refreshMarkets, shortAddress, stateLabel, timeAgo, useMarkets } from '@/lib/markets'
 import { quote } from '@/lib/payout'
 import { useBoot, useScrollMotion } from '@/lib/motion'
@@ -40,7 +40,7 @@ function AiBrief({ market }: { market: MarketT }) {
       const response = await fetch('/api/ai-brief', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ market: { id: market.id, q: market.question, cat: market.category, yes: market.yesOdds, closes: formatDate(market.deadline), source: 'PredictArc on-chain pool odds' } }),
+        body: JSON.stringify({ market: { id: market.id, q: market.question, cat: market.category, yes: market.yesOdds, closes: formatDate(market.deadline), rule: market.rules ?? 'Resolved by the owner from the question wording.', source: 'PredictArc on-chain pool odds' } }),
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error)
@@ -89,7 +89,20 @@ function TradePanel({ market }: { market: MarketT }) {
   const [side, setSide] = useState<Side>('YES')
   const [amount, setAmount] = useState('')
   const [pending, setPending] = useState(false)
+  const [balance, setBalance] = useState<number | null>(null)
+  const [balanceTick, setBalanceTick] = useState(0)
   const stake = Number(amount) || 0
+  const GAS_RESERVE = 0.02 // USDC is also Arc's gas token, so keep a little back
+  const tooMuch = balance !== null && stake > balance - GAS_RESERVE
+
+  useEffect(() => {
+    if (!account) return setBalance(null)
+    let live = true
+    fetchBalance(account).then((value) => live && setBalance(value)).catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [account, balanceTick])
   const sidePool = side === 'YES' ? market.yesPool : market.noPool
   const otherPool = side === 'YES' ? market.noPool : market.yesPool
   const q = quote(stake, sidePool, otherPool)
@@ -113,6 +126,7 @@ function TradePanel({ market }: { market: MarketT }) {
       /* toast already reported it */
     } finally {
       setPending(false)
+      setBalanceTick((tick) => tick + 1)
     }
   }
 
@@ -137,7 +151,15 @@ function TradePanel({ market }: { market: MarketT }) {
       </div>
       <div className="space-y-4 p-5">
         <div>
-          <label htmlFor="amount" className="label text-muted">Amount</label>
+          <div className="flex items-baseline justify-between">
+            <label htmlFor="amount" className="label text-muted">Amount</label>
+            {balance !== null && (
+              <span className="label text-muted">
+                Balance {Number(balance.toFixed(4))} USDC
+                <button type="button" onClick={() => setAmount(String(Math.max(0, Math.floor((balance - GAS_RESERVE) * 100) / 100)))} className="press ml-2 border border-line-strong px-1.5 py-0.5 text-ink hover:bg-ink hover:text-paper">Max</button>
+              </span>
+            )}
+          </div>
           <div className="mt-2 flex border border-line-strong focus-within:border-ink">
             <input
               id="amount"
@@ -176,15 +198,18 @@ function TradePanel({ market }: { market: MarketT }) {
         ) : market.version === 1 ? (
           <p className="label border border-line-strong p-3">Legacy contract: new bets are closed here. Existing positions stay claimable. <Link to="/markets" className="underline">See live v2 markets</Link></p>
         ) : account ? (
+          <>
           <button
             type="button"
             onClick={submit}
-            disabled={!stake || pending}
+            disabled={!stake || pending || tooMuch}
             className={`press label flex min-h-13 w-full items-center justify-center gap-3 disabled:opacity-40 ${side === 'YES' ? 'bg-ink text-paper' : 'bg-signal text-on-signal'}`}
           >
             {pending && <Orb state="working" size={20} label="Submitting" />}
-            {pending ? 'Confirm in wallet…' : `Buy ${side} for ${stake || 0} USDC`}
+            {pending ? 'Confirm in wallet…' : tooMuch ? 'Not enough USDC' : `Buy ${side} for ${stake || 0} USDC`}
           </button>
+          {tooMuch && <a href={ARC.faucet} target="_blank" rel="noreferrer" className="label block text-center underline">Get free test USDC</a>}
+          </>
         ) : (
           <WalletButton className="min-h-13 w-full justify-center" />
         )}
