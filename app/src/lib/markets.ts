@@ -12,7 +12,7 @@ const IMAGE_RULES: [RegExp, string][] = [
   [/nato/i, 'classic-nato'],
   [/united states|election|president/i, 'classic-us-politics'],
   [/gta|grand theft/i, 'classic-gta-wall'],
-  [/movie|film|box office/i, 'classic-cinema'],
+  [/movie|film|box office|avengers|dune/i, 'classic-cinema'],
   [/apple|iphone/i, 'market-apple-v3'],
   [/\bai\b|model|gemini|gpt|claude/i, 'classic-ai-fixed'],
   [/world cup|fifa/i, 'market-fifa-v3'],
