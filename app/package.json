@@ -2,6 +2,7 @@
   "name": "app",
   "private": true,
   "version": "0.0.0",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@bible-strong/avatar-react": "0.1.0",
     "@fontsource-variable/space-grotesk": "^5.3.0",
     "@fontsource-variable/tektur": "^5.3.0",
     "@fontsource/space-mono": "^5.3.0",

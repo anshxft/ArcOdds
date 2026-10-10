@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { ReactLenis, type LenisRef } from 'lenis/react'
 import 'lenis/dist/lenis.css'
@@ -11,6 +11,9 @@ import { ARC, CONTRACTS, fetchPositions } from '@/lib/chain'
 import { shortAddress, useMarkets } from '@/lib/markets'
 import { gsap, reducedMotion } from '@/lib/motion'
 import { connect, disconnect, useIsOwner, useWallet, walletOptions, type WalletOption } from '@/lib/wallet'
+import { mascot } from '@/mascot/react'
+
+const Mascot = lazy(() => import('@/mascot/Mascot'))
 
 const NAV = [
   ['/markets', 'Markets'],
@@ -80,9 +83,11 @@ function WalletModal({ onClose }: { onClose: () => void }) {
     try {
       const account = await connect(option)
       toast.success(`Connected ${shortAddress(account)}`)
+      mascot('happy', { say: 'Wallet connected. Pick a market!' })
       onClose()
     } catch (error) {
       toast.error((error as Error).message || 'Wallet connection failed')
+      mascot('confused', { say: 'Wallet did not connect.' })
       setPending(null)
     }
   }
@@ -167,6 +172,7 @@ function useReadyToClaim() {
       if (ready && !alerted.has(account)) {
         alerted.add(account)
         toast(`${ready} ${ready === 1 ? 'market has' : 'markets have'} a payout ready`, { action: { label: 'Claim', onClick: () => navigate('/portfolio') }, duration: 10000 })
+        mascot('excited', { ms: 4000, say: 'You have a payout waiting!' })
       }
     }).catch(() => {})
     return () => {
@@ -246,6 +252,7 @@ function Footer() {
           <a href={`${ARC.explorer}/address/${CONTRACTS[2].address}`} target="_blank" rel="noreferrer" className="link-line w-fit">Contract</a>
           <a href={ARC.faucet} target="_blank" rel="noreferrer" className="link-line w-fit">Faucet</a>
           <a href="https://x.com/imalanxx" target="_blank" rel="noreferrer" className="link-line w-fit">X (Twitter)</a>
+          <a href="https://github.com/anshxft/ArcOdds" target="_blank" rel="noreferrer" className="link-line w-fit">Source code (AGPL-3.0)</a>
         </div>
         {/* Letters near the cursor thin out and condense (Tektur's wght + wdth axes) */}
         <div ref={wordmark} className="cell overflow-hidden px-4 md:col-span-4" aria-hidden="true">
@@ -283,6 +290,9 @@ export function Layout() {
         </main>
         <Footer />
       </div>
+      <Suspense fallback={null}>
+        <Mascot />
+      </Suspense>
       <Noise fixed opacity={0.06} fps={0} blendMode="multiply" zIndex={60} />
       <Toaster
         position="bottom-right"

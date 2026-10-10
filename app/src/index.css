@@ -145,6 +145,18 @@ body {
   }
 }
 
+/* Mascot speech bubble pops from the mascot's side */
+.mascot-bubble {
+  transform-origin: bottom left;
+  animation: bubble-in 220ms var(--ease-out);
+}
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.95);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

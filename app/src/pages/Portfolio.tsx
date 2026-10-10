@@ -10,6 +10,7 @@ import { formatUsdc, marketImage, marketState, refreshMarkets, stateLabel, useMa
 import { poolPayout } from '@/lib/payout'
 import { useBoot, useScrollMotion } from '@/lib/motion'
 import { claimWinnings, refund, useWallet, errorText } from '@/lib/wallet'
+import { mascot } from '@/mascot/react'
 
 export default function Portfolio() {
   const scope = useRef<HTMLDivElement>(null)
@@ -58,12 +59,14 @@ export default function Portfolio() {
       success: (hash) => ({ message: isRefund ? 'Stake refunded' : 'Winnings claimed', action: { label: 'View tx', onClick: () => window.open(txUrl(hash), '_blank', 'noopener') } }),
       error: (error) => errorText(error, 'Transaction failed'),
     })
+    mascot('working', { ms: 60_000, say: isRefund ? 'Getting your stake back…' : 'Collecting your winnings…' })
     try {
       await run
+      mascot(isRefund ? 'happy' : 'celebrate', { ms: 4000, say: isRefund ? 'Refunded!' : 'Payday!' })
       await refreshMarkets()
       setVersion((value) => value + 1)
     } catch {
-      /* reported by toast */
+      mascot('confused', { ms: 3500, say: 'That did not go through.' }) // details are in the toast
     }
   }
 

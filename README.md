@@ -59,3 +59,11 @@ VERSION=2 MARKET=1 CANCEL="reason" npm run resolve:arc      # v2: void, bettors 
 Winners claim (and cancelled-market bettors refund) from the Portfolio page.
 
 Never commit `.env`. Keep API keys in Vercel environment variables.
+
+## Mascot
+
+Poring, the orange blob in the bottom-left corner, is `app/src/mascot/poring.avatar.json`, designed in [Bible Strong Avatar Lab](https://avatars.bible-strong.app) by Stéphane Montlouis-Calixte and rendered with `@bible-strong/avatar-react`. It wakes on load, gets excited over the buy button, works while a transaction is pending, celebrates or looks confused afterwards, and dozes off after 30 seconds without input. Make it react from any page with `mascot('happy', { say: 'Hi' })` from `app/src/mascot/react.ts`. Animation names come from the JSON. To change the look, re-export the JSON from the Studio and replace the file.
+
+## License
+
+AGPL-3.0-only (see `LICENSE`), because the mascot renderer is AGPL. If you run a modified copy as a public site, its source has to stay available; the site footer links to this repo.

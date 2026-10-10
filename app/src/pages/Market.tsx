@@ -9,6 +9,7 @@ import { bettorCount, formatDate, formatUsdc, marketImage, marketState, refreshM
 import { quote } from '@/lib/payout'
 import { useBoot, useScrollMotion } from '@/lib/motion'
 import { placeBet, useWallet, errorText } from '@/lib/wallet'
+import { mascot } from '@/mascot/react'
 
 interface Brief {
   summary: string
@@ -36,6 +37,7 @@ function AiBrief({ market }: { market: MarketT }) {
 
   async function generate() {
     setLoading(true)
+    mascot('thinking', { ms: 30_000 })
     try {
       const response = await fetch('/api/ai-brief', {
         method: 'POST',
@@ -46,9 +48,11 @@ function AiBrief({ market }: { market: MarketT }) {
       if (!response.ok) throw new Error(data.error)
       setBrief(data.brief)
       setNote('')
+      mascot('proud', { say: 'Brief ready. Read both sides!' })
     } catch {
       setBrief(localBrief(market))
       setNote('Local preview: the AI service is not reachable from this build.')
+      mascot('confused', { say: 'AI is offline, here is a quick take.' })
     } finally {
       setLoading(false)
     }
@@ -112,6 +116,7 @@ function TradePanel({ market }: { market: MarketT }) {
   async function submit() {
     if (!(stake > 0)) return
     setPending(true)
+    mascot('working', { ms: 60_000, say: `Sending ${stake} USDC on ${side}…` })
     const run = placeBet(market.version, market.id, side === 'YES', stake)
     toast.promise(run, {
       loading: `Placing ${stake} USDC on ${side}…`,
@@ -121,9 +126,10 @@ function TradePanel({ market }: { market: MarketT }) {
     try {
       await run
       setAmount('')
+      mascot('celebrate', { ms: 4000, say: `Locked in on ${side}!` })
       await refreshMarkets()
     } catch {
-      /* toast already reported it */
+      mascot('confused', { ms: 3500, say: 'That bet did not go through.' }) // details are in the toast
     } finally {
       setPending(false)
       setBalanceTick((tick) => tick + 1)
@@ -202,6 +208,7 @@ function TradePanel({ market }: { market: MarketT }) {
           <button
             type="button"
             onClick={submit}
+            onPointerEnter={(event) => event.pointerType === 'mouse' && stake > 0 && !pending && !tooMuch && mascot('excited', { ms: 1800 })}
             disabled={!stake || pending || tooMuch}
             className={`press label flex min-h-13 w-full items-center justify-center gap-3 disabled:opacity-40 ${side === 'YES' ? 'bg-ink text-paper' : 'bg-signal text-on-signal'}`}
           >
