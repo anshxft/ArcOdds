@@ -63,7 +63,10 @@ function ThemeToggle() {
     }
   }, [dark])
   return (
-    <button type="button" onClick={() => setDark(!dark)} className="press label hover-ink flex h-full items-center px-4" aria-label="Toggle dark mode">
+    <button type="button" onClick={() => {
+      setDark(!dark)
+      mascot('surprised', { ms: 1600, say: dark ? 'Lights on!' : 'Lights off!' })
+    }} className="press label hover-ink flex h-full items-center px-4" aria-label="Toggle dark mode">
       {dark ? 'Light' : 'Dark'}
     </button>
   )
@@ -140,7 +143,7 @@ export function WalletButton({ className = '' }: { className?: string }) {
     <>
       <button
         type="button"
-        onClick={() => (account ? (disconnect(), toast('Wallet disconnected')) : setOpen(true))}
+        onClick={() => (account ? (disconnect(), toast('Wallet disconnected'), mascot('sad', { ms: 2500, say: 'Bye for now!' })) : setOpen(true))}
         className={`press label flex items-center gap-2 bg-ink px-4 text-paper hover:bg-signal hover:text-on-signal ${className}`}
         title={account ? 'Disconnect wallet' : 'Connect wallet'}
       >

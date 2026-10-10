@@ -1,9 +1,10 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import SplitText from '@/components/SplitText'
 import { Decode, Label, Orb } from '@/components/site'
 import { MarketCard } from '@/components/market'
 import { bettorCount, byRelevance, marketState, useMarkets } from '@/lib/markets'
 import { useBoot, useScrollMotion } from '@/lib/motion'
+import { mascot } from '@/mascot/react'
 
 const SORTS = { volume: 'Featured', closing: 'Closing soon', yes: 'Yes %' } as const
 type Sort = keyof typeof SORTS
@@ -26,6 +27,17 @@ export default function Markets() {
       return byRelevance(a, b)
     })
   const open = markets.filter((market) => marketState(market) === 'open').length
+  const found = list.length
+
+  // Poring searches along with the visitor, and shrugs when nothing matches.
+  useEffect(() => {
+    if (!query.trim() || !markets.length) return
+    const id = setTimeout(() => {
+      if (found) mascot('searching', { ms: 1400 })
+      else mascot('confused', { ms: 2600, say: `No "${query.trim().slice(0, 20)}" here. Try another word?` })
+    }, 500)
+    return () => clearTimeout(id)
+  }, [query, found, markets.length])
 
   return (
     <div ref={scope}>

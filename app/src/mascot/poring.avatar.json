@@ -835,6 +835,456 @@
       "colors": {
         "body": "#adc3ff"
       }
+    },
+    "look-left": {
+      "head": {
+        "x": 2,
+        "y": -32,
+        "z": 4
+      },
+      "eyes": {
+        "left": {
+          "width": 22,
+          "height": 46,
+          "x": 0,
+          "y": 0,
+          "angle": 0
+        },
+        "right": {
+          "width": 22,
+          "height": 46,
+          "x": 0,
+          "y": 0,
+          "angle": 0
+        },
+        "spacing": 52
+      },
+      "perspective": 1,
+      "motion": {
+        "eyes": "none",
+        "body": "none"
+      }
+    },
+    "look-right": {
+      "head": {
+        "x": 2,
+        "y": 32,
+        "z": -4
+      },
+      "eyes": {
+        "left": {
+          "width": 22,
+          "height": 46,
+          "x": 0,
+          "y": 0,
+          "angle": 0
+        },
+        "right": {
+          "width": 22,
+          "height": 46,
+          "x": 0,
+          "y": 0,
+          "angle": 0
+        },
+        "spacing": 52
+      },
+      "perspective": 1,
+      "motion": {
+        "eyes": "none",
+        "body": "none"
+      }
+    },
+    "look-up": {
+      "head": {
+        "x": 22,
+        "y": 0,
+        "z": 0
+      },
+      "eyes": {
+        "left": {
+          "width": 22,
+          "height": 52,
+          "x": 0,
+          "y": -12,
+          "angle": 0
+        },
+        "right": {
+          "width": 22,
+          "height": 52,
+          "x": 0,
+          "y": -12,
+          "angle": 0
+        },
+        "spacing": 50
+      },
+      "perspective": 1,
+      "motion": {
+        "eyes": "none",
+        "body": "none"
+      }
+    },
+    "look-down": {
+      "head": {
+        "x": -22,
+        "y": 0,
+        "z": 0
+      },
+      "eyes": {
+        "left": {
+          "width": 24,
+          "height": 40,
+          "x": 0,
+          "y": 0,
+          "angle": 0
+        },
+        "right": {
+          "width": 24,
+          "height": 40,
+          "x": 0,
+          "y": 0,
+          "angle": 0
+        },
+        "spacing": 54
+      },
+      "perspective": 1,
+      "motion": {
+        "eyes": "none",
+        "body": "none"
+      }
+    },
+    "wink-left": {
+      "head": {
+        "x": 4,
+        "y": 10,
+        "z": -8
+      },
+      "eyes": {
+        "left": {
+          "width": 50,
+          "height": 12,
+          "x": 0,
+          "y": 0,
+          "angle": -6
+        },
+        "right": {
+          "width": 24,
+          "height": 56,
+          "x": 0,
+          "y": 0,
+          "angle": 0
+        },
+        "spacing": 58
+      },
+      "perspective": 1,
+      "motion": {
+        "eyes": "none",
+        "body": "none"
+      }
+    },
+    "happy-squint": {
+      "head": {
+        "x": -4,
+        "y": -6,
+        "z": -10
+      },
+      "eyes": {
+        "left": {
+          "width": 46,
+          "height": 16,
+          "x": 0,
+          "y": 0,
+          "angle": -14
+        },
+        "right": {
+          "width": 46,
+          "height": 16,
+          "x": 0,
+          "y": 0,
+          "angle": 14
+        },
+        "spacing": 60
+      },
+      "perspective": 1,
+      "motion": {
+        "eyes": "none",
+        "body": "none"
+      },
+      "colors": {
+        "body": "#ff8f6b"
+      }
+    },
+    "love": {
+      "head": {
+        "x": -6,
+        "y": -10,
+        "z": -12
+      },
+      "eyes": {
+        "left": {
+          "width": 34,
+          "height": 80,
+          "x": 0,
+          "y": 0,
+          "angle": 0
+        },
+        "right": {
+          "width": 34,
+          "height": 80,
+          "x": 0,
+          "y": 0,
+          "angle": 0
+        },
+        "spacing": 60
+      },
+      "perspective": 1,
+      "motion": {
+        "eyes": "none",
+        "body": "none"
+      },
+      "colors": {
+        "body": "#ff6f91"
+      }
+    },
+    "dizzy-a": {
+      "head": {
+        "x": 0,
+        "y": -12,
+        "z": -14
+      },
+      "eyes": {
+        "left": {
+          "width": 30,
+          "height": 30,
+          "x": 0,
+          "y": 0,
+          "angle": 45
+        },
+        "right": {
+          "width": 18,
+          "height": 40,
+          "x": 0,
+          "y": 0,
+          "angle": -30
+        },
+        "spacing": 58
+      },
+      "perspective": 1,
+      "motion": {
+        "eyes": "shake",
+        "body": "shake"
+      }
+    },
+    "dizzy-b": {
+      "head": {
+        "x": 0,
+        "y": 12,
+        "z": 14
+      },
+      "eyes": {
+        "left": {
+          "width": 18,
+          "height": 40,
+          "x": 0,
+          "y": 0,
+          "angle": 30
+        },
+        "right": {
+          "width": 30,
+          "height": 30,
+          "x": 0,
+          "y": 0,
+          "angle": -45
+        },
+        "spacing": 58
+      },
+      "perspective": 1,
+      "motion": {
+        "eyes": "shake",
+        "body": "shake"
+      }
+    },
+    "greedy": {
+      "head": {
+        "x": -4,
+        "y": 0,
+        "z": 0
+      },
+      "eyes": {
+        "left": {
+          "width": 34,
+          "height": 70,
+          "x": 0,
+          "y": 0,
+          "angle": 0
+        },
+        "right": {
+          "width": 34,
+          "height": 70,
+          "x": 0,
+          "y": 0,
+          "angle": 0
+        },
+        "spacing": 60
+      },
+      "perspective": 1,
+      "motion": {
+        "eyes": "none",
+        "body": "none"
+      },
+      "colors": {
+        "eyes": "#0f9d58"
+      }
+    },
+    "determined": {
+      "head": {
+        "x": -6,
+        "y": 0,
+        "z": 0
+      },
+      "eyes": {
+        "left": {
+          "width": 40,
+          "height": 26,
+          "x": 0,
+          "y": 0,
+          "angle": -14
+        },
+        "right": {
+          "width": 40,
+          "height": 26,
+          "x": 0,
+          "y": 0,
+          "angle": 14
+        },
+        "spacing": 56
+      },
+      "perspective": 1,
+      "motion": {
+        "eyes": "none",
+        "body": "none"
+      }
+    },
+    "oof": {
+      "head": {
+        "x": -10,
+        "y": 0,
+        "z": 0
+      },
+      "eyes": {
+        "left": {
+          "width": 44,
+          "height": 10,
+          "x": 0,
+          "y": 0,
+          "angle": 0
+        },
+        "right": {
+          "width": 44,
+          "height": 10,
+          "x": 0,
+          "y": 0,
+          "angle": 0
+        },
+        "spacing": 62
+      },
+      "perspective": 1,
+      "motion": {
+        "eyes": "none",
+        "body": "shake"
+      }
+    },
+    "peek": {
+      "head": {
+        "x": 0,
+        "y": 28,
+        "z": -12
+      },
+      "eyes": {
+        "left": {
+          "width": 22,
+          "height": 30,
+          "x": 0,
+          "y": -10,
+          "angle": 0
+        },
+        "right": {
+          "width": 22,
+          "height": 30,
+          "x": 0,
+          "y": -10,
+          "angle": 0
+        },
+        "spacing": 48
+      },
+      "perspective": 1,
+      "motion": {
+        "eyes": "none",
+        "body": "none"
+      }
+    },
+    "star-struck": {
+      "head": {
+        "x": 6,
+        "y": 0,
+        "z": 0
+      },
+      "eyes": {
+        "left": {
+          "width": 42,
+          "height": 42,
+          "x": 0,
+          "y": 0,
+          "angle": 0
+        },
+        "right": {
+          "width": 42,
+          "height": 42,
+          "x": 0,
+          "y": 0,
+          "angle": 0
+        },
+        "spacing": 62
+      },
+      "perspective": 1,
+      "motion": {
+        "eyes": "none",
+        "body": "none"
+      },
+      "colors": {
+        "eyes": "#c98a00"
+      }
+    },
+    "grumpy": {
+      "head": {
+        "x": -4,
+        "y": -8,
+        "z": 6
+      },
+      "eyes": {
+        "left": {
+          "width": 44,
+          "height": 18,
+          "x": 0,
+          "y": 0,
+          "angle": 18
+        },
+        "right": {
+          "width": 44,
+          "height": 18,
+          "x": 0,
+          "y": 0,
+          "angle": -18
+        },
+        "spacing": 56
+      },
+      "perspective": 1,
+      "motion": {
+        "eyes": "none",
+        "body": "none"
+      },
+      "colors": {
+        "body": "#e8611a"
+      }
     }
   },
   "expressionOrder": [
@@ -865,7 +1315,22 @@
     "suspicious-right",
     "shy-downward",
     "angry-brows",
-    "uneasy-left"
+    "uneasy-left",
+    "look-left",
+    "look-right",
+    "look-up",
+    "look-down",
+    "wink-left",
+    "happy-squint",
+    "love",
+    "dizzy-a",
+    "dizzy-b",
+    "greedy",
+    "determined",
+    "oof",
+    "peek",
+    "star-struck",
+    "grumpy"
   ],
   "animations": {
     "sleeping": {
@@ -1702,6 +2167,651 @@
         "description": "Cet état enchaîne un pool de presets et des clignements.",
         "group": "Réactions"
       }
+    },
+    "walk-left": {
+      "playbackMode": "loop",
+      "steps": [
+        {
+          "expression": "look-left",
+          "holdMs": 900,
+          "transitionMs": 200,
+          "transition": "snappy"
+        },
+        {
+          "expression": "curious-left",
+          "holdMs": 600,
+          "transitionMs": 250,
+          "transition": "smooth"
+        }
+      ],
+      "blink": {
+        "enabled": true,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "walk-left",
+        "description": "Facing left while hopping.",
+        "group": "Roaming"
+      }
+    },
+    "walk-right": {
+      "playbackMode": "loop",
+      "steps": [
+        {
+          "expression": "look-right",
+          "holdMs": 900,
+          "transitionMs": 200,
+          "transition": "snappy"
+        },
+        {
+          "expression": "playful-right",
+          "holdMs": 600,
+          "transitionMs": 250,
+          "transition": "smooth"
+        }
+      ],
+      "blink": {
+        "enabled": true,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "walk-right",
+        "description": "Facing right while hopping.",
+        "group": "Roaming"
+      }
+    },
+    "watch-left": {
+      "playbackMode": "loop",
+      "steps": [
+        {
+          "expression": "look-left",
+          "holdMs": 2000,
+          "transitionMs": 250,
+          "transition": "smooth"
+        }
+      ],
+      "blink": {
+        "enabled": true,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "watch-left",
+        "description": "Eyes on something to the left.",
+        "group": "Roaming"
+      }
+    },
+    "watch-right": {
+      "playbackMode": "loop",
+      "steps": [
+        {
+          "expression": "look-right",
+          "holdMs": 2000,
+          "transitionMs": 250,
+          "transition": "smooth"
+        }
+      ],
+      "blink": {
+        "enabled": true,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "watch-right",
+        "description": "Eyes on something to the right.",
+        "group": "Roaming"
+      }
+    },
+    "watch-up": {
+      "playbackMode": "loop",
+      "steps": [
+        {
+          "expression": "look-up",
+          "holdMs": 2000,
+          "transitionMs": 250,
+          "transition": "smooth"
+        }
+      ],
+      "blink": {
+        "enabled": true,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "watch-up",
+        "description": "Looking up.",
+        "group": "Roaming"
+      }
+    },
+    "watch-down": {
+      "playbackMode": "loop",
+      "steps": [
+        {
+          "expression": "look-down",
+          "holdMs": 1800,
+          "transitionMs": 300,
+          "transition": "smooth"
+        },
+        {
+          "expression": "gentle-downward-gaze",
+          "holdMs": 1400,
+          "transitionMs": 400,
+          "transition": "smooth"
+        }
+      ],
+      "blink": {
+        "enabled": true,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "watch-down",
+        "description": "Looking down at what it sits on.",
+        "group": "Roaming"
+      }
+    },
+    "wink": {
+      "playbackMode": "once",
+      "steps": [
+        {
+          "expression": "neutral",
+          "holdMs": 200,
+          "transitionMs": 150,
+          "transition": "smooth"
+        },
+        {
+          "expression": "wink-left",
+          "holdMs": 500,
+          "transitionMs": 120,
+          "transition": "snappy"
+        },
+        {
+          "expression": "neutral",
+          "holdMs": 300,
+          "transitionMs": 200,
+          "transition": "smooth"
+        }
+      ],
+      "blink": {
+        "enabled": false,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "wink",
+        "description": "A quick wink.",
+        "group": "Roaming"
+      }
+    },
+    "blush": {
+      "playbackMode": "loop",
+      "steps": [
+        {
+          "expression": "happy-squint",
+          "holdMs": 1600,
+          "transitionMs": 300,
+          "transition": "smooth"
+        },
+        {
+          "expression": "shy-downward",
+          "holdMs": 1200,
+          "transitionMs": 400,
+          "transition": "smooth"
+        }
+      ],
+      "blink": {
+        "enabled": true,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "blush",
+        "description": "Shy and pink after being petted.",
+        "group": "Roaming"
+      }
+    },
+    "love": {
+      "playbackMode": "loop",
+      "steps": [
+        {
+          "expression": "love",
+          "holdMs": 1600,
+          "transitionMs": 300,
+          "transition": "spring"
+        },
+        {
+          "expression": "happy-squint",
+          "holdMs": 1200,
+          "transitionMs": 300,
+          "transition": "smooth"
+        },
+        {
+          "expression": "joyful-wide",
+          "holdMs": 900,
+          "transitionMs": 300,
+          "transition": "smooth"
+        }
+      ],
+      "blink": {
+        "enabled": true,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "love",
+        "description": "Big pink heart-eyes mood.",
+        "group": "Roaming"
+      }
+    },
+    "dizzy": {
+      "playbackMode": "loop",
+      "steps": [
+        {
+          "expression": "dizzy-a",
+          "holdMs": 260,
+          "transitionMs": 120,
+          "transition": "snappy"
+        },
+        {
+          "expression": "dizzy-b",
+          "holdMs": 260,
+          "transitionMs": 120,
+          "transition": "snappy"
+        }
+      ],
+      "blink": {
+        "enabled": false,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "dizzy",
+        "description": "Spun around or thrown.",
+        "group": "Roaming"
+      }
+    },
+    "dance": {
+      "playbackMode": "loop",
+      "steps": [
+        {
+          "expression": "playful-right",
+          "holdMs": 320,
+          "transitionMs": 120,
+          "transition": "snappy"
+        },
+        {
+          "expression": "joyful-wide",
+          "holdMs": 320,
+          "transitionMs": 120,
+          "transition": "snappy"
+        },
+        {
+          "expression": "asymmetric-up-left",
+          "holdMs": 320,
+          "transitionMs": 120,
+          "transition": "snappy"
+        },
+        {
+          "expression": "joyful-down-right",
+          "holdMs": 320,
+          "transitionMs": 120,
+          "transition": "snappy"
+        },
+        {
+          "expression": "wink-left",
+          "holdMs": 320,
+          "transitionMs": 120,
+          "transition": "snappy"
+        }
+      ],
+      "blink": {
+        "enabled": true,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "dance",
+        "description": "Bobbing to a beat.",
+        "group": "Roaming"
+      }
+    },
+    "nod": {
+      "playbackMode": "pingPong",
+      "steps": [
+        {
+          "expression": "look-down",
+          "holdMs": 220,
+          "transitionMs": 160,
+          "transition": "snappy"
+        },
+        {
+          "expression": "look-up",
+          "holdMs": 220,
+          "transitionMs": 160,
+          "transition": "snappy"
+        }
+      ],
+      "blink": {
+        "enabled": false,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "nod",
+        "description": "Yes, yes.",
+        "group": "Roaming"
+      }
+    },
+    "shake-no": {
+      "playbackMode": "loop",
+      "steps": [
+        {
+          "expression": "look-left",
+          "holdMs": 200,
+          "transitionMs": 140,
+          "transition": "snappy"
+        },
+        {
+          "expression": "look-right",
+          "holdMs": 200,
+          "transitionMs": 140,
+          "transition": "snappy"
+        }
+      ],
+      "blink": {
+        "enabled": false,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "shake-no",
+        "description": "Nope.",
+        "group": "Roaming"
+      }
+    },
+    "yawn": {
+      "playbackMode": "once",
+      "steps": [
+        {
+          "expression": "sleepy-squint",
+          "holdMs": 600,
+          "transitionMs": 300,
+          "transition": "smooth"
+        },
+        {
+          "expression": "surprised-wide-left",
+          "holdMs": 900,
+          "transitionMs": 500,
+          "transition": "smooth"
+        },
+        {
+          "expression": "eyes-closed",
+          "holdMs": 800,
+          "transitionMs": 400,
+          "transition": "smooth"
+        },
+        {
+          "expression": "neutral",
+          "holdMs": 400,
+          "transitionMs": 400,
+          "transition": "smooth"
+        }
+      ],
+      "blink": {
+        "enabled": false,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "yawn",
+        "description": "Big sleepy yawn.",
+        "group": "Roaming"
+      }
+    },
+    "greedy": {
+      "playbackMode": "loop",
+      "steps": [
+        {
+          "expression": "greedy",
+          "holdMs": 1400,
+          "transitionMs": 250,
+          "transition": "spring"
+        },
+        {
+          "expression": "joyful-wide",
+          "holdMs": 800,
+          "transitionMs": 300,
+          "transition": "smooth"
+        }
+      ],
+      "blink": {
+        "enabled": true,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "greedy",
+        "description": "Money eyes for a big bet.",
+        "group": "Roaming"
+      }
+    },
+    "peek": {
+      "playbackMode": "loop",
+      "steps": [
+        {
+          "expression": "peek",
+          "holdMs": 1500,
+          "transitionMs": 300,
+          "transition": "smooth"
+        },
+        {
+          "expression": "look-right",
+          "holdMs": 900,
+          "transitionMs": 300,
+          "transition": "smooth"
+        },
+        {
+          "expression": "peek",
+          "holdMs": 1200,
+          "transitionMs": 300,
+          "transition": "smooth"
+        }
+      ],
+      "blink": {
+        "enabled": true,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "peek",
+        "description": "Peeking in from the edge.",
+        "group": "Roaming"
+      }
+    },
+    "determined": {
+      "playbackMode": "loop",
+      "steps": [
+        {
+          "expression": "determined",
+          "holdMs": 2000,
+          "transitionMs": 300,
+          "transition": "smooth"
+        },
+        {
+          "expression": "attentive-left",
+          "holdMs": 800,
+          "transitionMs": 300,
+          "transition": "smooth"
+        }
+      ],
+      "blink": {
+        "enabled": true,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "determined",
+        "description": "Focused, on a mission.",
+        "group": "Roaming"
+      }
+    },
+    "oof": {
+      "playbackMode": "once",
+      "steps": [
+        {
+          "expression": "oof",
+          "holdMs": 260,
+          "transitionMs": 60,
+          "transition": "snappy"
+        },
+        {
+          "expression": "surprised-wide-left",
+          "holdMs": 400,
+          "transitionMs": 200,
+          "transition": "smooth"
+        },
+        {
+          "expression": "neutral",
+          "holdMs": 300,
+          "transitionMs": 300,
+          "transition": "smooth"
+        }
+      ],
+      "blink": {
+        "enabled": false,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "oof",
+        "description": "Squashed landing.",
+        "group": "Roaming"
+      }
+    },
+    "star-struck": {
+      "playbackMode": "loop",
+      "steps": [
+        {
+          "expression": "star-struck",
+          "holdMs": 1200,
+          "transitionMs": 250,
+          "transition": "spring"
+        },
+        {
+          "expression": "joyful-wide",
+          "holdMs": 800,
+          "transitionMs": 300,
+          "transition": "smooth"
+        }
+      ],
+      "blink": {
+        "enabled": true,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "star-struck",
+        "description": "Wowed.",
+        "group": "Roaming"
+      }
+    },
+    "grumpy": {
+      "playbackMode": "loop",
+      "steps": [
+        {
+          "expression": "grumpy",
+          "holdMs": 2000,
+          "transitionMs": 300,
+          "transition": "smooth"
+        },
+        {
+          "expression": "skeptical-left",
+          "holdMs": 1000,
+          "transitionMs": 300,
+          "transition": "smooth"
+        }
+      ],
+      "blink": {
+        "enabled": true,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "grumpy",
+        "description": "Annoyed at being poked too much.",
+        "group": "Roaming"
+      }
+    },
+    "hop": {
+      "playbackMode": "once",
+      "steps": [
+        {
+          "expression": "surprised-wide-left",
+          "holdMs": 200,
+          "transitionMs": 100,
+          "transition": "snappy"
+        },
+        {
+          "expression": "joyful-wide",
+          "holdMs": 500,
+          "transitionMs": 200,
+          "transition": "spring"
+        }
+      ],
+      "blink": {
+        "enabled": false,
+        "initialDelayMs": 1500,
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 5000,
+        "durationMs": 220
+      },
+      "metadata": {
+        "label": "hop",
+        "description": "One springy hop.",
+        "group": "Roaming"
+      }
     }
   },
   "animationOrder": [
@@ -1727,6 +2837,27 @@
     "laughing",
     "scared",
     "playful",
-    "celebrate"
+    "celebrate",
+    "walk-left",
+    "walk-right",
+    "watch-left",
+    "watch-right",
+    "watch-up",
+    "watch-down",
+    "wink",
+    "blush",
+    "love",
+    "dizzy",
+    "dance",
+    "nod",
+    "shake-no",
+    "yawn",
+    "greedy",
+    "peek",
+    "determined",
+    "oof",
+    "star-struck",
+    "grumpy",
+    "hop"
   ]
 }

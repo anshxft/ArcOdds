@@ -126,7 +126,7 @@ function TradePanel({ market }: { market: MarketT }) {
     try {
       await run
       setAmount('')
-      mascot('celebrate', { ms: 4000, say: `Locked in on ${side}!` })
+      mascot(stake >= 10 ? 'greedy' : 'celebrate', { ms: 4000, say: stake >= 10 ? `Big bet! ${stake} USDC on ${side}.` : `Locked in on ${side}!` })
       await refreshMarkets()
     } catch {
       mascot('confused', { ms: 3500, say: 'That bet did not go through.' }) // details are in the toast
@@ -240,6 +240,7 @@ function Share({ market }: { market: MarketT }) {
     try {
       await navigator.clipboard.writeText(url)
       toast.success('Link copied')
+      mascot('wink', { ms: 1500, say: 'Copied! Go share it.' })
     } catch {
       toast.error('Could not copy. Copy the address bar instead.')
     }
