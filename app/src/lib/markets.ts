@@ -4,6 +4,17 @@ import { fetchBets, fetchMarkets, type Bet, type Market } from './chain'
 
 // Picked from the question so any market, v1 or v2, gets a fitting photo.
 const IMAGE_RULES: [RegExp, string][] = [
+  [/solana|\bsol\b/i, 'market-solana'],
+  [/\bxrp\b|ripple/i, 'market-xrp'],
+  [/dogecoin|\bdoge\b/i, 'market-doge'],
+  [/nvidia|geforce/i, 'market-nvidia'],
+  [/tesla/i, 'market-tesla'],
+  [/s&p|nasdaq|dow jones|stock market/i, 'market-stocks'],
+  [/crude|\boil\b|\bwti\b|brent/i, 'market-oil'],
+  [/avengers|marvel/i, 'market-avengers'],
+  [/world series|baseball|\bmlb\b/i, 'market-baseball'],
+  [/formula 1|\bf1\b|grand prix/i, 'market-f1'],
+  [/cricket|\bt20|\bodi\b|test series|\bipl\b/i, 'market-cricket'],
   [/bitcoin|btc/i, 'classic-btc'],
   [/ethereum|\beth\b/i, 'market-eth-v3'],
   [/gold/i, 'classic-gold-fixed'],
@@ -12,7 +23,7 @@ const IMAGE_RULES: [RegExp, string][] = [
   [/nato/i, 'classic-nato'],
   [/united states|election|president/i, 'classic-us-politics'],
   [/gta|grand theft/i, 'classic-gta-wall'],
-  [/movie|film|box office|avengers|dune/i, 'classic-cinema'],
+  [/movie|film|box office|dune/i, 'classic-cinema'],
   [/apple|iphone/i, 'market-apple-v3'],
   [/\bai\b|model|gemini|gpt|claude/i, 'classic-ai-fixed'],
   [/world cup|fifa/i, 'market-fifa-v3'],
