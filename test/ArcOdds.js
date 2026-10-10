@@ -46,19 +46,7 @@ describe("ArcOdds", function () {
 });
 
 describe("frontend payout estimate", function () {
-  // Loads app.js in a stub browser context so the UI formula is checked against the real contract.
-  function loadPoolPayout() {
-    const fs = require("fs");
-    const path = require("path");
-    const vm = require("vm");
-    const window = { addEventListener() {}, dispatchEvent() {} };
-    const context = { window, Event: class {}, CustomEvent: class {}, console };
-    vm.runInNewContext(fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8"), context);
-    return window.PredictArcApp.poolPayout;
-  }
-
   it("matches claimWinnings for an uneven pool", async function () {
-    const poolPayout = loadPoolPayout();
     const [, alice, bob, carol] = await ethers.getSigners();
     const ArcOdds = await ethers.getContractFactory("ArcOdds");
     const contract = await ArcOdds.deploy();
@@ -77,11 +65,9 @@ describe("frontend payout estimate", function () {
     const receipt = await tx.wait();
     const paid = (await ethers.provider.getBalance(alice.address)) - before + receipt.gasUsed * receipt.gasPrice;
 
+    // The site's estimate (app/src/lib/payout.ts) must agree with the contract.
+    const { poolPayout, quote } = await import(require("url").pathToFileURL(require("path").join(__dirname, "..", "app", "src", "lib", "payout.ts")).href);
     expect(Number(ethers.formatEther(paid))).to.be.closeTo(poolPayout(10, 15, 106), 1e-9);
-
-    // The React app (app/src/lib/payout.ts) must agree with the contract too.
-    const { poolPayout: appPoolPayout, quote } = await import(require("url").pathToFileURL(require("path").join(__dirname, "..", "app", "src", "lib", "payout.ts")).href);
-    expect(Number(ethers.formatEther(paid))).to.be.closeTo(appPoolPayout(10, 15, 106), 1e-9);
-    expect(quote(10, 5, 106).payout).to.be.closeTo(appPoolPayout(10, 15, 106), 1e-9);
+    expect(quote(10, 5, 106).payout).to.be.closeTo(poolPayout(10, 15, 106), 1e-9);
   });
 });

@@ -1,2 +1,0 @@
-gsap 3.15.0 - GreenSock standard no-charge license: https://gsap.com/standard-license
-More plugins (Flip, Draggable, MorphSVG, ...): npm pack gsap@3.15.0, copy dist/<Plugin>.min.js here.

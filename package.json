@@ -5,10 +5,9 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
-    "deploy:arc": "hardhat run scripts/deploy.js --network arcTestnet",
+    "deploy:arc": "hardhat run scripts/deploy-v2.js --network arcTestnet",
     "resolve:arc": "hardhat run scripts/resolve-market.js --network arcTestnet",
-    "set-address": "node scripts/set-contract-address.js",
-    "ai:server": "node ai-server.js"
+    "check:arc": "node scripts/check-resolutions.js"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

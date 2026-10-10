@@ -1,27 +1,20 @@
 # PredictArc
 
-## New site (app/)
+Parimutuel YES/NO prediction markets on Arc Testnet, paid in native USDC. Live at https://www.arcpredict.xyz.
 
-The redesigned React site lives in `app/` (Vite, React 19, Tailwind 4, GSAP, Lenis, anime.js, React Bits, thinking-orbs, Sonner). The HTML pages in this folder stay live until it replaces them.
+- `contracts/`: `PredictArcV2.sol` (current) and `ArcOdds.sol` (legacy v1)
+- `app/`: the site (Vite, React 19, Tailwind 4, viem, GSAP, Lenis, anime.js, React Bits, thinking-orbs)
+- `api/`: Vercel functions: AI brief (`ai-brief.js`), share images (`og.js`), per-market link previews (`market-page.js`)
+- `scripts/`: deploy, resolve and resolution-check scripts
 
-```bash
-cd app
-npm install
-npm run dev
-```
+## Contracts
 
-Deploy (Vercel project `arc-odds`, domain arcpredict.xyz): pushes to `main` on GitHub deploy automatically. The root `vercel.json` builds `app/` and serves `app/dist`, sends app routes to the SPA, and redirects the old `.html` URLs. `api/ai-brief.js` is the AI brief function; set `OPENROUTER_API_KEY` in the Vercel project for live briefs.
+Both verified on the Arc explorer:
 
-Owner tools: connect the contract owner's wallet and open `/admin` to create v2 markets, resolve closed ones, or cancel (refund) a market.
+- `PredictArcV2` (current): `0xfadbE0877379F3a6CBC8A612b9B28b1B25baa796`. Rules on-chain, cancel + refunds, auto-refund for one-sided markets, 30-day stale-market escape hatch, two-step ownership.
+- `ArcOdds` (legacy v1): `0x19D638Af6b2De9718Eff496fc27a304155D6Af44`. Existing positions stay claimable; no new bets from the app.
 
-PredictArc is a simple prediction market MVP built for Arc Testnet.
-
-Market discovery questions and displayed probabilities refresh from Polymarket's public read-only Gamma API. PredictArc testnet trades, volume, and settlement remain separate.
-
-Arc Testnet deployments (both verified on the explorer):
-
-- `PredictArcV2` (current): `0xfadbE0877379F3a6CBC8A612b9B28b1B25baa796`. Rules on-chain, cancel + refunds, auto-refund for one-sided markets, 30-day stale-market escape hatch, two-step ownership. Deploy with `npx hardhat run scripts/deploy-v2.js --network arcTestnet` (markets in `scripts/markets-v2.js`).
-- `ArcOdds` (legacy v1): `0x19D638Af6b2De9718Eff496fc27a304155D6Af44`. Existing positions stay claimable; no new bets from the new app.
+Fee: 2% of the losing pool. Payout = stake × (winning pool + losing pool − fee) / winning pool.
 
 ## Arc Testnet
 
@@ -29,88 +22,40 @@ Arc Testnet deployments (both verified on the explorer):
 - Explorer: `https://explorer.testnet.arc.io` (also the source of on-chain trade history)
 - Chain ID: `5042002`
 - Native gas token: `USDC`
-- Faucet: `https://faucet.circle.com` (select Arc Testnet and claim test USDC)
+- Faucet: `https://faucet.circle.com`
 
-## Deploy Contract
-
-1. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-2. Copy `.env.example` to `.env` and add your deployer private key.
-
-3. Deploy:
-
-   ```bash
-   npm run deploy:arc
-   ```
-
-4. Add the deployed contract address to the frontend:
-
-   ```bash
-   npm run set-address -- 0xYourContractAddress
-   ```
-
-The deploy script now creates the seeded markets and updates `contract.js` automatically.
-
-## Test
+## Run the site
 
 ```bash
+cd app
+npm install
+npm run dev
+```
+
+Deploy: pushes to `main` on GitHub deploy to Vercel (project `arc-odds`, domain arcpredict.xyz). The root `vercel.json` builds `app/`, serves `app/dist`, sends app routes to the SPA, shows link-preview bots the per-market page, and redirects the old `.html` URLs. Set `OPENROUTER_API_KEY` (and optionally `OPENROUTER_MODEL`) in Vercel for live AI briefs.
+
+## Contracts: test and deploy
+
+```bash
+npm install
 npm test
 ```
 
-Includes a check that the website's payout estimate matches the contract's real `claimWinnings` payout.
+Tests include a check that the site's payout estimate (`app/src/lib/payout.ts`) matches the contract's real `claimWinnings` payout.
 
-## Resolve A Market
+To deploy a fresh v2, copy `.env.example` to `.env`, add a testnet-only deployer key, then run `npm run deploy:arc` (markets come from `scripts/markets-v2.js`). Update the address in `app/src/lib/chain.ts`, `api/_market.js` and `scripts/check-resolutions.js`.
 
-After its deadline, resolve a market from the owner wallet:
+## Owner tasks
 
-```bash
-MARKET=1 OUTCOME=yes npm run resolve:arc            # v1
-VERSION=2 MARKET=1 OUTCOME=yes npm run resolve:arc  # v2
-VERSION=2 MARKET=1 CANCEL="reason" npm run resolve:arc  # v2: void, bettors refund
-```
-
-Winning users can then claim from the Portfolio page.
-
-## Open App
-
-Open `predictarc.html` in a browser, connect MetaMask, OKX Wallet, Rabby, Trust Wallet, Coinbase Wallet, or another injected wallet, and switch/add Arc Testnet when prompted.
-
-Do not upload `.env`, `node_modules`, `artifacts`, `cache`, or local deployment output when publishing the site. Add API keys in Vercel environment variables instead.
-
-## Optional Supabase
-
-PredictArc can run without Supabase. When configured, Supabase stores off-chain app data such as wallet profiles, activity events, portfolio cache, and watchlists. Arc Testnet smart contracts remain the source of truth for trading and settlement.
-
-1. Create a Supabase project.
-2. Open the SQL editor and run `supabase-schema.sql`.
-3. Open `supabase.js` and add your public project URL and anon key:
-
-   ```js
-   const SUPABASE_URL = "https://your-project.supabase.co";
-   const SUPABASE_ANON_KEY = "your-public-anon-key";
-   ```
-
-The anon key is public by design. Do not put service-role keys in frontend files.
-
-## AI Briefs
-
-The market detail page has an AI Brief panel. The server uses Gemini first when `GEMINI_API_KEY` is present, then OpenRouter when `OPENROUTER_API_KEY` is present, and can fall back to OpenAI when `OPENAI_API_KEY` is present.
-
-For the free OpenRouter route, add these to `.env`:
+Connect the owner wallet and open `/admin` to create markets, resolve closed ones, or cancel (refund) a market. The same from the command line:
 
 ```bash
-OPENROUTER_API_KEY=your_openrouter_api_key
-OPENROUTER_MODEL=google/gemma-4-26b-a4b-it:free
+npm run check:arc                                           # what needs resolving, what closes soon
+MARKET=1 OUTCOME=yes npm run resolve:arc                    # v1
+VERSION=2 MARKET=1 OUTCOME=yes npm run resolve:arc          # v2
+VERSION=2 MARKET=1 CANCEL="reason" npm run resolve:arc      # v2: void, bettors refund
 ```
 
-Then run:
+Winners claim (and cancelled-market bettors refund) from the Portfolio page.
 
-```bash
-npm run ai:server
-```
-
-Then open `http://localhost:4173/predictarc.html`. If the AI server or key is missing, the page still shows a local preview brief instead of breaking.
+Never commit `.env`. Keep API keys in Vercel environment variables.
