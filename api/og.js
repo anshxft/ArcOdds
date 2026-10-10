@@ -43,11 +43,25 @@ const asterisk = (size) => ({
   },
 });
 
+// The Split Arc mark (same paths as the site header and favicon).
+const mark = (height) => ({
+  type: "svg",
+  props: {
+    width: Math.round((height * 46) / 38),
+    height,
+    viewBox: "9 13 46 38",
+    children: [
+      { type: "path", props: { d: "M9 30A17 17 0 0 1 43 30L34 30A8 8 0 0 0 18 30Z", fill: INK } },
+      { type: "path", props: { d: "M55 34A17 17 0 0 1 21 34L30 34A8 8 0 0 0 46 34Z", fill: SIGNAL } },
+    ],
+  },
+});
+
 function marketCard(market) {
   const questionSize = market.question.length > 70 ? 54 : 64;
   return h("div", { width: "100%", height: "100%", flexDirection: "column", background: PAPER, color: INK, border: `1px solid ${LINE}` },
     h("div", { height: 96, alignItems: "center", justifyContent: "space-between", padding: "0 48px", borderBottom: `1px solid ${LINE}` },
-      h("div", { fontFamily: "Tektur", fontSize: 44, letterSpacing: -1 }, "predictarc"),
+      h("div", { alignItems: "center", gap: 14 }, mark(40), h("div", { fontFamily: "Tektur", fontSize: 44, letterSpacing: -1 }, "predictarc")),
       label(`Market ${market.key} / ${market.category}`),
     ),
     h("div", { flex: 1, flexDirection: "column", justifyContent: "center", padding: "0 48px", gap: 18, borderBottom: `1px solid ${LINE}` },
@@ -75,7 +89,7 @@ function marketCard(market) {
 function siteCard() {
   return h("div", { width: "100%", height: "100%", flexDirection: "column", justifyContent: "space-between", background: PAPER, color: INK, padding: 56, border: `1px solid ${LINE}` },
     h("div", { justifyContent: "space-between", alignItems: "center" }, h("div", { alignItems: "center", gap: 14 }, asterisk(30), label("Prediction + Markets", { color: INK })), asterisk(30)),
-    h("div", { fontFamily: "Tektur", fontSize: 214, letterSpacing: -10, lineHeight: 0.9 }, "predictarc"),
+    h("div", { alignItems: "center", gap: 36 }, mark(150), h("div", { fontFamily: "Tektur", fontSize: 176, letterSpacing: -8, lineHeight: 0.9 }, "predictarc")),
     h("div", { justifyContent: "space-between", alignItems: "flex-end" },
       h("div", { fontFamily: "Grotesk", fontSize: 40, maxWidth: 720, lineHeight: 1.2 }, "The crowd's best guess, priced in USDC and settled on Arc."),
       h("div", { background: SIGNAL, padding: "16px 22px" }, label("arcpredict.xyz", { color: INK })),

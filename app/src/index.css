@@ -325,3 +325,17 @@ body {
     transform: translate(0, 0);
   }
 }
+
+/* Logo mark: on hover the arch (YES) and bowl (NO) ease apart a touch */
+.logo-mark path {
+  transform-box: fill-box;
+  transition: transform 260ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .group:hover .logo-mark .mark-arch {
+    transform: translate(-1.5px, -2px);
+  }
+  .group:hover .logo-mark .mark-bowl {
+    transform: translate(1.5px, 2px);
+  }
+}

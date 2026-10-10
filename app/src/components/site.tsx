@@ -45,9 +45,20 @@ export function Orb({ state, size = 64, label }: { state: Parameters<typeof Thin
   return <ThinkingOrb state={state} size={size} aria-label={label} />
 }
 
+/** The Split Arc mark: an ink arch (YES) over a red bowl (NO). Ink follows the text colour. */
+export function LogoMark({ className = 'h-[22px] w-auto' }: { className?: string }) {
+  return (
+    <svg viewBox="9 13 46 38" className={className} aria-hidden="true">
+      <path className="mark-arch" d="M9 30A17 17 0 0 1 43 30L34 30A8 8 0 0 0 18 30Z" fill="currentColor" />
+      <path className="mark-bowl" d="M55 34A17 17 0 0 1 21 34L30 34A8 8 0 0 0 46 34Z" fill="var(--signal)" />
+    </svg>
+  )
+}
+
 function Logo() {
   return (
-    <Link to="/" className="font-display text-[22px] font-extrabold leading-none tracking-tight lowercase" aria-label="PredictArc home">
+    <Link to="/" className="group font-display flex items-center gap-2 text-[22px] font-extrabold leading-none tracking-tight lowercase" aria-label="PredictArc home">
+      <LogoMark className="logo-mark h-[22px] w-auto" />
       predictarc
     </Link>
   )
