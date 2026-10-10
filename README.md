@@ -62,7 +62,14 @@ Never commit `.env`. Keep API keys in Vercel environment variables.
 
 ## Mascot
 
-Poring, the orange blob in the bottom-left corner, is `app/src/mascot/poring.avatar.json`, designed in [Bible Strong Avatar Lab](https://avatars.bible-strong.app) by Stéphane Montlouis-Calixte and rendered with `@bible-strong/avatar-react`. It wakes on load, gets excited over the buy button, works while a transaction is pending, celebrates or looks confused afterwards, and dozes off after 30 seconds without input. Make it react from any page with `mascot('happy', { say: 'Hi' })` from `app/src/mascot/react.ts`. Animation names come from the JSON. To change the look, re-export the JSON from the Studio and replace the file.
+Poring (`app/src/mascot/`) is the site guide: `poring.avatar.json`, designed in [Bible Strong Avatar Lab](https://avatars.bible-strong.app) by Stéphane Montlouis-Calixte and rendered with `@bible-strong/avatar-react`.
+
+- New visitors get a welcome and an optional tour; returning visitors get a greeting. Each page type has a one-time guide. Tour stops are elements marked `data-tour="..."`; edit `TOUR` and `PAGE_GUIDES` in `Mascot.tsx`.
+- It roams (hops, climbs cards, peeks, tricks), watches the cursor, can be tapped (help menu: tour, tip, nap) or dragged and thrown.
+- Make it react from any page: `mascot('happy', { say: 'Hi' })` from `app/src/mascot/react.ts`.
+- The Docs page lists every mood ("Meet Poring").
+
+The renderer caps a definition at 64 animations. After re-exporting Poring from the Studio, run `node scripts/extend-mascot.js app/src/mascot/poring.avatar.json` to add back the site's extra moods.
 
 ## License
 

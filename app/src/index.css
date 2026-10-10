@@ -156,6 +156,17 @@ body {
     transform: translateY(4px) scale(0.95);
   }
 }
+/* What Poring is pointing at during a tour */
+.poring-spot {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+  animation: poring-spot 900ms var(--ease-out) infinite alternate;
+}
+@keyframes poring-spot {
+  to {
+    outline-offset: 7px;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *,

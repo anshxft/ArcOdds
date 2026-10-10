@@ -62,7 +62,7 @@ export default function Portfolio() {
     mascot('working', { ms: 60_000, say: isRefund ? 'Getting your stake back…' : 'Collecting your winnings…' })
     try {
       await run
-      mascot(isRefund ? 'happy' : 'celebrate', { ms: 4000, say: isRefund ? 'Refunded!' : 'Payday!' })
+      mascot(isRefund ? 'happy' : 'golden', { ms: 4000, say: isRefund ? 'Refunded!' : 'Payday!' })
       await refreshMarkets()
       setVersion((value) => value + 1)
     } catch {
@@ -77,7 +77,7 @@ export default function Portfolio() {
           <Decode text="Your / positions / on Arc" className="text-muted" />
           <SplitText text="Portfolio" tag="h1" splitType="chars" className="font-display mt-3 text-[clamp(56px,10vw,150px)] font-extrabold leading-[0.9] tracking-[-0.04em]" textAlign="left" />
         </div>
-        <div className="cell flex flex-col justify-end gap-3 p-6 md:col-span-4 md:p-8" data-boot>
+        <div className="cell flex flex-col justify-end gap-3 p-6 md:col-span-4 md:p-8" data-boot data-tour="portfolio-wallet">
           <Label>Wallet</Label>
           <WalletButton className="min-h-12 justify-center" />
         </div>

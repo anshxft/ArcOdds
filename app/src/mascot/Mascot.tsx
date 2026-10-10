@@ -1,7 +1,10 @@
-// Poring: a mascot that roams the whole site. It hops along the bottom of the screen, climbs onto
-// market cards and headings, peeks in from the edges, does tricks, watches and flees the cursor,
-// can be dragged and thrown, and reacts to trades through `mascot()` (see ./react.ts).
-// Reduced motion: it sits still in the corner.
+// Poring: a mascot that roams the whole site and guides visitors.
+// - Welcomes new visitors (offers a tour) and greets returning ones.
+// - Tour + one-off page guides: hops to each [data-tour] target, highlights it and explains it.
+// - Roams: hops along the bottom, climbs cards and headings, peeks from edges, does tricks.
+// - Tap: help menu (tour, tip, nap). Hold and drag: it follows smoothly, and when let go it is
+//   thrown with real momentum (gravity, wall and floor bounces).
+// - Reacts to trades through `mascot()` (see ./react.ts). Reduced motion: sits still in the corner.
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router'
 import gsap from 'gsap'
@@ -11,7 +14,8 @@ import '@bible-strong/avatar-react/styles.css'
 import definition from './poring.avatar.json'
 import { setMascotHandler, type Mood } from './react'
 import { reducedMotion } from '@/lib/motion'
-import { formatDate, formatUsdc, marketState, useMarkets } from '@/lib/markets'
+import { formatDate, formatUsdc, marketState, shortAddress, useMarkets } from '@/lib/markets'
+import { useWallet } from '@/lib/wallet'
 import type { Market } from '@/lib/chain'
 
 gsap.registerPlugin(Draggable)
@@ -19,34 +23,97 @@ gsap.registerPlugin(Draggable)
 const Poring = createAvatar(definition)
 const DOZE_AFTER = 30_000
 const SLEEP_AFTER = 15_000
+const NAP_FOR = 5 * 60_000
+const GRAVITY = 2600 // px/s²
 const PERCH_TARGETS = 'a.cell[href^="/market/"], h1, [data-perch]'
-const JUMPY: Mood[] = ['celebrate', 'excited', 'happy', 'proud']
+const JUMPY: Mood[] = ['celebrate', 'excited', 'happy', 'proud', 'party', 'golden', 'greedy']
+
+interface Step {
+  target?: string // CSS selector; the first visible match is used, the step is skipped if none
+  text: string
+  mood?: Mood
+}
+
+const TOUR: Step[] = [
+  { text: 'PredictArc lets you bet YES or NO on real-world questions, with free test USDC. Let me show you around!', mood: 'welcome' },
+  { target: '[data-tour="faucet"]', text: 'Step 1: grab free test USDC here. It also pays the gas on Arc.' },
+  { target: '[data-tour="wallet"]', text: 'Step 2: connect a wallet. I switch it to Arc Testnet for you.' },
+  { target: '[data-tour="markets"]', text: 'Step 3: every market lives here. Search, filter, pick one.' },
+  { target: 'a.cell[href^="/market/"]', text: 'Tap any market to see the odds and place a bet.' },
+  { target: '[data-tour="portfolio"]', text: 'Your bets and winnings live here. When you win, claim it there!' },
+  { text: "That's the tour! Tap me anytime for help, or drag me around for fun.", mood: 'party' },
+]
+
+/** Shown once per visitor the first time they open each kind of page. */
+const PAGE_GUIDES: [RegExp, Step[]][] = [
+  [/^\/markets\/?$/, [{ target: '[data-tour="search"]', text: 'Looking for something? Search here, or filter by topic just below.' }]],
+  [
+    /^\/market\//,
+    [
+      { target: '[data-tour="trade"]', text: 'Pick YES or NO, type an amount, then Buy. Your payout estimate updates as you type.' },
+      { target: '[data-tour="rules"]', text: 'Read the rules first. They say exactly how this market gets decided.' },
+    ],
+  ],
+  [/^\/portfolio\/?$/, [{ target: '[data-tour="portfolio-wallet"]', text: 'Connect here to see your bets. When you win, a Claim button lights up below.' }]],
+  [/^\/status\/?$/, [{ text: 'This page shows how PredictArc is doing on-chain right now.', mood: 'explain' }]],
+  [/^\/docs\/?$/, [{ target: '[data-tour="poring"]', text: 'Want to see all my moods? Tap the buttons down here!', mood: 'kawaii' }]],
+  [/^\/admin\/?$/, [{ text: 'Owner tools. Double-check every outcome before you resolve!', mood: 'nervous' }]],
+]
+
+const TRICK_MOODS: Mood[] = ['wink', 'nod', 'star-struck', 'smug', 'cool', 'side-eye', 'silly', 'kawaii', 'eye-roll', 'amazed', 'pleading', 'ghost', 'love']
 
 const rand = (min: number, max: number) => min + Math.random() * (max - min)
 const pick = <T,>(items: readonly T[]) => items[Math.floor(Math.random() * items.length)]
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 const short = (text: string, max = 54) => (text.length > max ? `${text.slice(0, max - 1)}…` : text)
+/** True the first time `key` is seen in that storage (false if storage is blocked). */
+const firstTime = (storage: () => Storage, key: string) => {
+  try {
+    if (storage().getItem(key)) return false
+    storage().setItem(key, '1')
+    return true
+  } catch {
+    return false
+  }
+}
+const timeGreeting = () => {
+  const hour = new Date().getHours()
+  return hour < 5 ? 'Up late?' : hour < 12 ? 'Good morning!' : hour < 17 ? 'Good afternoon!' : hour < 22 ? 'Good evening!' : 'Up late?'
+}
 
-type Mode = 'roam' | 'perch' | 'drag' | 'sleep'
+type Mode = 'roam' | 'perch' | 'drag' | 'sleep' | 'guide'
+interface Bubble {
+  text: string
+  offset: number // px from the mascot's left edge, chosen so the bubble stays on screen
+  width: number // max width in px
+  below: boolean // show under the mascot (mascot near the top)
+  actions?: { label: string; choose(): void }[]
+}
 interface Brain {
   onRoute(): void
-  poke(): void
+  tap(): void
 }
 
 export default function Mascot() {
   const mover = useRef<HTMLDivElement>(null) // fixed; travels with x/y
-  const body = useRef<HTMLDivElement>(null) // squash, stretch, spin
+  const body = useRef<HTMLDivElement>(null) // squash, stretch, spin; the drag handle
   const avatar = useRef<AvatarController>(null)
   const brain = useRef<Brain | null>(null)
   const marketsRef = useRef<Market[]>([])
-  const [bubble, setBubble] = useState<{ text: string; flip: boolean } | null>(null)
+  const accountRef = useRef<string | null>(null)
+  const [bubble, setBubble] = useState<Bubble | null>(null)
   const [still] = useState(reducedMotion)
   const { markets } = useMarkets()
+  const { account } = useWallet()
   const { pathname } = useLocation()
 
   useEffect(() => {
     marketsRef.current = markets
   }, [markets])
+
+  useEffect(() => {
+    accountRef.current = account
+  }, [account])
 
   useEffect(() => {
     brain.current?.onRoute()
@@ -68,9 +135,11 @@ export default function Mascot() {
     let busy = false
     let gen = 0 // bumped on interrupt so stale actions stop after their next await
     let reactUntil = 0
-    let lastSaid = Date.now() // first tip waits a while
+    let napUntil = 0
+    let lastSaid = Date.now()
     let current: Mood = 'idle'
     let pokes: number[] = []
+    let physics: (() => void) | null = null
     const timers = new Set<number>()
     const later = (fn: () => void, ms: number) => {
       const id = window.setTimeout(() => {
@@ -90,23 +159,76 @@ export default function Mascot() {
       avatar.current?.play(mood)
     }
 
+    // ---- speech ----
+
     let bubbleTimer = 0
+    let pending: ((answer: string) => void) | null = null
+    let under = false // standing under a tour target: talk below so the bubble does not cover it
+    const place = () => {
+      const width = Math.min(240, innerWidth - 16)
+      const x = getX()
+      const wanted = x + size() / 2 > innerWidth / 2 ? x + size() - width : x // lean toward the middle
+      return { offset: clamp(wanted, 8, innerWidth - 8 - width) - x, width, below: under || getY() < 170 }
+    }
+    const closeAsk = (answer = 'cancel') => {
+      const resolve = pending
+      pending = null
+      resolve?.(answer)
+    }
     const say = (text: string, ms = 3400) => {
+      closeAsk()
       cancel(bubbleTimer)
       lastSaid = Date.now()
-      setBubble({ text, flip: getX() > innerWidth - 260 })
+      setBubble({ text, ...place() })
       bubbleTimer = later(() => setBubble(null), ms)
     }
+    /** Speech bubble with buttons; resolves with the chosen label, or 'cancel' if interrupted. */
+    const ask = (text: string, labels: string[]) =>
+      new Promise<string>((resolve) => {
+        closeAsk()
+        cancel(bubbleTimer)
+        lastSaid = Date.now()
+        pending = resolve
+        setBubble({
+          text,
+          ...place(),
+          actions: labels.map((label) => ({
+            label,
+            choose: () => {
+              setBubble(null)
+              closeAsk(label)
+            },
+          })),
+        })
+      })
 
     let settleTimer = 0
     const settle = (ms: number) => {
       cancel(settleTimer)
-      settleTimer = later(() => mode !== 'sleep' && play(mode === 'perch' ? 'watch-down' : 'idle'), ms)
+      settleTimer = later(() => {
+        if (mode === 'sleep' || pending) return
+        play(mode === 'perch' ? 'watch-down' : 'idle')
+      }, ms)
+    }
+
+    // ---- highlight for guides ----
+
+    let spot: Element | null = null
+    const spotlight = (node: Element | null) => {
+      spot?.classList.remove('poring-spot')
+      spot = node
+      node?.classList.add('poring-spot')
     }
 
     const interrupt = () => {
       gen += 1
       busy = false
+      if (pending) {
+        closeAsk()
+        setBubble(null)
+      }
+      spotlight(null)
+      under = false
       gsap.killTweensOf([el, inner])
       gsap.to(inner, { rotation: 0, scaleX: 1, scaleY: 1, y: 0, duration: 0.2 })
     }
@@ -123,6 +245,8 @@ export default function Mascot() {
     }
 
     const timeline = (tl: gsap.core.Timeline) => new Promise<void>((done) => tl.eventCallback('onComplete', () => done()))
+    const squash = (amount = 0.22) =>
+      gsap.fromTo(inner, { scaleX: 1 + amount, scaleY: 1 - amount }, { scaleX: 1, scaleY: 1, duration: 0.45, ease: 'elastic.out(1, 0.45)' })
 
     // ---- movement ----
 
@@ -141,7 +265,7 @@ export default function Mascot() {
     const hopTo = (tx: number, ty = ground(), mood?: Mood) => {
       const x0 = getX()
       const y0 = getY()
-      tx = clamp(tx, fine ? -size() * 0.5 : 4, innerWidth - size() * (fine ? 0.5 : 1) - 4)
+      tx = clamp(tx, 4, maxX()) // fully on screen; only peekEdge slides it past the edge
       play(mood ?? (tx < x0 ? 'walk-left' : 'walk-right'))
       const tl = gsap.timeline()
       if (Math.abs(ty - y0) > 50) {
@@ -153,14 +277,125 @@ export default function Mascot() {
       return timeline(tl)
     }
 
-    const fall = async (my: number) => {
-      const distance = ground() - getY()
-      if (distance < 4) return
-      play('surprised')
-      await timeline(gsap.timeline().to(el, { y: ground(), duration: clamp(distance / 900, 0.35, 0.9), ease: 'bounce.out' }))
-      if (my !== gen) return
-      play('oof')
-      settle(1100)
+    /** Ballistic flight from the current spot: gravity, wall and floor bounces, rolling to a stop. */
+    const throwIt = (vx: number, vy: number, my: number) =>
+      new Promise<void>((done) => {
+        let x = getX()
+        let y = getY()
+        if (y >= ground() - 1 && Math.abs(vx) < 30 && vy >= 0) return done()
+        let rotation = Number(gsap.getProperty(inner, 'rotation'))
+        const hard = Math.hypot(vx, vy) > 1100
+        play(hard ? 'dizzy' : 'surprised')
+        let last = performance.now()
+        const step = () => {
+          if (my !== gen) {
+            gsap.ticker.remove(step)
+            physics = null
+            return done()
+          }
+          const now = performance.now()
+          const dt = Math.min((now - last) / 1000, 1 / 30)
+          last = now
+          vy += GRAVITY * dt
+          x += vx * dt
+          y += vy * dt
+          if (x < 4) {
+            x = 4
+            vx = Math.abs(vx) * 0.55
+          } else if (x > maxX()) {
+            x = maxX()
+            vx = -Math.abs(vx) * 0.55
+          }
+          if (y < 0) {
+            y = 0
+            vy = Math.abs(vy) * 0.4
+          }
+          if (y >= ground()) {
+            y = ground()
+            if (vy > 280) {
+              vy = -vy * 0.45
+              vx *= 0.82
+              squash(clamp(Math.abs(vy) / 4000, 0.1, 0.28))
+            } else {
+              vy = 0
+              vx *= Math.pow(0.02, dt) // floor friction
+            }
+          }
+          rotation += vx * dt * 0.35
+          gsap.set(el, { x, y })
+          gsap.set(inner, { rotation })
+          if (y === ground() && vy === 0 && Math.abs(vx) < 15) {
+            gsap.ticker.remove(step)
+            physics = null
+            gsap.to(inner, { rotation: Math.round(rotation / 360) * 360, duration: 0.35, ease: 'back.out(2)', onComplete: () => void gsap.set(inner, { rotation: 0 }) })
+            play(hard ? 'dizzy' : 'oof')
+            settle(hard ? 1600 : 900)
+            done()
+          }
+        }
+        physics = step
+        gsap.ticker.add(step)
+      })
+
+    // ---- guiding ----
+
+    const visible = (node: Element) => {
+      const r = node.getBoundingClientRect()
+      return r.width > 0 && r.height > 0
+    }
+    const findTarget = (selector: string) => [...document.querySelectorAll(selector)].find(visible) ?? null
+
+    /** Hop next to `node`: on top of it, or under it when it is near the top of the screen. */
+    const goNear = async (node: Element, my: number) => {
+      let r = node.getBoundingClientRect()
+      if (r.bottom < 60 || r.top > innerHeight - 60) {
+        node.scrollIntoView({ block: 'center' })
+        await wait(450)
+        if (my !== gen) return
+        r = node.getBoundingClientRect()
+      }
+      const x = clamp(r.left + r.width / 2 - size() / 2, 4, maxX())
+      under = r.top <= size() + 150
+      const y = under ? clamp(r.bottom + 8, 0, ground()) : r.top - size() * 0.82
+      await hopTo(x, y, 'hop')
+    }
+    const pointAt = (node: Element | null): Mood => {
+      if (!node) return 'explain'
+      const r = node.getBoundingClientRect()
+      const offset = r.left + r.width / 2 - (getX() + size() / 2)
+      return offset < -30 ? 'point-left' : offset > 30 ? 'point-right' : 'explain'
+    }
+
+    const tour = async (steps: Step[], my: number) => {
+      const shown = steps.filter((step) => !step.target || findTarget(step.target))
+      if (!shown.length) return
+      mode = 'guide'
+      for (let i = 0; i < shown.length; i++) {
+        const step = shown[i]
+        const node = step.target ? findTarget(step.target) : null
+        under = false
+        if (node) await goNear(node, my)
+        if (my !== gen) return
+        spotlight(node)
+        play(step.mood ?? pointAt(node))
+        const last = i === shown.length - 1
+        const answer = await ask(step.text, last ? [shown.length > 1 ? 'Done' : 'Got it'] : ['Next', 'Skip'])
+        if (my !== gen || answer === 'cancel') return
+        if (answer === 'Skip') break
+      }
+      spotlight(null)
+      under = false
+      mode = 'roam'
+      play('happy')
+      await throwIt(0, 0, my) // hop down if it ended up on something
+      if (my === gen) settle(1400)
+    }
+
+    const guidePage = () => {
+      const steps = PAGE_GUIDES.find(([pattern]) => pattern.test(location.pathname))?.[1]
+      if (!steps || mode !== 'roam' || busy) return
+      if (!firstTime(() => localStorage, `poring_guide_${location.pathname.split('/')[1] || 'home'}`)) return
+      run((my) => tour(steps, my))
     }
 
     // ---- things it does on its own ----
@@ -205,28 +440,37 @@ export default function Mascot() {
     }
 
     const trick = async (my: number) => {
-      const which = pick(['spin', 'jump', 'dance', 'wink', 'nod', 'star'] as const)
+      const night = new Date().getHours() >= 22 || new Date().getHours() < 5
+      const which = pick(['spin', 'jump', 'dance', 'party', 'mood', 'mood', 'mood', ...(night ? (['night'] as const) : [])] as const)
       if (which === 'spin') {
         play('dizzy')
         await timeline(gsap.timeline().to(inner, { rotation: 360, duration: 0.8, ease: 'power2.inOut' }).set(inner, { rotation: 0 }))
         await wait(900)
       } else if (which === 'jump') {
         play('hop')
-        await timeline(gsap.timeline().to(el, { y: getY() - 130, duration: 0.32, ease: 'power2.out' }).to(el, { y: getY(), duration: 0.32, ease: 'power2.in' }).to(inner, { scaleX: 1.25, scaleY: 0.78, duration: 0.08, yoyo: true, repeat: 1 }))
+        await timeline(gsap.timeline().to(el, { y: getY() - 130, duration: 0.32, ease: 'power2.out' }).to(el, { y: getY(), duration: 0.32, ease: 'power2.in' }))
+        squash(0.25)
         play('star-struck')
         await wait(1200)
-      } else if (which === 'dance') {
-        play('dance')
+      } else if (which === 'dance' || which === 'party') {
+        play(which)
         await timeline(gsap.timeline().to(inner, { rotation: 10, y: -8, duration: 0.16, yoyo: true, repeat: 3, ease: 'sine.inOut' }).to(inner, { rotation: -10, y: -8, duration: 0.16, yoyo: true, repeat: 3, ease: 'sine.inOut' }).set(inner, { rotation: 0, y: 0 }))
+      } else if (which === 'night') {
+        play('dreamy')
+        say(pick(['So sleepy…', 'Markets never sleep. I do.']), 2600)
+        await wait(2600)
       } else {
-        play(which === 'star' ? 'star-struck' : which)
-        await wait(1800)
+        const mood = pick(TRICK_MOODS)
+        play(mood)
+        if (mood === 'ghost' && Math.random() < 0.6) say('Boo!', 1400)
+        if (mood === 'cool' && Math.random() < 0.4) say('Too cool.', 1400)
+        await wait(2000)
       }
       if (my === gen) play('idle')
     }
 
     const lookAround = async (my: number) => {
-      play(pick(['curious', 'searching', 'watch-up', 'listening', 'watch-left', 'watch-right'] as const))
+      play(pick(['curious', 'searching', 'watch-up', 'listening', 'watch-left', 'watch-right', 'bored'] as const))
       await wait(rand(2200, 3600))
       if (my === gen) play('idle')
     }
@@ -246,22 +490,23 @@ export default function Mascot() {
     const tip = () => {
       const soon = marketsRef.current.filter((m) => marketState(m) === 'open').sort((a, b) => a.deadline - b.deadline)[0]
       const tips = [
-        'Drag me anywhere. I bounce!',
+        'Drag me anywhere and let go. I bounce!',
         'Free test USDC is up in the header.',
         'Odds are just the pool split. They move with every bet.',
         'Winners split the losing side, minus 2%.',
         'Try the AI brief on any market.',
+        'Tap me for a tour anytime.',
       ]
       if (soon) tips.push(`"${short(soon.question)}" closes ${formatDate(soon.deadline)}.`)
-      play('wink')
-      say(pick(tips), 4200)
-      settle(1500)
+      play('explain')
+      say(pick(tips), 4600)
+      settle(2400)
     }
 
     const ACTIONS: [number, (my: number) => Promise<void>][] = [
       [4, wander],
       [2.5, perch],
-      [1.5, trick],
+      [2, trick],
       [1.5, lookAround],
       [1, peekEdge],
     ]
@@ -320,56 +565,146 @@ export default function Mascot() {
     }
 
     const pet = () => {
-      if (mode === 'drag' || mode === 'sleep' || busy) return
+      if (mode !== 'roam' || busy) return
       reactUntil = Date.now() + 2200
-      play(pick(['blush', 'love'] as const))
+      play(pick(['blush', 'love', 'kawaii'] as const))
       if (Math.random() < 0.5) say(pick(['Hehe.', 'That tickles!', 'Again!']), 1600)
       settle(2200)
     }
 
-    const poke = () => {
-      const now = Date.now()
-      pokes = [...pokes.filter((time) => now - time < 4000), now]
-      interrupt()
-      reactUntil = now + 2400
-      if (pokes.length >= 5) {
-        pokes = []
-        play('grumpy')
-        say('Okay, okay, enough poking!', 2400)
-      } else {
-        play(pick(['laughing', 'playful', 'wink', 'happy'] as const))
-        gsap.to(inner, { y: -26, duration: 0.16, yoyo: true, repeat: 1, ease: 'power2.out' })
-      }
-      settle(2400)
+    let lastPlead = 0
+    const onLeaveWindow = () => {
+      if (!fine || mode !== 'roam' || busy || Date.now() - lastPlead < 90_000) return
+      lastPlead = Date.now()
+      play('pleading')
+      say(pick(["Don't go! Markets are closing soon.", 'Come back soon!']), 2600)
+      settle(2600)
     }
 
-    const [drag] = Draggable.create(el, {
+    const sleepNow = () =>
+      run(async (my) => {
+        mode = 'sleep'
+        await throwIt(0, 0, my)
+        if (my !== gen) return
+        await hopTo(fine ? 16 : 8)
+        if (my !== gen) return
+        play('yawn')
+        await wait(2200)
+        if (my !== gen) return
+        play('drowsy')
+        await wait(SLEEP_AFTER)
+        if (my === gen) play('sleeping')
+      })
+
+    const wake = (text?: string) => {
+      interrupt()
+      mode = 'roam'
+      napUntil = 0
+      play('waking')
+      reactUntil = Date.now() + 1800
+      if (text) say(text, 1800)
+      settle(1800)
+    }
+
+    /** Tap: help menu. Second tap closes it; poking too much gets it grumpy, then furious. */
+    const tap = () => {
+      const now = Date.now()
+      pokes = [...pokes.filter((time) => now - time < 4000), now]
+      if (mode === 'sleep') return wake("I'm up, I'm up!")
+      if (pokes.length >= 8) {
+        pokes = []
+        interrupt()
+        play('furious')
+        say("That's it, I'm out!", 2200)
+        run(async (my) => {
+          await wait(900)
+          if (my === gen) await hopTo(getX() < innerWidth / 2 ? maxX() : 8, ground(), 'furious')
+          if (my === gen) settle(600)
+        })
+        return
+      }
+      if (pokes.length >= 5) {
+        interrupt()
+        reactUntil = now + 2200
+        play('grumpy')
+        say('Okay, okay, enough poking!', 2200)
+        settle(2200)
+        return
+      }
+      if (mode === 'guide') return // the bubble buttons drive the tour
+      if (pending) {
+        interrupt()
+        play('wink')
+        settle(900)
+        return
+      }
+      interrupt()
+      play(pick(['happy', 'laughing', 'kawaii', 'playful'] as const))
+      gsap.to(inner, { y: -22, duration: 0.15, yoyo: true, repeat: 1, ease: 'power2.out' })
+      run(async (my) => {
+        const answer = await ask(pick(['Need a hand?', 'Hi! What can I do?', 'Yes? How can I help?']), ['Tour', 'Tip', 'Nap', 'Close'])
+        if (my !== gen) return
+        if (answer === 'Tour') await tour(TOUR, my)
+        else if (answer === 'Tip') tip()
+        else if (answer === 'Nap') {
+          napUntil = Date.now() + NAP_FOR
+          busy = false
+          sleepNow()
+        } else play('idle')
+      })
+    }
+
+    // ---- drag: Draggable moves a hidden proxy; Poring eases after it, tilting with speed ----
+
+    const proxy = document.createElement('div')
+    proxy.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;pointer-events:none;visibility:hidden'
+    document.body.appendChild(proxy)
+    let xTo: gsap.QuickToFunc | null = null
+    let yTo: gsap.QuickToFunc | null = null
+    let tiltTo: gsap.QuickToFunc | null = null
+    let trail: { x: number; y: number; t: number }[] = []
+
+    const [drag] = Draggable.create(proxy, {
+      trigger: inner,
       type: 'x,y',
-      minimumMovement: 6,
+      minimumMovement: 4,
       onPress() {
-        this.applyBounds({ minX: 0, maxX: maxX(), minY: 56, maxY: ground() })
+        gsap.set(proxy, { x: getX(), y: getY() })
+        this.update()
+        this.applyBounds({ minX: -size() * 0.3, maxX: innerWidth - size() * 0.7, minY: 0, maxY: ground() })
       },
       onDragStart() {
         interrupt()
         mode = 'drag'
-        play('scared')
-        say(pick(['Hey! Put me down!', 'Wheee!', 'Where are we going?']), 1800)
+        xTo = gsap.quickTo(el, 'x', { duration: 0.14, ease: 'power3.out' })
+        yTo = gsap.quickTo(el, 'y', { duration: 0.14, ease: 'power3.out' })
+        tiltTo = gsap.quickTo(inner, 'rotation', { duration: 0.35, ease: 'power3.out' })
+        gsap.to(inner, { scaleX: 0.92, scaleY: 1.1, duration: 0.2, ease: 'power2.out' })
+        play(pick(['scared', 'nervous', 'amazed'] as const))
+        say(pick(['Hey! Put me down!', 'Wheee!', 'Where are we going?', 'Careful with me!']), 1800)
+        trail = []
       },
       onDrag() {
-        gsap.set(inner, { rotation: clamp(this.deltaX * 3, -30, 30) })
+        xTo?.(this.x)
+        yTo?.(this.y)
+        const now = performance.now()
+        trail = [...trail.filter((point) => now - point.t < 100), { x: this.x, y: this.y, t: now }]
+        const first = trail[0]
+        tiltTo?.(clamp(((this.x - first.x) / Math.max(now - first.t, 16)) * 25, -35, 35))
       },
       onDragEnd() {
-        gsap.to(inner, { rotation: 0, duration: 0.3 })
+        const now = performance.now()
+        const first = trail.find((point) => now - point.t < 100)
+        const dt = first ? Math.max(now - first.t, 16) / 1000 : 1
+        const vx = first ? clamp((this.x - first.x) / dt, -2600, 2600) : 0
+        const vy = first ? clamp((this.y - first.y) / dt, -2600, 2600) : 0
+        gsap.killTweensOf(el)
+        gsap.killTweensOf(inner)
+        gsap.to(inner, { scaleX: 1, scaleY: 1, duration: 0.2 })
         mode = 'roam'
-        run(async (my) => {
-          await fall(my)
-          if (my !== gen) return
-          play('dizzy')
-          await wait(1000)
-          if (my === gen) play('idle')
-        })
+        run((my) => throwIt(vx, vy, my))
       },
-      onClick: poke,
+      onClick: tap,
     })
 
     // ---- the page ----
@@ -377,68 +712,59 @@ export default function Mascot() {
     let lastScroll = scrollY
     let lastScrollAt = performance.now()
     let lastWhee = 0
+    let bottomSaid = ''
     const onScroll = () => {
       const now = performance.now()
       const velocity = Math.abs(scrollY - lastScroll) / Math.max(now - lastScrollAt, 1)
       lastScroll = scrollY
       lastScrollAt = now
+      if (mode === 'guide' || mode === 'drag' || mode === 'sleep') return
       if (mode === 'perch') {
         interrupt()
         mode = 'roam'
         if (Math.random() < 0.4) say('Whoa!', 1200)
-        run(fall)
-      } else if (velocity > 4 && mode === 'roam' && !busy && Date.now() - lastWhee > 20_000) {
+        run((my) => throwIt(0, 0, my))
+      } else if (velocity > 4 && !busy && Date.now() - lastWhee > 20_000) {
         lastWhee = Date.now()
         play('surprised')
         say(pick(['Slow down!', 'Wheee, scrolling!']), 1500)
         settle(1500)
+      } else if (!busy && bottomSaid !== location.pathname && innerHeight + scrollY >= document.documentElement.scrollHeight - 40) {
+        bottomSaid = location.pathname
+        play('cool')
+        say('You made it to the bottom!', 2200)
+        settle(2200)
       }
     }
 
     const onResize = () => {
       if (mode === 'drag') return
       interrupt()
-      mode = mode === 'sleep' ? 'sleep' : 'roam'
+      if (mode !== 'sleep') mode = 'roam'
       gsap.set(el, { x: clamp(getX(), 8, maxX()), y: ground() })
     }
 
-    // ---- sleep ----
+    // ---- dozing ----
 
     let doze = 0
     const armDoze = () => {
       cancel(doze)
       doze = later(() => {
+        if (mode === 'guide' || mode === 'drag' || pending) return armDoze()
         interrupt()
-        mode = 'sleep'
-        run(async (my) => {
-          await fall(my)
-          if (my !== gen) return
-          await hopTo(fine ? 16 : 8)
-          if (my !== gen) return
-          play('yawn')
-          await wait(2200)
-          if (my !== gen) return
-          play('drowsy')
-          await wait(SLEEP_AFTER)
-          if (my === gen) play('sleeping')
-        })
+        sleepNow()
       }, DOZE_AFTER)
     }
     const onActivity = () => {
-      if (mode === 'sleep') {
-        interrupt()
-        mode = 'roam'
-        play('waking')
-        reactUntil = Date.now() + 1800
-        settle(1800)
-      }
-      armDoze()
+      if (mode === 'sleep' && Date.now() > napUntil) wake()
+      if (mode !== 'sleep') armDoze()
     }
 
     // ---- reactions from the rest of the app ----
 
     setMascotHandler((mood, { ms = 2600, say: text }) => {
-      if (mode === 'sleep') mode = 'roam'
+      if (mode === 'guide' || mode === 'drag') return
+      if (mode === 'sleep') wake()
       armDoze()
       if (mode !== 'perch') interrupt()
       reactUntil = Date.now() + ms
@@ -449,41 +775,57 @@ export default function Mascot() {
     })
 
     brain.current = {
-      poke,
+      tap,
       onRoute() {
-        setBubble(null)
-        if (mode === 'perch') {
+        if (mode === 'drag') return
+        if (mode === 'guide' || mode === 'perch' || pending) {
           interrupt()
           mode = 'roam'
-            run(fall)
-        } else if (mode === 'roam' && !busy) {
+          run((my) => throwIt(0, 0, my))
+        } else if (!pending) setBubble(null)
+        if (mode === 'roam' && !busy) {
           play('curious')
           settle(1600)
         }
+        later(guidePage, 1600)
       },
     }
 
-    // ---- start ----
+    // ---- start: welcome first-time visitors, greet returning ones ----
 
     gsap.set(el, { x: fine ? 24 : 8, y: ground(), autoAlpha: 1 })
     play('waking')
     settle(2000)
     armDoze()
-    later(tick, 4000)
-    try {
-      if (!sessionStorage.getItem('poring_hi')) {
-        later(() => {
-          sessionStorage.setItem('poring_hi', '1')
-          play('wink')
-          say(fine ? "Hi, I'm Poring! Drag me around, or pet me." : "Hi, I'm Poring! Drag me around.", 4500)
-          settle(1500)
-        }, 2600)
-      }
-    } catch {
-      /* storage blocked: skip the greeting */
-    }
+    later(tick, 9000)
+    later(() => {
+      if (firstTime(() => localStorage, 'poring_seen')) {
+        run(async (my) => {
+          await hopTo(innerWidth / 2 - size() / 2)
+          if (my !== gen) return
+          play('welcome')
+          squash(0.2)
+          const answer = await ask("Welcome to PredictArc! I'm Poring, your guide. Want a quick tour?", ['Show me', 'Maybe later'])
+          if (my !== gen) return
+          if (answer === 'Show me') await tour(TOUR, my)
+          else {
+            play('wink')
+            say('Okay! Tap me anytime for help.', 2800)
+            settle(1400)
+          }
+          if (my === gen) later(guidePage, 3000)
+        })
+      } else if (firstTime(() => sessionStorage, 'poring_hi')) {
+        const who = accountRef.current ? `, ${shortAddress(accountRef.current)}` : ''
+        play('welcome')
+        say(`${timeGreeting()} Welcome back${who}!`, 3600)
+        settle(2000)
+        later(guidePage, 4200)
+      } else later(guidePage, 600)
+    }, 1800)
 
-    el.addEventListener('pointerenter', pet)
+    inner.addEventListener('pointerenter', pet)
+    document.documentElement.addEventListener('mouseleave', onLeaveWindow)
     const activity = ['pointermove', 'pointerdown', 'keydown', 'scroll', 'touchstart'] as const
     activity.forEach((name) => window.addEventListener(name, onActivity, { passive: true }))
     window.addEventListener('pointermove', onPointerMove, { passive: true })
@@ -493,11 +835,16 @@ export default function Mascot() {
     return () => {
       setMascotHandler(null)
       brain.current = null
+      closeAsk()
+      spotlight(null)
       drag.kill()
+      proxy.remove()
+      if (physics) gsap.ticker.remove(physics)
       gsap.killTweensOf([el, inner])
       cancelAnimationFrame(frame)
       timers.forEach(clearTimeout)
-      el.removeEventListener('pointerenter', pet)
+      inner.removeEventListener('pointerenter', pet)
+      document.documentElement.removeEventListener('mouseleave', onLeaveWindow)
       activity.forEach((name) => window.removeEventListener(name, onActivity))
       window.removeEventListener('pointermove', onPointerMove)
       window.removeEventListener('scroll', onScroll)
@@ -514,32 +861,47 @@ export default function Mascot() {
   }
 
   return (
-    <div
-      ref={mover}
-      role="button"
-      tabIndex={0}
-      aria-label="Poring, the PredictArc mascot. Press to poke."
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault()
-          brain.current?.poke()
-        }
-      }}
-      className="invisible fixed top-0 left-0 z-50 w-12 cursor-grab touch-none select-none active:cursor-grabbing md:w-[72px]"
-    >
-      <div ref={body} className="origin-bottom">
+    <div ref={mover} className="invisible fixed top-0 left-0 z-50 w-12 will-change-transform select-none md:w-[72px]">
+      <div
+        ref={body}
+        role="button"
+        tabIndex={0}
+        aria-label="Poring, your guide. Press for help, or drag to move."
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            brain.current?.tap()
+          }
+        }}
+        className="origin-bottom cursor-grab touch-none active:cursor-grabbing"
+      >
         <Poring ref={avatar} defaultAnimation="idle" size="100%" ariaLabel="Poring" />
       </div>
-      <p
+      <div
         role="status"
         className={
           bubble
-            ? `mascot-bubble label pointer-events-none absolute bottom-full mb-2 w-max max-w-56 border border-ink bg-paper px-3 py-2 normal-case tracking-normal text-ink shadow-[3px_3px_0_var(--ink)] ${bubble.flip ? 'right-0' : 'left-0'}`
+            ? `mascot-bubble label absolute w-max border border-ink bg-paper px-3 py-2 normal-case tracking-normal text-ink shadow-[3px_3px_0_var(--ink)] ${bubble.below ? 'top-full mt-2' : 'bottom-full mb-2'} ${bubble.actions ? '' : 'pointer-events-none'}`
             : 'sr-only'
         }
+        style={bubble ? { left: bubble.offset, maxWidth: bubble.width } : undefined}
       >
         {bubble?.text}
-      </p>
+        {bubble?.actions && (
+          <span className="mt-2 flex flex-wrap gap-1.5">
+            {bubble.actions.map((action, index) => (
+              <button
+                key={action.label}
+                type="button"
+                onClick={action.choose}
+                className={`press label px-2.5 py-1.5 ${index === 0 ? 'bg-signal text-on-signal' : 'border border-ink hover-ink'}`}
+              >
+                {action.label}
+              </button>
+            ))}
+          </span>
+        )}
+      </div>
     </div>
   )
 }

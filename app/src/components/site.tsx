@@ -65,7 +65,7 @@ function ThemeToggle() {
   return (
     <button type="button" onClick={() => {
       setDark(!dark)
-      mascot('surprised', { ms: 1600, say: dark ? 'Lights on!' : 'Lights off!' })
+      mascot(dark ? 'amazed' : 'dreamy', { ms: 1800, say: dark ? 'Lights on!' : 'Lights off!' })
     }} className="press label hover-ink flex h-full items-center px-4" aria-label="Toggle dark mode">
       {dark ? 'Light' : 'Dark'}
     </button>
@@ -204,7 +204,7 @@ function Header() {
             <span className="label text-muted">Testnet / 2026</span>
           </span>
           {NAV.map(([to, label]) => (
-            <NavLink key={to} to={to} className={({ isActive }) => `press label hover-ink flex items-center px-4 lg:px-5 ${isActive ? 'bg-ink text-paper' : ''}`}>
+            <NavLink key={to} to={to} data-tour={label.toLowerCase()} className={({ isActive }) => `press label hover-ink flex items-center px-4 lg:px-5 ${isActive ? 'bg-ink text-paper' : ''}`}>
               {label}{to === '/portfolio' && <NavBadge count={ready} />}
             </NavLink>
           ))}
@@ -213,11 +213,11 @@ function Header() {
               <Asterisk className="size-3" /> Admin
             </NavLink>
           )}
-          <a href={ARC.faucet} target="_blank" rel="noreferrer" className="press label hover-ink ml-auto hidden items-center gap-2 border-l border-line px-5 whitespace-nowrap lg:flex">
+          <a href={ARC.faucet} target="_blank" rel="noreferrer" data-tour="faucet" className="press label hover-ink ml-auto hidden items-center gap-2 border-l border-line px-5 whitespace-nowrap lg:flex">
             <Asterisk className="size-3" /> Free test USDC
           </a>
         </nav>
-        <div className="cell flex items-stretch">
+        <div className="cell flex items-stretch" data-tour="wallet">
           <span className="hidden md:block">
             <ThemeToggle />
           </span>
@@ -226,7 +226,7 @@ function Header() {
       </div>
       <nav className="frame flex overflow-x-auto border-t-0 md:hidden" aria-label="Main mobile">
         {NAV.map(([to, label]) => (
-          <NavLink key={to} to={to} className={({ isActive }) => `cell label flex min-h-11 flex-1 items-center justify-center px-3 ${isActive ? 'bg-ink text-paper' : ''}`}>
+          <NavLink key={to} to={to} data-tour={label.toLowerCase()} className={({ isActive }) => `cell label flex min-h-11 flex-1 items-center justify-center px-3 ${isActive ? 'bg-ink text-paper' : ''}`}>
             {label}{to === '/portfolio' && <NavBadge count={ready} />}
           </NavLink>
         ))}

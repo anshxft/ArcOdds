@@ -1,8 +1,10 @@
-import { useRef } from 'react'
+import { Suspense, lazy, useRef } from 'react'
 import SplitText from '@/components/SplitText'
 import { Asterisk, Decode, Label } from '@/components/site'
 import { ARC, CONTRACTS, addressUrl } from '@/lib/chain'
 import { useBoot, useScrollMotion } from '@/lib/motion'
+
+const Gallery = lazy(() => import('@/mascot/Gallery'))
 
 const SECTIONS = [
   ['Getting started', 'Open Markets, pick a question, read the YES/NO pool odds, then connect a wallet to trade.'],
@@ -43,6 +45,9 @@ export default function Docs() {
           </article>
         ))}
       </section>
+      <Suspense fallback={null}>
+        <Gallery />
+      </Suspense>
     </div>
   )
 }

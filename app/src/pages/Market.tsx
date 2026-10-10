@@ -126,7 +126,7 @@ function TradePanel({ market }: { market: MarketT }) {
     try {
       await run
       setAmount('')
-      mascot(stake >= 10 ? 'greedy' : 'celebrate', { ms: 4000, say: stake >= 10 ? `Big bet! ${stake} USDC on ${side}.` : `Locked in on ${side}!` })
+      mascot(stake >= 10 ? 'greedy' : Math.random() < 0.5 ? 'party' : 'celebrate', { ms: 4000, say: stake >= 10 ? `Big bet! ${stake} USDC on ${side}.` : `Locked in on ${side}!` })
       await refreshMarkets()
     } catch {
       mascot('confused', { ms: 3500, say: 'That bet did not go through.' }) // details are in the toast
@@ -137,7 +137,7 @@ function TradePanel({ market }: { market: MarketT }) {
   }
 
   return (
-    <div className="cell">
+    <div className="cell" data-tour="trade">
       <div className="flex items-center justify-between border-b border-line px-5 py-3">
         <Label className="text-ink">Trade</Label>
         <Label>USDC / Arc</Label>
@@ -315,7 +315,7 @@ export default function Market() {
           <div className="cell p-5" data-reveal>
             <OddsBar yes={market.yesOdds} />
           </div>
-          <div className="cell p-5" data-reveal>
+          <div className="cell p-5" data-reveal data-tour="rules">
             <span className="flex items-center gap-2"><Asterisk className="size-3" /><Label className="text-ink">Resolution rules</Label>{market.rules && <Label>· stored on-chain</Label>}</span>
             <p className="mt-3 max-w-2xl leading-relaxed">{market.rules ?? 'Legacy market: resolved by the contract owner from the plain wording of the question after the deadline.'}</p>
             {market.version === 2 && <p className="mt-2 text-sm text-muted">If the owner does not resolve within 30 days of the deadline, anyone can cancel the market and every bettor gets a full refund.</p>}

@@ -50,6 +50,7 @@ export default function Markets() {
           <label className="label text-muted" htmlFor="search">Search</label>
           <input
             id="search"
+            data-tour="search"
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
