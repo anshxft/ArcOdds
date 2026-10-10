@@ -8,6 +8,7 @@ import { Halftone, MarketCard } from '@/components/market'
 import { ARC, txUrl } from '@/lib/chain'
 import { bettorCount, byRelevance, marketImage, marketState, shortAddress, timeAgo, useMarkets } from '@/lib/markets'
 import { useBoot, useInView, useMarquee, useScrollMotion } from '@/lib/motion'
+import { poolPayout } from '@/lib/payout'
 
 function Ticker() {
   const { markets } = useMarkets()
@@ -74,14 +75,21 @@ export default function Home() {
     ['Predictions', bets.length, '', 'Confirmed bets'],
     ['Resolved', markets.filter((m) => m.status === 1).length, '', 'Settled by owner'],
   ] as const
+  // Profit counts settled markets only: winners get their pool share, losers lose the stake.
   const leaders = Object.values(
-    bets.reduce<Record<string, { user: string; staked: number; count: number }>>((map, bet) => {
-      map[bet.user] ??= { user: bet.user, staked: 0, count: 0 }
+    bets.reduce<Record<string, { user: string; staked: number; count: number; pnl: number }>>((map, bet) => {
+      map[bet.user] ??= { user: bet.user, staked: 0, count: 0, pnl: 0 }
       map[bet.user].staked += bet.amount
       map[bet.user].count += 1
+      const market = markets.find((m) => m.key === bet.key)
+      if (market?.status === 1) {
+        const won = market.outcome === bet.side
+        const [sidePool, otherPool] = bet.side === 'YES' ? [market.yesPool, market.noPool] : [market.noPool, market.yesPool]
+        map[bet.user].pnl += won ? poolPayout(bet.amount, sidePool, otherPool) - bet.amount : -bet.amount
+      }
       return map
     }, {}),
-  ).sort((a, b) => b.staked - a.staked).slice(0, 5)
+  ).sort((a, b) => b.pnl - a.pnl || b.staked - a.staked).slice(0, 5)
   const latest = [...bets].reverse().slice(0, 6)
 
   return (
@@ -211,13 +219,14 @@ export default function Home() {
           }) : <p className="p-5 text-sm text-muted">No on-chain bets yet.</p>}
         </div>
         <div className="cell" data-reveal>
-          <div className="label grid grid-cols-[40px_1fr_auto_auto] gap-4 border-b border-line px-5 py-3 text-muted"><span>Rank</span><span>Wallet</span><span>Bets</span><span>Staked</span></div>
+          <div className="label grid grid-cols-[32px_1fr_auto_auto] gap-3 border-b border-line px-5 py-3 text-muted sm:grid-cols-[40px_1fr_auto_auto_auto] sm:gap-4"><span>Rank</span><span>Wallet</span><span className="hidden sm:block">Bets</span><span>Staked</span><span>P&amp;L</span></div>
           {leaders.map((row, index) => (
-            <div key={row.user} className="grid grid-cols-[40px_1fr_auto_auto] items-center gap-4 border-b border-line px-5 py-3 last:border-b-0">
+            <div key={row.user} className="grid grid-cols-[32px_1fr_auto_auto] items-center gap-3 border-b border-line px-5 py-3 last:border-b-0 sm:grid-cols-[40px_1fr_auto_auto_auto] sm:gap-4">
               <span className="font-display text-xl font-bold">{String(index + 1).padStart(2, '0')}</span>
               <span className="font-mono text-sm">{shortAddress(row.user)}</span>
-              <span className="label">{row.count}</span>
-              <span className="label bg-ink px-1.5 text-paper">{Number(row.staked.toFixed(2))} USDC</span>
+              <span className="label hidden sm:block">{row.count}</span>
+              <span className="label">{Number(row.staked.toFixed(2))} USDC</span>
+              <span className={`label px-1.5 ${row.pnl < 0 ? 'bg-signal text-on-signal' : 'bg-ink text-paper'}`}>{row.pnl >= 0 ? '+' : ''}{Number(row.pnl.toFixed(2))}</span>
             </div>
           ))}
         </div>
