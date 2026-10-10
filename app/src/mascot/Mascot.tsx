@@ -12,11 +12,11 @@ import { Draggable } from 'gsap/Draggable'
 import { createAvatar, type AvatarController } from '@bible-strong/avatar-react'
 import '@bible-strong/avatar-react/styles.css'
 import definition from './poring.avatar.json'
-import { setMascotHandler, type Mood } from './react'
+import { setMascotHandler, setPoringHidden, type Mood } from './react'
 import { reducedMotion } from '@/lib/motion'
 import { formatDate, formatUsdc, marketState, shortAddress, useMarkets } from '@/lib/markets'
 import { useWallet } from '@/lib/wallet'
-import type { Market } from '@/lib/chain'
+import { fetchBalance, type Market } from '@/lib/chain'
 
 gsap.registerPlugin(Draggable)
 
@@ -60,6 +60,26 @@ const PAGE_GUIDES: [RegExp, Step[]][] = [
   [/^\/admin\/?$/, [{ text: 'Owner tools. Double-check every outcome before you resolve!', mood: 'nervous' }]],
 ]
 
+/** Getting-started checklist, tracked from the wallet, its balance and its bets. */
+interface Progress {
+  wallet: boolean
+  usdc: boolean
+  bet: boolean
+}
+const CHECKLIST: { key: keyof Progress; label: string; step: Step }[] = [
+  { key: 'wallet', label: 'Connect a wallet', step: { target: '[data-tour="wallet"]', text: 'Connect a wallet here. I switch it to Arc Testnet for you.' } },
+  { key: 'usdc', label: 'Get free test USDC', step: { target: '[data-tour="faucet"]', text: 'Get free test USDC here: pick Arc Testnet on the faucet page.' } },
+  { key: 'bet', label: 'Place your first bet', step: { target: 'a.cell[href^="/market/"], [data-tour="trade"], [data-tour="markets"]', text: 'Pick a market and bet YES or NO. Even 1 USDC works!' } },
+]
+const ONBOARDED = 'poring_onboarded'
+const onboarded = () => {
+  try {
+    return localStorage.getItem(ONBOARDED) === '1'
+  } catch {
+    return true
+  }
+}
+
 const TRICK_MOODS: Mood[] = ['wink', 'nod', 'star-struck', 'smug', 'cool', 'side-eye', 'silly', 'kawaii', 'eye-roll', 'amazed', 'pleading', 'ghost', 'love']
 
 const rand = (min: number, max: number) => min + Math.random() * (max - min)
@@ -92,6 +112,7 @@ interface Bubble {
 interface Brain {
   onRoute(): void
   tap(): void
+  onProgress(previous: Progress | null, next: Progress): void
 }
 
 export default function Mascot() {
@@ -103,8 +124,9 @@ export default function Mascot() {
   const accountRef = useRef<string | null>(null)
   const [bubble, setBubble] = useState<Bubble | null>(null)
   const [still] = useState(reducedMotion)
-  const { markets } = useMarkets()
+  const { markets, bets } = useMarkets()
   const { account } = useWallet()
+  const progressRef = useRef<Progress | null>(null)
   const { pathname } = useLocation()
 
   useEffect(() => {
@@ -118,6 +140,28 @@ export default function Mascot() {
   useEffect(() => {
     brain.current?.onRoute()
   }, [pathname])
+
+  // Checklist progress, re-read on every market refresh until the visitor has done it all.
+  useEffect(() => {
+    if (!account) {
+      progressRef.current = { wallet: false, usdc: false, bet: false } // so connecting counts as step 1
+      return
+    }
+    if (onboarded()) return
+    let live = true
+    fetchBalance(account)
+      .then((balance) => {
+        if (!live) return
+        const next = { wallet: true, usdc: balance >= 0.01, bet: bets.some((bet) => bet.user.toLowerCase() === account.toLowerCase()) }
+        const previous = progressRef.current
+        progressRef.current = next
+        brain.current?.onProgress(previous, next)
+      })
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [account, markets, bets])
 
   useEffect(() => {
     const el = mover.current
@@ -201,6 +245,16 @@ export default function Mascot() {
           })),
         })
       })
+
+    /** `ask` that gives up (and closes the bubble) after `ms`. */
+    const askFor = async (text: string, labels: string[], ms: number) => {
+      const answer = await Promise.race([ask(text, labels), wait(ms).then(() => 'timeout')])
+      if (answer === 'timeout') {
+        closeAsk()
+        setBubble(null)
+      }
+      return answer
+    }
 
     let settleTimer = 0
     const settle = (ms: number) => {
@@ -343,7 +397,14 @@ export default function Mascot() {
       const r = node.getBoundingClientRect()
       return r.width > 0 && r.height > 0
     }
-    const findTarget = (selector: string) => [...document.querySelectorAll(selector)].find(visible) ?? null
+    /** First visible match, trying comma-separated selectors in the order written (preferred first). */
+    const findTarget = (selector: string) => {
+      for (const part of selector.split(',')) {
+        const found = [...document.querySelectorAll(part.trim())].find(visible)
+        if (found) return found
+      }
+      return null
+    }
 
     /** Hop next to `node`: on top of it, or under it when it is near the top of the screen. */
     const goNear = async (node: Element, my: number) => {
@@ -606,6 +667,34 @@ export default function Mascot() {
       settle(1800)
     }
 
+    const progress = () => progressRef.current ?? { wallet: false, usdc: false, bet: false }
+    const doneCount = (p = progress()) => CHECKLIST.filter((item) => p[item.key]).length
+
+    const checklist = async (my: number) => {
+      const p = progress()
+      const nextItem = CHECKLIST.find((item) => !p[item.key])
+      if (!nextItem) {
+        play('party')
+        say("You've done it all. Good luck out there!", 3000)
+        return settle(2400)
+      }
+      play('explain')
+      const lines = CHECKLIST.map((item) => `${p[item.key] ? '✓' : '○'} ${item.label}`).join('\n')
+      const answer = await ask(`Getting started (${doneCount(p)}/${CHECKLIST.length})\n${lines}`, ['Next step', 'Close'])
+      if (my !== gen || answer !== 'Next step') return settle(300)
+      await tour([nextItem.step], my)
+    }
+
+    const hide = async (my: number) => {
+      play('wink')
+      say('Bye! Bring me back from the footer anytime.', 2400)
+      await wait(1700)
+      if (my !== gen) return
+      play('hop')
+      await timeline(gsap.timeline().to(el, { y: getY() - 60, duration: 0.25, ease: 'power2.out' }).to(el, { y: innerHeight + 40, duration: 0.4, ease: 'power2.in' }))
+      if (my === gen) setPoringHidden(true)
+    }
+
     /** Tap: help menu. Second tap closes it; poking too much gets it grumpy, then furious. */
     const tap = () => {
       const now = Date.now()
@@ -642,9 +731,13 @@ export default function Mascot() {
       play(pick(['happy', 'laughing', 'kawaii', 'playful'] as const))
       gsap.to(inner, { y: -22, duration: 0.15, yoyo: true, repeat: 1, ease: 'power2.out' })
       run(async (my) => {
-        const answer = await ask(pick(['Need a hand?', 'Hi! What can I do?', 'Yes? How can I help?']), ['Tour', 'Tip', 'Nap', 'Close'])
+        const done = doneCount()
+        const labels = ['Tour', ...(onboarded() ? [] : [`Start ${done}/${CHECKLIST.length}`]), 'Tip', 'Nap', 'Hide', 'Close']
+        const answer = await ask(pick(['Need a hand?', 'Hi! What can I do?', 'Yes? How can I help?']), labels)
         if (my !== gen) return
         if (answer === 'Tour') await tour(TOUR, my)
+        else if (answer.startsWith('Start')) await checklist(my)
+        else if (answer === 'Hide') await hide(my)
         else if (answer === 'Tip') tip()
         else if (answer === 'Nap') {
           napUntil = Date.now() + NAP_FOR
@@ -762,20 +855,54 @@ export default function Mascot() {
 
     // ---- reactions from the rest of the app ----
 
-    setMascotHandler((mood, { ms = 2600, say: text }) => {
-      if (mode === 'guide' || mode === 'drag') return
+    setMascotHandler((mood, { ms = 2600, say: text, action }) => {
+      if (mode === 'guide' || mode === 'drag' || pending) return false // the visitor is busy with Poring
       if (mode === 'sleep') wake()
       armDoze()
       if (mode !== 'perch') interrupt()
       reactUntil = Date.now() + ms
       play(mood)
       if (JUMPY.includes(mood)) gsap.to(inner, { y: -34, duration: 0.2, yoyo: true, repeat: 3, ease: 'power2.out' })
-      if (text) say(text, Math.max(ms, 2400))
-      settle(ms)
+      if (action && text) {
+        run(async (my) => {
+          const answer = await askFor(text, [action.label, 'Later'], 15_000)
+          if (my !== gen) return
+          if (answer === action.label) action.run()
+          settle(300)
+        })
+      } else {
+        if (text) say(text, Math.max(ms, 2400))
+        settle(ms)
+      }
+      return true
     })
 
     brain.current = {
       tap,
+      onProgress(previous, next) {
+        const done = doneCount(next)
+        if (done === CHECKLIST.length) {
+          try {
+            localStorage.setItem(ONBOARDED, '1')
+          } catch {
+            /* storage blocked */
+          }
+        }
+        if (!previous || done <= doneCount(previous) || mode !== 'roam' || busy || pending) return
+        run(async (my) => {
+          play(done === CHECKLIST.length ? 'party' : 'celebrate')
+          squash(0.2)
+          const nextItem = CHECKLIST.find((item) => !next[item.key])
+          if (!nextItem) {
+            say(`${done}/${done} done! You're a real predictor now. Good luck!`, 4000)
+            return settle(3000)
+          }
+          const answer = await askFor(`${done}/${CHECKLIST.length} done! Next: ${nextItem.label.toLowerCase()}.`, ['Show me', 'Later'], 15_000)
+          if (my !== gen) return
+          if (answer === 'Show me') await tour([nextItem.step], my)
+          else settle(300)
+        })
+      },
       onRoute() {
         if (mode === 'drag') return
         if (mode === 'guide' || mode === 'perch' || pending) {
@@ -799,7 +926,18 @@ export default function Mascot() {
     armDoze()
     later(tick, 9000)
     later(() => {
-      if (firstTime(() => localStorage, 'poring_seen')) {
+      let back = false
+      try {
+        back = sessionStorage.getItem('poring_back') === '1'
+        sessionStorage.removeItem('poring_back')
+      } catch {
+        /* storage blocked */
+      }
+      if (back) {
+        play('welcome')
+        say("I'm back! Missed me?", 2600)
+        settle(1800)
+      } else if (firstTime(() => localStorage, 'poring_seen')) {
         run(async (my) => {
           await hopTo(innerWidth / 2 - size() / 2)
           if (my !== gen) return
@@ -881,7 +1019,7 @@ export default function Mascot() {
         role="status"
         className={
           bubble
-            ? `mascot-bubble label absolute w-max border border-ink bg-paper px-3 py-2 normal-case tracking-normal text-ink shadow-[3px_3px_0_var(--ink)] ${bubble.below ? 'top-full mt-2' : 'bottom-full mb-2'} ${bubble.actions ? '' : 'pointer-events-none'}`
+            ? `mascot-bubble label absolute w-max whitespace-pre-line border border-ink bg-paper px-3 py-2 normal-case tracking-normal text-ink shadow-[3px_3px_0_var(--ink)] ${bubble.below ? 'top-full mt-2' : 'bottom-full mb-2'} ${bubble.actions ? '' : 'pointer-events-none'}`
             : 'sr-only'
         }
         style={bubble ? { left: bubble.offset, maxWidth: bubble.width } : undefined}

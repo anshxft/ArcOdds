@@ -8,10 +8,11 @@ import Noise from '@/components/Noise'
 import VariableProximity from '@/components/VariableProximity'
 import DecryptedText from '@/components/DecryptedText'
 import { ARC, CONTRACTS, fetchPositions } from '@/lib/chain'
-import { shortAddress, useMarkets } from '@/lib/markets'
+import { formatUsdc, shortAddress, useMarkets } from '@/lib/markets'
 import { gsap, reducedMotion } from '@/lib/motion'
 import { connect, disconnect, useIsOwner, useWallet, walletOptions, type WalletOption } from '@/lib/wallet'
-import { mascot } from '@/mascot/react'
+import { mascot, setPoringHidden, usePoringHidden, type Mood } from '@/mascot/react'
+import { poolPayout } from '@/lib/payout'
 
 const Mascot = lazy(() => import('@/mascot/Mascot'))
 
@@ -155,9 +156,18 @@ export function WalletButton({ className = '' }: { className?: string }) {
   )
 }
 
-/** Markets where the connected wallet has a win or refund waiting. Toasts once per wallet per visit. */
-const alerted = new Set<string>()
-function useReadyToClaim() {
+const HOUR = 3_600_000
+const shortQ = (text: string) => (text.length > 48 ? `${text.slice(0, 47)}…` : text)
+const alerted = new Set<string>() // alerts already shown this visit
+const lastOdds = new Map<string, number>() // your side's odds when last checked, per market + side
+
+/**
+ * Watches the connected wallet's positions on every market refresh. Returns how many markets
+ * have a win or refund waiting (for the Portfolio badge), and has Poring (or a toast, if
+ * Poring is hidden or busy) speak up when: a payout is ready, one of your markets closes
+ * within 6 hours, or the odds on your side move 10+ points.
+ */
+function useWalletWatch() {
   const { account } = useWallet()
   const { markets } = useMarkets()
   const navigate = useNavigate()
@@ -167,15 +177,47 @@ function useReadyToClaim() {
     let live = true
     fetchPositions(account).then((positions) => {
       if (!live) return
-      const ready = new Set(positions.filter((position) => {
+      const alerts: { id: string; mood: Mood; text: string; label: string; to: string }[] = []
+      let won = 0
+      let refunds = 0
+      const ready = new Set<string>()
+      for (const position of positions) {
         const market = markets.find((item) => item.key === position.key)
-        return market && !position.claimed && ((market.status === 1 && market.outcome === position.side) || market.status === 2)
-      }).map((position) => position.key)).size
-      setCount(ready)
-      if (ready && !alerted.has(account)) {
-        alerted.add(account)
-        toast(`${ready} ${ready === 1 ? 'market has' : 'markets have'} a payout ready`, { action: { label: 'Claim', onClick: () => navigate('/portfolio') }, duration: 10000 })
-        mascot('excited', { ms: 4000, say: 'You have a payout waiting!' })
+        if (!market) continue
+        if (!position.claimed && market.status === 1 && market.outcome === position.side) {
+          const [sidePool, otherPool] = position.side === 'YES' ? [market.yesPool, market.noPool] : [market.noPool, market.yesPool]
+          won += poolPayout(position.amount, sidePool, otherPool)
+          ready.add(market.key)
+        } else if (!position.claimed && market.status === 2) {
+          refunds += position.amount
+          ready.add(market.key)
+        }
+        if (market.status !== 0) continue
+        const left = market.deadline * 1000 - Date.now()
+        if (left > 0 && left < 6 * HOUR) {
+          const when = left < HOUR ? `${Math.max(1, Math.round(left / 60_000))} min` : `${Math.round(left / HOUR)}h`
+          alerts.push({ id: `close:${market.key}`, mood: 'nervous', text: `Your ${position.side} on "${shortQ(market.question)}" closes in ${when}.`, label: 'Open', to: `/market/${market.key}` })
+        }
+        const odds = position.side === 'YES' ? market.yesOdds : 100 - market.yesOdds
+        // Compare with the odds when last alerted (or first seen), so slow drifts count too.
+        const before = lastOdds.get(`${market.key}:${position.side}`)
+        if (before === undefined || Math.abs(odds - before) >= 10) lastOdds.set(`${market.key}:${position.side}`, odds)
+        if (before !== undefined && Math.abs(odds - before) >= 10) {
+          alerts.push({ id: `odds:${market.key}:${position.side}:${odds}`, mood: odds > before ? 'happy' : 'nervous', text: `Odds moved: your ${position.side} on "${shortQ(market.question)}" is now ${odds}% (was ${before}%).`, label: 'Open', to: `/market/${market.key}` })
+        }
+      }
+      setCount(ready.size)
+      if (ready.size) {
+        const parts = [won > 0 && `${formatUsdc(won)} in winnings`, refunds > 0 && `${formatUsdc(refunds)} in refunds`].filter(Boolean).join(' + ')
+        alerts.unshift({ id: `ready:${account}:${ready.size}`, mood: won > 0 ? 'golden' : 'happy', text: won > 0 ? `You won! ${parts} ready to claim.` : `A market was cancelled. ${parts} ready to take back.`, label: 'Claim', to: '/portfolio' })
+      }
+      // One alert per refresh so nothing piles up; the rest come on the next refreshes.
+      const next = alerts.find((alert) => !alerted.has(alert.id))
+      if (!next) return
+      alerted.add(next.id)
+      const go = () => navigate(next.to)
+      if (!mascot(next.mood, { ms: 6000, say: next.text, action: { label: next.label, run: go } })) {
+        toast(next.text, { action: { label: next.label, onClick: go }, duration: 10000 })
       }
     }).catch(() => {})
     return () => {
@@ -191,7 +233,7 @@ function NavBadge({ count }: { count: number }) {
 
 function Header() {
   const isOwner = useIsOwner()
-  const ready = useReadyToClaim()
+  const ready = useWalletWatch()
   return (
     <header className="sticky top-0 z-40 bg-paper/90 backdrop-blur-md">
       <div className="frame grid h-14 grid-cols-[auto_1fr_auto] border-t-0">
@@ -237,6 +279,7 @@ function Header() {
 
 function Footer() {
   const wordmark = useRef<HTMLDivElement>(null)
+  const poringHidden = usePoringHidden()
   return (
     <footer className="mt-24">
       <div className="frame grid md:grid-cols-4">
@@ -253,9 +296,12 @@ function Footer() {
         <div className="cell flex flex-col gap-2 p-6">
           <Label>Elsewhere</Label>
           <a href={`${ARC.explorer}/address/${CONTRACTS[2].address}`} target="_blank" rel="noreferrer" className="link-line w-fit">Contract</a>
-          <a href={ARC.faucet} target="_blank" rel="noreferrer" className="link-line w-fit">Faucet</a>
+          <a href={ARC.faucet} target="_blank" rel="noreferrer" data-tour="faucet" className="link-line w-fit">Faucet</a>
           <a href="https://x.com/imalanxx" target="_blank" rel="noreferrer" className="link-line w-fit">X (Twitter)</a>
           <a href="https://github.com/anshxft/ArcOdds" target="_blank" rel="noreferrer" className="link-line w-fit">Source code (AGPL-3.0)</a>
+          <button type="button" onClick={() => setPoringHidden(!poringHidden)} className="link-line w-fit text-left">
+            {poringHidden ? 'Bring Poring back' : 'Hide Poring'}
+          </button>
         </div>
         {/* Letters near the cursor thin out and condense (Tektur's wght + wdth axes) */}
         <div ref={wordmark} className="cell overflow-hidden px-4 md:col-span-4" aria-hidden="true">
@@ -271,6 +317,7 @@ function Footer() {
 /** Shell: Lenis on the GSAP ticker, grain overlay, toasts, and scroll-to-top on navigation. */
 export function Layout() {
   const lenis = useRef<LenisRef>(null)
+  const poringHidden = usePoringHidden()
   const { pathname } = useLocation()
 
   useEffect(() => {
@@ -293,9 +340,11 @@ export function Layout() {
         </main>
         <Footer />
       </div>
-      <Suspense fallback={null}>
-        <Mascot />
-      </Suspense>
+      {!poringHidden && (
+        <Suspense fallback={null}>
+          <Mascot />
+        </Suspense>
+      )}
       <Noise fixed opacity={0.06} fps={0} blendMode="multiply" zIndex={60} />
       <Toaster
         position="bottom-right"
