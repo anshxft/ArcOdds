@@ -131,7 +131,7 @@ function TradePanel({ market }: { market: MarketT }) {
   }
 
   return (
-    <div className="cell lg:sticky lg:top-[57px]">
+    <div className="cell">
       <div className="flex items-center justify-between border-b border-line px-5 py-3">
         <Label className="text-ink">Trade</Label>
         <Label>USDC / Arc</Label>
@@ -219,6 +219,38 @@ function TradePanel({ market }: { market: MarketT }) {
   )
 }
 
+function Share({ market }: { market: MarketT }) {
+  const url = `${location.origin}/market/${market.key}`
+  const text = `${market.question} ${market.yesOdds}% YES on PredictArc`
+  const enc = encodeURIComponent
+  const links = [
+    ['X', `https://x.com/intent/post?text=${enc(text)}&url=${enc(url)}`],
+    ['WhatsApp', `https://wa.me/?text=${enc(`${text} ${url}`)}`],
+    ['Telegram', `https://t.me/share/url?url=${enc(url)}&text=${enc(text)}`],
+  ] as const
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(url)
+      toast.success('Link copied')
+    } catch {
+      toast.error('Could not copy. Copy the address bar instead.')
+    }
+  }
+
+  return (
+    <div className="cell">
+      <div className="flex items-center gap-2 border-b border-line px-5 py-3"><Asterisk className="size-3" /><Label className="text-ink">Share</Label></div>
+      <div className="grid grid-cols-4">
+        {links.map(([name, href]) => (
+          <a key={name} href={href} target="_blank" rel="noreferrer" className="press label hover-ink flex min-h-11 items-center justify-center border-r border-line">{name}</a>
+        ))}
+        <button type="button" onClick={copy} className="press label hover-ink min-h-11">Copy</button>
+      </div>
+    </div>
+  )
+}
+
 export default function Market() {
   const { id = '' } = useParams()
   const parsed = parseMarketKey(id)
@@ -296,7 +328,10 @@ export default function Market() {
             )) : <p className="p-5 text-sm text-muted">No confirmed trades for this market yet.</p>}
           </div>
         </div>
-        <TradePanel market={market} />
+        <div className="self-start lg:sticky lg:top-[57px]">
+          <TradePanel market={market} />
+          <Share market={market} />
+        </div>
       </section>
     </div>
   )

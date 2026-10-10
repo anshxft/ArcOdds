@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { ReactLenis, type LenisRef } from 'lenis/react'
 import 'lenis/dist/lenis.css'
 import { Toaster, toast } from 'sonner'
@@ -7,8 +7,8 @@ import { ThinkingOrb } from 'thinking-orbs'
 import Noise from '@/components/Noise'
 import VariableProximity from '@/components/VariableProximity'
 import DecryptedText from '@/components/DecryptedText'
-import { ARC, CONTRACTS } from '@/lib/chain'
-import { shortAddress } from '@/lib/markets'
+import { ARC, CONTRACTS, fetchPositions } from '@/lib/chain'
+import { shortAddress, useMarkets } from '@/lib/markets'
 import { gsap, reducedMotion } from '@/lib/motion'
 import { connect, disconnect, useIsOwner, useWallet, walletOptions, type WalletOption } from '@/lib/wallet'
 
@@ -147,8 +147,42 @@ export function WalletButton({ className = '' }: { className?: string }) {
   )
 }
 
+/** Markets where the connected wallet has a win or refund waiting. Toasts once per wallet per visit. */
+const alerted = new Set<string>()
+function useReadyToClaim() {
+  const { account } = useWallet()
+  const { markets } = useMarkets()
+  const navigate = useNavigate()
+  const [count, setCount] = useState(0)
+  useEffect(() => {
+    if (!account || !markets.length) return setCount(0)
+    let live = true
+    fetchPositions(account).then((positions) => {
+      if (!live) return
+      const ready = new Set(positions.filter((position) => {
+        const market = markets.find((item) => item.key === position.key)
+        return market && !position.claimed && ((market.status === 1 && market.outcome === position.side) || market.status === 2)
+      }).map((position) => position.key)).size
+      setCount(ready)
+      if (ready && !alerted.has(account)) {
+        alerted.add(account)
+        toast(`${ready} ${ready === 1 ? 'market has' : 'markets have'} a payout ready`, { action: { label: 'Claim', onClick: () => navigate('/portfolio') }, duration: 10000 })
+      }
+    }).catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [account, markets, navigate])
+  return count
+}
+
+function NavBadge({ count }: { count: number }) {
+  return count ? <span className="ml-2 bg-signal px-1.5 text-on-signal" aria-label={`${count} ready to claim`}>{count}</span> : null
+}
+
 function Header() {
   const isOwner = useIsOwner()
+  const ready = useReadyToClaim()
   return (
     <header className="sticky top-0 z-40 bg-paper/90 backdrop-blur-md">
       <div className="frame grid h-14 grid-cols-[auto_1fr_auto] border-t-0">
@@ -162,7 +196,7 @@ function Header() {
           </span>
           {NAV.map(([to, label]) => (
             <NavLink key={to} to={to} className={({ isActive }) => `press label hover-ink flex items-center px-4 lg:px-5 ${isActive ? 'bg-ink text-paper' : ''}`}>
-              {label}
+              {label}{to === '/portfolio' && <NavBadge count={ready} />}
             </NavLink>
           ))}
           {isOwner && (
@@ -184,7 +218,7 @@ function Header() {
       <nav className="frame flex overflow-x-auto border-t-0 md:hidden" aria-label="Main mobile">
         {NAV.map(([to, label]) => (
           <NavLink key={to} to={to} className={({ isActive }) => `cell label flex min-h-11 flex-1 items-center justify-center px-3 ${isActive ? 'bg-ink text-paper' : ''}`}>
-            {label}
+            {label}{to === '/portfolio' && <NavBadge count={ready} />}
           </NavLink>
         ))}
       </nav>
