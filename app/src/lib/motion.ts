@@ -50,13 +50,18 @@ export function useScrollMotion(scope: RefObject<HTMLElement | null>, ready = tr
 }
 
 /** GSAP: endless horizontal ticker. The track must contain its content twice. */
+const MARQUEE_SPEED = 45 // px per second
+
 export function useMarquee(track: RefObject<HTMLElement | null>, ready = true) {
   useGSAP(() => {
     if (!ready || !track.current || reducedMotion()) return
-    const tween = gsap.to(track.current, { xPercent: -50, duration: 40, ease: 'none', repeat: -1 })
     const el = track.current
-    const pause = () => tween.pause()
-    const play = () => tween.play()
+    // Constant reading speed, however many items: the track holds two copies, so loop half of it.
+    const distance = el.scrollWidth / 2
+    const tween = gsap.to(el, { x: -distance, duration: distance / MARQUEE_SPEED, ease: 'none', repeat: -1 })
+    // Ease to a stop on hover / focus and ease back, instead of freezing mid-frame.
+    const pause = () => gsap.to(tween, { timeScale: 0, duration: 0.6, ease: 'power2.out', overwrite: true })
+    const play = () => gsap.to(tween, { timeScale: 1, duration: 0.8, ease: 'power2.in', overwrite: true })
     el.addEventListener('mouseenter', pause)
     el.addEventListener('mouseleave', play)
     el.addEventListener('focusin', pause)

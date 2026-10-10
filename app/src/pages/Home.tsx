@@ -161,13 +161,17 @@ export default function Home() {
 
       {/* Stats */}
       <section className="frame grid grid-cols-2 border-t-0 md:grid-cols-5">
-        {stats.map(([label, value, suffix, note]) => (
-          <div key={label} className="cell p-5" data-reveal>
-            <Label>{label}</Label>
-            <div className="font-display mt-2 text-4xl font-bold md:text-5xl">
-              {loading ? <Orb state="searching" size={20} label="Loading" /> : <><CountUp to={value} duration={1.2} separator="," />{suffix && <span className="text-lg">{suffix}</span>}</>}
+        {stats.map(([label, value, suffix, note], index) => (
+          <div key={label} className="cell stat p-5" data-reveal style={{ '--i': index } as React.CSSProperties}>
+            <span className="flex items-center gap-2">
+              <span className="stat-dot" aria-hidden="true" />
+              <Decode text={label} className="text-muted" />
+            </span>
+            <div className="stat-num font-display mt-2 text-4xl font-bold md:text-5xl">
+              {loading ? <Orb state="searching" size={20} label="Loading" /> : <><CountUp to={value} duration={1.6} separator="," />{suffix && <span className="text-lg">{suffix}</span>}</>}
             </div>
-            <Label className="mt-1 block">{note}</Label>
+            <Decode text={note} className="mt-1 text-muted" />
+            <span className="stat-bar" aria-hidden="true" />
           </div>
         ))}
       </section>
