@@ -68,6 +68,7 @@ const DotGrid: React.FC<DotGridProps> = ({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dotsRef = useRef<Dot[]>([]);
+  const dirtyUntilRef = useRef(Infinity); // repaint until this time (ms); starts dirty for the first frames
   const pointerRef = useRef({
     x: 0,
     y: 0,
@@ -97,6 +98,7 @@ const DotGrid: React.FC<DotGridProps> = ({
 
     const { width, height } = wrap.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
+    dirtyUntilRef.current = performance.now() + 300;
 
     canvas.width = width * dpr;
     canvas.height = height * dpr;
@@ -136,6 +138,9 @@ const DotGrid: React.FC<DotGridProps> = ({
     const proxSq = proximity * proximity;
 
     const draw = () => {
+      rafId = requestAnimationFrame(draw);
+      // Idle grid = nothing to repaint; pointer moves, clicks and resizes mark it dirty.
+      if (performance.now() > dirtyUntilRef.current) return;
       const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
@@ -161,14 +166,11 @@ const DotGrid: React.FC<DotGridProps> = ({
           style = `rgb(${r},${g},${b})`;
         }
 
-        ctx.save();
         ctx.translate(ox, oy);
         ctx.fillStyle = style;
         ctx.fill(circlePath);
-        ctx.restore();
+        ctx.translate(-ox, -oy);
       }
-
-      rafId = requestAnimationFrame(draw);
     };
 
     draw();
@@ -191,6 +193,7 @@ const DotGrid: React.FC<DotGridProps> = ({
   }, [buildGrid]);
 
   useEffect(() => {
+    let wasNear = false;
     const onMove = (e: MouseEvent) => {
       const now = performance.now();
       const pr = pointerRef.current;
@@ -216,6 +219,10 @@ const DotGrid: React.FC<DotGridProps> = ({
       const rect = canvasRef.current!.getBoundingClientRect();
       pr.x = e.clientX - rect.left;
       pr.y = e.clientY - rect.top;
+      // Repaint while the pointer is near the grid, and once more after it leaves (to clear the glow).
+      const near = pr.x > -proximity && pr.y > -proximity && pr.x < rect.width + proximity && pr.y < rect.height + proximity;
+      if (near || wasNear) dirtyUntilRef.current = now + 2500; // covers the push + elastic return
+      wasNear = near;
 
       for (const dot of dotsRef.current) {
         const dist = Math.hypot(dot.cx - pr.x, dot.cy - pr.y);
@@ -241,6 +248,7 @@ const DotGrid: React.FC<DotGridProps> = ({
     };
 
     const onClick = (e: MouseEvent) => {
+      dirtyUntilRef.current = performance.now() + 3000;
       const rect = canvasRef.current!.getBoundingClientRect();
       const cx = e.clientX - rect.left;
       const cy = e.clientY - rect.top;

@@ -152,7 +152,7 @@ export default function Home() {
         <div className="md:col-span-4" data-boot>
           <div ref={terminalCell} className="cell relative h-56 overflow-hidden bg-signal md:h-[calc(100%-41px)]">
             <div className="absolute inset-0 mix-blend-screen">
-              <Suspense fallback={null}><FaultyTerminal pause={!terminalOn} scale={1.6} gridMul={TERMINAL_GRID} digitSize={1.3} timeScale={0.4} scanlineIntensity={0.25} glitchAmount={0.6} flickerAmount={0.4} curvature={0} brightness={1.1} mouseStrength={0.3} /></Suspense>
+              <Suspense fallback={null}><FaultyTerminal pause={!terminalOn} dpr={1} scale={1.6} gridMul={TERMINAL_GRID} digitSize={1.3} timeScale={0.4} scanlineIntensity={0.25} glitchAmount={0.6} flickerAmount={0.4} curvature={0} brightness={1.1} mouseStrength={0.3} /></Suspense>
             </div>
           </div>
           <div className="cell label flex h-[41px] items-center justify-center gap-2">Predict / Stake / Claim</div>
@@ -182,7 +182,7 @@ export default function Home() {
       <SectionHead kicker="Live / v2 contract / rules on-chain" title="Fresh predictions" action={<Link to="/markets" className="press label hover-ink border border-line-strong px-4 py-2.5">All markets</Link>} />
       <section className="frame grid border-t-0 md:grid-cols-3">
         {loading
-          ? <div className="cell col-span-full flex items-center justify-center gap-3 p-16"><Orb state="searching" label="Loading markets" /><Label>Reading Arc Testnet…</Label></div>
+          ? <div className="cell col-span-full flex min-h-[460px] items-center justify-center gap-3 p-16"><Orb state="searching" label="Loading markets" /><Label>Reading Arc Testnet…</Label></div>
           : featured.map((market) => <MarketCard key={market.key} market={market} bettors={bettorCount(bets, market.key)} featured />)}
       </section>
 

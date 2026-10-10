@@ -92,7 +92,7 @@ export default function Portfolio() {
         </section>
       ) : positions === null ? (
         <section className="frame border-t-0">
-          <div className="cell flex items-center justify-center gap-3 p-20"><Orb state="searching" label="Loading positions" /><Label>Reading your positions…</Label></div>
+          <div className="cell flex min-h-[60vh] items-start justify-center gap-3 p-20"><Orb state="searching" label="Loading positions" /><Label>Reading your positions…</Label></div>
         </section>
       ) : (
         <>

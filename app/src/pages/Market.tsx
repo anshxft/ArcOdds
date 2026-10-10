@@ -272,7 +272,7 @@ export default function Market() {
   if (!market) {
     return (
       <div className="frame border-t-0">
-        <div className="cell flex flex-col items-center gap-4 p-24">
+        <div className={`cell flex flex-col items-center gap-4 p-24 ${loading ? 'min-h-[120vh]' : ''}`}>
           {loading ? <><Orb state="searching" label="Loading market" /><Label>Loading market…</Label></> : <><Label>Market not found</Label><Link to="/markets" className="underline">Back to markets</Link></>}
         </div>
       </div>

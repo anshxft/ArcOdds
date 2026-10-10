@@ -22,6 +22,8 @@ export interface FaultyTerminalProps extends React.HTMLAttributes<HTMLDivElement
   mouseReact?: boolean;
   mouseStrength?: number;
   dpr?: number;
+  /** Render at most this many frames per second; the effect moves slowly, so 30 looks the same. */
+  maxFps?: number;
   pageLoadAnimation?: boolean;
   brightness?: number;
   lightMode?: boolean;
@@ -269,6 +271,7 @@ export default function FaultyTerminal({
   mouseReact = true,
   mouseStrength = 0.2,
   dpr = Math.min(window.devicePixelRatio || 1, 2),
+  maxFps = 30,
   pageLoadAnimation = true,
   brightness = 1,
   lightMode = false,
@@ -285,6 +288,7 @@ export default function FaultyTerminal({
   const rafRef = useRef<number>(0);
   // pause lives in a ref so toggling it never rebuilds the WebGL context
   const pauseRef = useRef(pause);
+  const lastFrameRef = useRef(0);
   pauseRef.current = pause;
   const loadAnimationStartRef = useRef<number>(0);
   const timeOffsetRef = useRef<number>(Math.random() * 100);
@@ -370,6 +374,8 @@ export default function FaultyTerminal({
       }
 
       if (pauseRef.current) return; // offscreen: skip the GPU work entirely
+      if (t - lastFrameRef.current < 1000 / maxFps - 2) return
+      lastFrameRef.current = t
 
       const elapsed = (t * 0.001 + timeOffsetRef.current) * timeScale;
       program.uniforms.iTime.value = elapsed;
@@ -413,6 +419,7 @@ export default function FaultyTerminal({
   }, [
     dpr,
     timeScale,
+    maxFps,
     scale,
     gridMul,
     digitSize,

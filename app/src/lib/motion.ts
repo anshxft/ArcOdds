@@ -49,30 +49,51 @@ export function useScrollMotion(scope: RefObject<HTMLElement | null>, ready = tr
   }, { scope, dependencies: [ready] })
 }
 
-/** GSAP: endless horizontal ticker. The track must contain its content twice. */
 const MARQUEE_SPEED = 45 // px per second
 
+/**
+ * Endless horizontal ticker. The track must contain its content twice.
+ * Runs as a Web Animation so the browser moves it on the compositor (no main-thread work per
+ * frame), at a constant reading speed however many items there are. Hover/focus eases it to a
+ * stop and back instead of freezing mid-frame.
+ */
 export function useMarquee(track: RefObject<HTMLElement | null>, ready = true) {
-  useGSAP(() => {
-    if (!ready || !track.current || reducedMotion()) return
+  useEffect(() => {
     const el = track.current
-    // Constant reading speed, however many items: the track holds two copies, so loop half of it.
+    if (!ready || !el || reducedMotion()) return
     const distance = el.scrollWidth / 2
-    const tween = gsap.to(el, { x: -distance, duration: distance / MARQUEE_SPEED, ease: 'none', repeat: -1 })
-    // Ease to a stop on hover / focus and ease back, instead of freezing mid-frame.
-    const pause = () => gsap.to(tween, { timeScale: 0, duration: 0.6, ease: 'power2.out', overwrite: true })
-    const play = () => gsap.to(tween, { timeScale: 1, duration: 0.8, ease: 'power2.in', overwrite: true })
+    const anim = el.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${-distance}px)` }], {
+      duration: (distance / MARQUEE_SPEED) * 1000,
+      iterations: Infinity,
+    })
+    let frame = 0
+    const easeTo = (target: number, ms: number) => {
+      cancelAnimationFrame(frame)
+      const from = anim.playbackRate
+      const start = performance.now()
+      const step = (now: number) => {
+        const p = Math.min((now - start) / ms, 1)
+        const eased = target < from ? 1 - (1 - p) ** 2 : p * p // ease out when stopping, in when starting
+        anim.updatePlaybackRate(from + (target - from) * eased)
+        if (p < 1) frame = requestAnimationFrame(step)
+      }
+      frame = requestAnimationFrame(step)
+    }
+    const pause = () => easeTo(0, 600)
+    const play = () => easeTo(1, 800)
     el.addEventListener('mouseenter', pause)
     el.addEventListener('mouseleave', play)
     el.addEventListener('focusin', pause)
     el.addEventListener('focusout', play)
     return () => {
+      cancelAnimationFrame(frame)
+      anim.cancel()
       el.removeEventListener('mouseenter', pause)
       el.removeEventListener('mouseleave', play)
       el.removeEventListener('focusin', pause)
       el.removeEventListener('focusout', play)
     }
-  }, { dependencies: [ready] })
+  }, [track, ready])
 }
 
 /** True while the element is on screen (never true for display:none), so canvas effects can sleep. */

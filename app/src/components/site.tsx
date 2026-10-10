@@ -235,7 +235,7 @@ function Header() {
   const isOwner = useIsOwner()
   const ready = useWalletWatch()
   return (
-    <header className="sticky top-0 z-40 bg-paper/90 backdrop-blur-md">
+    <header className="sticky top-0 z-40 bg-paper/95">
       <div className="frame grid h-14 grid-cols-[auto_1fr_auto] border-t-0">
         <div className="cell flex items-center px-4 md:px-6">
           <Logo />
@@ -345,7 +345,7 @@ export function Layout() {
           <Mascot />
         </Suspense>
       )}
-      <Noise fixed opacity={0.06} fps={0} blendMode="multiply" zIndex={60} />
+      <Noise fixed opacity={0.05} fps={0} blendMode="normal" zIndex={60} />
       <Toaster
         position="bottom-right"
         toastOptions={{

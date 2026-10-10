@@ -91,7 +91,7 @@ export default function Markets() {
 
       <section className="frame grid border-t-0 sm:grid-cols-2 lg:grid-cols-3">
         {loading && (
-          <div className="cell col-span-full flex items-center justify-center gap-3 p-20">
+          <div className="cell col-span-full flex min-h-[120vh] items-start justify-center gap-3 p-20">
             <Orb state="searching" label="Loading markets" />
             <Label>Reading Arc Testnet…</Label>
           </div>

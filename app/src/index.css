@@ -263,8 +263,12 @@ body {
 /* Colour variant for market thumbnails: real colour, a faint dot screen keeps the print texture */
 .halftone.in-color img,
 :root[data-theme="dark"] .halftone.in-color img {
-  filter: saturate(1.15) contrast(1.05);
+  filter: none; /* a filter on every card made scrolling the market grid heavy */
   mix-blend-mode: normal;
+}
+/* Parallax images move on every scroll frame: keep them on their own layer */
+[data-parallax] {
+  will-change: transform;
 }
 .halftone.in-color::after {
   background-image: radial-gradient(circle, transparent 1px, rgb(11 11 11 / 0.35) 1.4px);

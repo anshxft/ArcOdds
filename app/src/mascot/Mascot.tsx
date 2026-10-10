@@ -806,11 +806,26 @@ export default function Mascot() {
     let lastScrollAt = performance.now()
     let lastWhee = 0
     let bottomSaid = ''
+    // While the page scrolls Poring just stands there, so its face loop pauses (it costs a
+    // render every frame) and picks up again once scrolling stops.
+    let scrollPaused = false
+    let scrollResume = 0
+    let lastBottomCheck = 0
     const onScroll = () => {
       const now = performance.now()
       const velocity = Math.abs(scrollY - lastScroll) / Math.max(now - lastScrollAt, 1)
       lastScroll = scrollY
       lastScrollAt = now
+      if (!scrollPaused && mode !== 'drag' && !physics) {
+        scrollPaused = true
+        avatar.current?.pause()
+      }
+      cancel(scrollResume)
+      scrollResume = later(() => {
+        if (!scrollPaused) return
+        scrollPaused = false
+        avatar.current?.play(current)
+      }, 200)
       if (mode === 'guide' || mode === 'drag' || mode === 'sleep') return
       if (mode === 'perch') {
         interrupt()
@@ -822,7 +837,7 @@ export default function Mascot() {
         play('surprised')
         say(pick(['Slow down!', 'Wheee, scrolling!']), 1500)
         settle(1500)
-      } else if (!busy && bottomSaid !== location.pathname && innerHeight + scrollY >= document.documentElement.scrollHeight - 40) {
+      } else if (!busy && bottomSaid !== location.pathname && now - lastBottomCheck > 300 && (lastBottomCheck = now) && innerHeight + scrollY >= document.documentElement.scrollHeight - 40) {
         bottomSaid = location.pathname
         play('cool')
         say('You made it to the bottom!', 2200)
@@ -1011,7 +1026,7 @@ export default function Mascot() {
             brain.current?.tap()
           }
         }}
-        className="origin-bottom cursor-grab touch-none active:cursor-grabbing"
+        className="aspect-square origin-bottom cursor-grab touch-none [contain:layout_style_paint] active:cursor-grabbing"
       >
         <Poring ref={avatar} defaultAnimation="idle" size="100%" ariaLabel="Poring" />
       </div>
