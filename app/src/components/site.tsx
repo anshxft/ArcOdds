@@ -7,7 +7,7 @@ import { ThinkingOrb } from 'thinking-orbs'
 import Noise from '@/components/Noise'
 import VariableProximity from '@/components/VariableProximity'
 import DecryptedText from '@/components/DecryptedText'
-import { ARC, CONTRACTS, IS_TESTNET, MAINNET_LIVE, NETWORK, fetchPositions, switchNetwork, type NetworkName } from '@/lib/chain'
+import { ARC, CURRENT_VERSION, IS_TESTNET, contract, MAINNET_LIVE, NETWORK, fetchPositions, switchNetwork, type NetworkName } from '@/lib/chain'
 import { formatUsdc, shortAddress, useMarkets } from '@/lib/markets'
 import { gsap, reducedMotion } from '@/lib/motion'
 import { connect, disconnect, useIsOwner, useWallet, walletOptions, type WalletOption } from '@/lib/wallet'
@@ -336,7 +336,7 @@ function Footer() {
         </div>
         <div className="cell flex flex-col gap-2 p-6">
           <Label>Elsewhere</Label>
-          <a href={`${ARC.explorer}/address/${CONTRACTS[2].address}`} target="_blank" rel="noreferrer" className="link-line w-fit">Contract</a>
+          <a href={`${ARC.explorer}/address/${contract(CURRENT_VERSION).address}`} target="_blank" rel="noreferrer" className="link-line w-fit">Contract</a>
           {ARC.faucet && <a href={ARC.faucet} target="_blank" rel="noreferrer" data-tour="faucet" className="link-line w-fit">Faucet</a>}
           <a href="https://x.com/imalanxx" target="_blank" rel="noreferrer" className="link-line w-fit">X (Twitter)</a>
           <a href="https://github.com/anshxft/ArcOdds" target="_blank" rel="noreferrer" className="link-line w-fit">Source code (AGPL-3.0)</a>

@@ -5,6 +5,8 @@
     "rpc": "https://rpc.mainnet.arc.io",
     "explorer": "https://explorer.arc.io",
     "faucet": null,
+    "v3": null,
+    "v3DeployBlock": null,
     "v2": "0xA5C7BC89827a67d794DF11ee9D90c4331b34d15A",
     "v2DeployBlock": 25409621,
     "v1": null
@@ -15,6 +17,8 @@
     "rpc": "https://rpc.testnet.arc.network",
     "explorer": "https://explorer.testnet.arc.io",
     "faucet": "https://faucet.circle.com",
+    "v3": "0x73318b5D028c1f8873a8b2c344Ef12397Fa6F0d1",
+    "v3DeployBlock": 66648284,
     "v2": "0xfadbE0877379F3a6CBC8A612b9B28b1B25baa796",
     "v2DeployBlock": null,
     "v1": "0x19D638Af6b2De9718Eff496fc27a304155D6Af44"

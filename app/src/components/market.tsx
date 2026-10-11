@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 import NumberFlow from '@number-flow/react'
 import PixelTransition from '@/components/PixelTransition'
 import { Asterisk, Label, Orb } from '@/components/site'
-import type { Bet, Market } from '@/lib/chain'
+import { isLegacy, type Bet, type Market } from '@/lib/chain'
 import { formatDate, formatUsdc, marketImage, marketState, stateLabel } from '@/lib/markets'
 
 export function Halftone({ src, alt = '', className = '', parallax = false, eager = false, color = false }: { src: string; alt?: string; className?: string; parallax?: boolean; eager?: boolean; color?: boolean }) {
@@ -44,7 +44,7 @@ function CardBody({ market, bettors }: { market: Market; bettors: number }) {
       <div className="flex items-center justify-between gap-2">
         <Label>#{String(market.id).padStart(2, '0')} / {market.category}</Label>
         <span className="flex items-center gap-1.5">
-          {market.version === 1 && <span className="label px-1.5 py-0.5 text-muted" title="Older ArcOdds contract: positions stay claimable, new bets go to v2 markets">Legacy</span>}
+          {isLegacy(market.version) && <span className="label px-1.5 py-0.5 text-muted" title="Older ArcOdds contract: positions stay claimable, new bets go to v2 markets">Legacy</span>}
           <StateBadge market={market} />
         </span>
       </div>
@@ -92,9 +92,10 @@ export function PoolChart({ bets }: { bets: Bet[] }) {
   let yes = 0
   let no = 0
   const points = bets.map((bet) => {
-    if (bet.side === 'YES') yes += bet.amount
-    else no += bet.amount
-    return (yes / (yes + no)) * 100
+    const amount = bet.kind === 'cashout' ? -bet.amount : bet.amount
+    if (bet.side === 'YES') yes += amount
+    else no += amount
+    return yes + no > 0 ? (yes / (yes + no)) * 100 : 50
   })
   const width = 600
   const height = 200

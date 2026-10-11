@@ -5,7 +5,7 @@ import CountUp from '@/components/CountUp'
 import SplitText from '@/components/SplitText'
 import { Asterisk, Decode, Label, Orb } from '@/components/site'
 import { Halftone, MarketCard } from '@/components/market'
-import { ARC, IS_TESTNET, switchNetwork, txUrl } from '@/lib/chain'
+import { ARC, CASHOUT_FEE, IS_TESTNET, switchNetwork, txUrl } from '@/lib/chain'
 import { bettorCount, byRelevance, marketImage, marketState, shortAddress, timeAgo, useMarkets } from '@/lib/markets'
 import { useBoot, useInView, useMarquee, useScrollMotion } from '@/lib/motion'
 import { poolPayout } from '@/lib/payout'
@@ -72,24 +72,37 @@ export default function Home() {
     ['Markets', markets.length, '', 'On the Arc contract'],
     ['Volume', Math.round(markets.reduce((sum, m) => sum + m.volume, 0)), ' USDC', IS_TESTNET ? 'Test USDC in pools' : 'USDC in pools'],
     ['Traders', bettorCount(bets), '', 'Unique wallets'],
-    ['Predictions', bets.length, '', 'Confirmed bets'],
+    ['Predictions', bets.filter((bet) => bet.kind === 'bet').length, '', 'Confirmed bets'],
     ['Resolved', markets.filter((m) => m.status === 1).length, '', 'Settled by owner'],
   ] as const
-  // Profit counts settled markets only: winners get their pool share, losers lose the stake.
-  const leaders = Object.values(
-    bets.reduce<Record<string, { user: string; staked: number; count: number; pnl: number }>>((map, bet) => {
-      map[bet.user] ??= { user: bet.user, staked: 0, count: 0, pnl: 0 }
-      map[bet.user].staked += bet.amount
-      map[bet.user].count += 1
-      const market = markets.find((m) => m.key === bet.key)
-      if (market?.status === 1) {
-        const won = market.outcome === bet.side
-        const [sidePool, otherPool] = bet.side === 'YES' ? [market.yesPool, market.noPool] : [market.noPool, market.yesPool]
-        map[bet.user].pnl += won ? poolPayout(bet.amount, sidePool, otherPool) - bet.amount : -bet.amount
+  // Profit counts settled markets only: net stake per market side (bets minus cash-outs) pays its
+  // pool share if it won and is lost if it lost; every cash-out also costs its 2% exit fee.
+  const leaders = (() => {
+    const rows = new Map<string, { user: string; staked: number; count: number; pnl: number }>()
+    const net = new Map<string, { user: string; key: string; side: string; stake: number }>()
+    for (const bet of bets) {
+      const row = rows.get(bet.user) ?? { user: bet.user, staked: 0, count: 0, pnl: 0 }
+      rows.set(bet.user, row)
+      const id = `${bet.user}|${bet.key}|${bet.side}`
+      const entry = net.get(id) ?? { user: bet.user, key: bet.key, side: bet.side, stake: 0 }
+      net.set(id, entry)
+      if (bet.kind === 'bet') {
+        row.staked += bet.amount
+        row.count += 1
+        entry.stake += bet.amount
+      } else {
+        row.pnl -= bet.amount * CASHOUT_FEE
+        entry.stake -= bet.amount
       }
-      return map
-    }, {}),
-  ).sort((a, b) => b.pnl - a.pnl || b.staked - a.staked).slice(0, 5)
+    }
+    for (const { user, key, side, stake } of net.values()) {
+      const market = markets.find((m) => m.key === key)
+      if (market?.status !== 1 || stake <= 0) continue
+      const [sidePool, otherPool] = side === 'YES' ? [market.yesPool, market.noPool] : [market.noPool, market.yesPool]
+      rows.get(user)!.pnl += market.outcome === side ? poolPayout(stake, sidePool, otherPool) - stake : -stake
+    }
+    return [...rows.values()].sort((a, b) => b.pnl - a.pnl || b.staked - a.staked).slice(0, 5)
+  })()
   const latest = [...bets].reverse().slice(0, 6)
 
   return (

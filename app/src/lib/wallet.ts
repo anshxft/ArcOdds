@@ -1,7 +1,7 @@
 // Injected-wallet connection (EIP-6963 discovery, window.ethereum fallback) and signed actions.
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { createWalletClient, custom, parseEther, type Address } from 'viem'
-import { ARC, arcChain, contract, fetchOwner, publicClient, type Version } from './chain'
+import { ARC, CURRENT_VERSION, arcChain, contract, fetchOwner, publicClient, type Version } from './chain'
 
 interface Eip1193 {
   request(args: { method: string; params?: unknown[] }): Promise<unknown>
@@ -124,18 +124,22 @@ export const placeBet = (version: Version, marketId: number, side: boolean, amou
 
 export const claimWinnings = (version: Version, marketId: number) => write(version, 'claimWinnings', [BigInt(marketId)])
 
-/** v2 only: take back both sides of a stake from a cancelled market. */
-export const refund = (marketId: number) => write(2, 'refund', [BigInt(marketId)])
+/** v2 and later: take back both sides of a stake from a cancelled market. */
+export const refund = (version: Version, marketId: number) => write(version, 'refund', [BigInt(marketId)])
+
+/** v3: take `amountWei` of one side's stake back before the cutoff (the contract keeps a 2% exit fee). */
+export const cashOut = (version: Version, marketId: number, side: boolean, amountWei: bigint) =>
+  write(version, 'cashOut', [BigInt(marketId), side, amountWei])
 
 // ---- owner actions (the contract rejects anyone else) ----
 
 export const createMarket = (question: string, category: string, rules: string, deadline: number) =>
-  write(2, 'createMarket', [question, category, rules, BigInt(deadline)])
+  write(CURRENT_VERSION, 'createMarket', [question, category, rules, BigInt(deadline)])
 
 export const resolveMarket = (version: Version, marketId: number, outcome: boolean) =>
   write(version, 'resolveMarket', [BigInt(marketId), outcome])
 
-export const cancelMarket = (marketId: number, reason: string) => write(2, 'cancelMarket', [BigInt(marketId), reason])
+export const cancelMarket = (version: Version, marketId: number, reason: string) => write(version, 'cancelMarket', [BigInt(marketId), reason])
 
 let ownerRequest: Promise<string> | null = null
 /** True when the connected wallet owns the v2 contract (gates the admin page; the contract enforces it). */

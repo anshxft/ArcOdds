@@ -2,20 +2,22 @@
 
 Parimutuel YES/NO prediction markets on Arc Testnet, paid in native USDC. Live at https://www.arcpredict.xyz.
 
-- `contracts/`: `PredictArcV2.sol` (current) and `ArcOdds.sol` (legacy v1)
+- `contracts/`: `PredictArcV3.sol` (current: V2 + cash-out), `PredictArcV2.sol` and `ArcOdds.sol` (legacy)
 - `app/`: the site (Vite, React 19, Tailwind 4, viem, GSAP, Lenis, anime.js, React Bits, thinking-orbs)
 - `api/`: Vercel functions: AI brief (`ai-brief.js`), share images (`og.js`), per-market link previews (`market-page.js`)
 - `scripts/`: deploy, resolve and resolution-check scripts
 
 ## Contracts
 
-Both verified on the Arc explorer:
+Addresses live in `networks.json`. The newest contract on a network is current; older ones are legacy (their markets stay visible if anyone bet, and stay claimable).
 
-- `PredictArcV2` on **Arc mainnet** (real USDC): `0xA5C7BC89827a67d794DF11ee9D90c4331b34d15A`, verified on explorer.arc.io. The site opens here by default.
-- `PredictArcV2` on Arc testnet (free test USDC): `0xfadbE0877379F3a6CBC8A612b9B28b1B25baa796`. Rules on-chain, cancel + refunds, auto-refund for one-sided markets, 30-day stale-market escape hatch, two-step ownership.
-- `ArcOdds` (legacy v1): `0x19D638Af6b2De9718Eff496fc27a304155D6Af44`. Existing positions stay claimable; no new bets from the app.
+- **PredictArcV3** (current): V2 plus cash-out. Testnet `0x73318b5D028c1f8873a8b2c344Ef12397Fa6F0d1` (verified). Mainnet: see `networks.json`.
+- **PredictArcV2**: rules on-chain, cancel + refunds, auto-refund for one-sided markets, 30-day stale-market escape hatch, two-step ownership. Mainnet `0xA5C7BC89827a67d794DF11ee9D90c4331b34d15A`, testnet `0xfadbE0877379F3a6CBC8A612b9B28b1B25baa796` (both verified).
+- **ArcOdds** (v1, testnet only): `0x19D638Af6b2De9718Eff496fc27a304155D6Af44`.
 
 Fee: 2% of the losing pool. Payout = stake × (winning pool + losing pool − fee) / winning pool.
+
+Cash-out (V3): until 1 hour before the deadline a bettor can take all or part of a stake back for a 2% exit fee (`cashOut(marketId, side, amount)`).
 
 ## Arc Testnet
 
@@ -56,7 +58,7 @@ The contract is unaudited and the owner decides outcomes. Every mainnet write ne
 
 1. Make a fresh wallet for the owner and fund it with a little USDC on Arc mainnet (bridge with CCTP). Deploying plus ~30 markets costs well under 1 USDC in gas.
 2. Put its key in `.env` as `MAINNET_PRIVATE_KEY` (never the testnet key).
-3. `CONFIRM_MAINNET=yes npm run deploy:mainnet` deploys and writes the address into `networks.json`.
+3. `CONFIRM_MAINNET=yes npm run deploy:mainnet` deploys PredictArcV3 and writes its address into `networks.json`.
 4. `CONFIRM_MAINNET=yes npm run markets:mainnet` creates the markets (skips any that close within the hour).
 5. `npx hardhat verify --network arcMainnet <address>` verifies the source on explorer.arc.io (if the explorer API refuses, verify by hand with the flattened source: `npx hardhat flatten contracts/PredictArcV2.sol`).
 6. Commit `networks.json` and push. Once `arcMainnet.v2` is set, the site opens on mainnet by default, with a Mainnet / Testnet switch in the header and footer (`?net=testnet` in a link opens testnet).

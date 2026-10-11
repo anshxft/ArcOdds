@@ -4,10 +4,11 @@ const { ethers } = require("hardhat");
 const RULES = "Resolves YES if the official source reports the event before the deadline (UTC).";
 const usdc = (value) => ethers.parseEther(String(value));
 
-describe("PredictArcV2", function () {
+// V3 adds cash-out on top of V2, so every V2 guarantee is checked on both.
+for (const NAME of ["PredictArcV2", "PredictArcV3"]) describe(NAME, function () {
   async function deployFixture() {
     const [owner, alice, bob, carol] = await ethers.getSigners();
-    const contract = await (await ethers.getContractFactory("PredictArcV2")).deploy();
+    const contract = await (await ethers.getContractFactory(NAME)).deploy();
     const deadline = (await ethers.provider.getBlock("latest")).timestamp + 3600;
     await contract.createMarket("Will the test pass?", "tech", RULES, deadline);
     return { contract, owner, alice, bob, carol, deadline };

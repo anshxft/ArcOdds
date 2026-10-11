@@ -5,7 +5,8 @@ import SplitText from '@/components/SplitText'
 import CountUp from '@/components/CountUp'
 import { Decode, Label, Orb, WalletButton } from '@/components/site'
 import { Halftone } from '@/components/market'
-import { ARC, fetchPositions, txUrl, type Position, type Version } from '@/lib/chain'
+import { CashOutButton } from '@/components/CashOut'
+import { ARC, canCashOut, fetchPositions, isLegacy, txUrl, type Position, type Version } from '@/lib/chain'
 import { formatUsdc, marketImage, marketState, refreshMarkets, stateLabel, useMarkets } from '@/lib/markets'
 import { poolPayout } from '@/lib/payout'
 import { useBoot, useScrollMotion } from '@/lib/motion'
@@ -53,7 +54,7 @@ export default function Portfolio() {
   const claimable = rows.filter((row) => row.claimable).reduce((sum, row) => sum + row.ifRight, 0)
 
   async function claim(version: Version, marketId: number, isRefund: boolean) {
-    const run = isRefund ? refund(marketId) : claimWinnings(version, marketId)
+    const run = isRefund ? refund(version, marketId) : claimWinnings(version, marketId)
     toast.promise(run, {
       loading: isRefund ? 'Refunding your stake…' : 'Claiming winnings…',
       success: (hash) => ({ message: isRefund ? 'Stake refunded' : 'Winnings claimed', action: { label: 'View tx', onClick: () => window.open(txUrl(hash), '_blank', 'noopener') } }),
@@ -115,7 +116,7 @@ export default function Portfolio() {
                 <Halftone src={marketImage(row.market)} className="aspect-square" color />
                 <Link to={`/market/${row.key}`} className="min-w-0 hover:underline">
                   <span className="block truncate font-medium">{row.market.question}</span>
-                  <Label>{row.market.category} · {stateLabel(row.market)}{row.version === 1 ? ' · legacy' : ''}</Label>
+                  <Label>{row.market.category} · {stateLabel(row.market)}{isLegacy(row.version) ? ' · legacy' : ''}</Label>
                 </Link>
                 <span className={`label w-fit px-2 py-0.5 ${row.side === 'YES' ? 'bg-ink text-paper' : 'bg-signal text-on-signal'}`}>{row.side}</span>
                 <div><Label>Staked</Label><div className="font-mono text-sm">{formatUsdc(row.amount)}</div></div>
@@ -125,6 +126,8 @@ export default function Portfolio() {
                     <button type="button" onClick={() => claim(row.version, row.marketId, row.refundable)} className="press label w-full bg-signal px-3 py-3 text-on-signal">
                       {row.refundable ? 'Refund stake' : 'Claim'}
                     </button>
+                  ) : canCashOut(row.market) ? (
+                    <CashOutButton version={row.version} marketId={row.marketId} side={row.side} stakeWei={row.raw} stake={row.amount} onDone={() => setVersion((value) => value + 1)} className="w-full" />
                   ) : (
                     <span className="label text-muted">{row.claimed ? (row.market.status === 2 ? 'Refunded' : 'Claimed') : row.resolved ? (row.won ? 'Won' : 'Lost') : marketState(row.market) === 'closed' ? 'Awaiting resolution' : 'Open'}</span>
                   )}

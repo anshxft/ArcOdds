@@ -4,7 +4,8 @@ import { toast } from 'sonner'
 import SplitText from '@/components/SplitText'
 import { Asterisk, Decode, Label, Orb, WalletButton } from '@/components/site'
 import { BigOdds, Halftone, OddsBar, PoolChart } from '@/components/market'
-import { ARC, IS_TESTNET, MAINNET_LIVE, addressUrl, fetchBalance, marketKey, parseMarketKey, txUrl, type Market as MarketT, type Side } from '@/lib/chain'
+import { CashOutButton } from '@/components/CashOut'
+import { ARC, CASHOUT_CUTOFF, IS_TESTNET, MAINNET_LIVE, addressUrl, canCashOut, fetchBalance, fetchPosition, isLegacy, marketKey, parseMarketKey, txUrl, type Market as MarketT, type Side } from '@/lib/chain'
 import { bettorCount, formatDate, formatUsdc, marketImage, marketState, refreshMarkets, shortAddress, stateLabel, timeAgo, useMarkets } from '@/lib/markets'
 import { quote } from '@/lib/payout'
 import { useBoot, useScrollMotion } from '@/lib/motion'
@@ -97,6 +98,7 @@ function TradePanel({ market }: { market: MarketT }) {
   const [pending, setPending] = useState(false)
   const [balance, setBalance] = useState<number | null>(null)
   const [balanceTick, setBalanceTick] = useState(0)
+  const [position, setPosition] = useState<{ yes: bigint; no: bigint } | null>(null)
   const stake = Number(amount) || 0
   const GAS_RESERVE = 0.02 // USDC is also Arc's gas token, so keep a little back
   const tooMuch = balance !== null && stake > balance - GAS_RESERVE
@@ -117,6 +119,16 @@ function TradePanel({ market }: { market: MarketT }) {
       /* storage blocked: ask again next visit */
     }
   }
+
+  // Your stake here (exact, for cash-out), refreshed after every bet or cash-out.
+  useEffect(() => {
+    if (!account) return setPosition(null)
+    let live = true
+    fetchPosition(market.version, market.id, account).then((p) => live && setPosition(p)).catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [account, market.version, market.id, balanceTick])
 
   useEffect(() => {
     if (!account) return setBalance(null)
@@ -220,7 +232,7 @@ function TradePanel({ market }: { market: MarketT }) {
           <p className="label bg-ink p-3 text-paper">
             {state === 'resolved' ? `Resolved ${market.outcome}. Winners claim from Portfolio.` : state === 'cancelled' ? 'Cancelled. Every bettor can refund their full stake from Portfolio.' : 'Trading closed. Waiting for the owner to resolve.'}
           </p>
-        ) : market.version === 1 ? (
+        ) : isLegacy(market.version) ? (
           <p className="label border border-line-strong p-3">Legacy contract: new bets are closed here. Existing positions stay claimable. <Link to="/markets" className="underline">See live v2 markets</Link></p>
         ) : account ? (
           <>
@@ -244,6 +256,30 @@ function TradePanel({ market }: { market: MarketT }) {
           </>
         ) : (
           <WalletButton className="min-h-13 w-full justify-center" />
+        )}
+        {position && (position.yes > 0n || position.no > 0n) && (
+          <div className="border border-line-strong">
+            <div className="label border-b border-line px-3 py-2 text-ink">Your position</div>
+            {([['YES', position.yes], ['NO', position.no]] as const).filter(([, wei]) => wei > 0n).map(([label, wei]) => {
+              const stakeNow = Number(wei) / 1e18
+              return (
+                <div key={label} className="flex items-center justify-between gap-3 border-b border-line px-3 py-2 last:border-b-0">
+                  <span className="flex items-center gap-2 text-sm">
+                    <span className={`label px-1.5 ${label === 'YES' ? 'bg-ink text-paper' : 'bg-signal text-on-signal'}`}>{label}</span>
+                    <span className="font-mono">{formatUsdc(stakeNow)}</span>
+                  </span>
+                  {canCashOut(market) && <CashOutButton version={market.version} marketId={market.id} side={label} stakeWei={wei} stake={stakeNow} onDone={() => setBalanceTick((tick) => tick + 1)} />}
+                </div>
+              )
+            })}
+            <p className="px-3 py-2 text-xs leading-relaxed text-muted">
+              {canCashOut(market)
+                ? `Cash out any time until ${Math.round(CASHOUT_CUTOFF / 3600)}h before close, minus a 2% exit fee.`
+                : market.version >= 3 && market.status === 0
+                  ? 'Cash-out is closed in the last hour. Your stake is locked until the market resolves.'
+                  : 'Locked until the market resolves.'}
+            </p>
+          </div>
         )}
         <p className="text-xs leading-relaxed text-muted">Pool-based: winners split the whole pool pro-rata, minus 2% of the losing side. Estimates move as others bet.</p>
       </div>
@@ -309,7 +345,7 @@ export default function Market() {
     <div ref={scope}>
       <section className="frame grid border-t-0 md:grid-cols-12">
         <div className="cell label flex items-center gap-2 px-5 py-3 md:col-span-12" data-boot>
-          <Link to="/markets" className="hover:underline">Markets</Link> / <span>v{market.version} #{String(market.id).padStart(2, '0')}</span> / <span>{market.category}</span>{market.version === 1 && <span className="text-muted">/ legacy</span>}
+          <Link to="/markets" className="hover:underline">Markets</Link> / <span>v{market.version} #{String(market.id).padStart(2, '0')}</span> / <span>{market.category}</span>{isLegacy(market.version) && <span className="text-muted">/ legacy</span>}
           <span className="ml-auto flex items-center gap-2">{marketState(market) === 'closed' && <Orb state="solving" size={20} />}{stateLabel(market)}</span>
         </div>
         <div className="cell h-48 overflow-hidden md:col-span-4 md:h-auto" data-boot>
@@ -343,7 +379,7 @@ export default function Market() {
           <div className="cell p-5" data-reveal data-tour="rules">
             <span className="flex items-center gap-2"><Asterisk className="size-3" /><Label className="text-ink">Resolution rules</Label>{market.rules && <Label>· stored on-chain</Label>}</span>
             <p className="mt-3 max-w-2xl leading-relaxed">{market.rules ?? 'Legacy market: resolved by the contract owner from the plain wording of the question after the deadline.'}</p>
-            {market.version === 2 && <p className="mt-2 text-sm text-muted">If the owner does not resolve within 30 days of the deadline, anyone can cancel the market and every bettor gets a full refund.</p>}
+            {market.version >= 2 && <p className="mt-2 text-sm text-muted">If the owner does not resolve within 30 days of the deadline, anyone can cancel the market and every bettor gets a full refund.</p>}
           </div>
           <div className="cell p-5" data-reveal>
             <Label className="text-ink">Pool odds history</Label>
@@ -356,7 +392,7 @@ export default function Market() {
               <a key={index} href={bet.txHash ? txUrl(bet.txHash) : undefined} target="_blank" rel="noreferrer" className="grid grid-cols-[52px_1fr_auto] items-center gap-3 border-b border-line px-5 py-3 last:border-b-0 hover:bg-paper-2">
                 <span className={`label px-1.5 py-0.5 text-center ${bet.side === 'YES' ? 'bg-ink text-paper' : 'bg-signal text-on-signal'}`}>{bet.side}</span>
                 <span className="font-mono text-sm">{shortAddress(bet.user)}</span>
-                <span className="label text-muted">{bet.amount} USDC · {timeAgo(bet.time)}</span>
+                <span className="label text-muted">{bet.kind === 'cashout' ? 'cashed out ' : ''}{bet.amount} USDC · {timeAgo(bet.time)}</span>
               </a>
             )) : <p className="p-5 text-sm text-muted">No confirmed trades for this market yet.</p>}
           </div>

@@ -8,7 +8,7 @@ const ABI = {
   2: ["function getMarket(uint256) view returns (tuple(string question, string category, string rules, uint256 deadline, uint256 yesPool, uint256 noPool, bool outcome, uint8 status, address creator))"],
   1: ["function getMarket(uint256) view returns (string question, string category, uint256 deadline, uint256 yesPool, uint256 noPool, bool outcome, uint8 status, address creator)"],
 };
-export const MAINNET_LIVE = Boolean(NETWORKS.arcMainnet.v2);
+export const MAINNET_LIVE = Boolean(NETWORKS.arcMainnet.v3 || NETWORKS.arcMainnet.v2);
 
 /** Same rule as the site: mainnet once it has a contract, unless ?net=testnet. */
 export const pickNet = (net) => (net === "testnet" || !MAINNET_LIVE ? "testnet" : "mainnet");
@@ -16,17 +16,17 @@ export const pickNet = (net) => (net === "testnet" || !MAINNET_LIVE ? "testnet" 
 const contracts = {};
 function contractFor(net, version) {
   const config = net === "mainnet" ? NETWORKS.arcMainnet : NETWORKS.arcTestnet;
-  const address = version === 2 ? config.v2 : config.v1;
+  const address = config[`v${version}`];
   if (!address) return null;
   const id = `${net}:${version}`;
   // Batching off: the testnet RPC mishandles JSON-RPC batches.
-  contracts[id] ??= new Contract(address, ABI[version], new JsonRpcProvider(config.rpc, config.chainId, { staticNetwork: true, batchMaxCount: 1 }));
+  contracts[id] ??= new Contract(address, ABI[Math.min(version, 2)], new JsonRpcProvider(config.rpc, config.chainId, { staticNetwork: true, batchMaxCount: 1 }));
   return contracts[id];
 }
 
-/** "v2-3" -> v2 market 3; a bare "3" is an old v1 link. Returns null for anything else. */
+/** "v3-3" -> v3 market 3; a bare "3" is an old v1 link. Returns null for anything else. */
 export function parseKey(key) {
-  const match = /^(?:v([12])-)?(\d{1,6})$/.exec(String(key || ""));
+  const match = /^(?:v([123])-)?(\d{1,6})$/.exec(String(key || ""));
   return match ? { version: Number(match[1] || 1), id: Number(match[2]) } : null;
 }
 
@@ -36,7 +36,7 @@ export async function readMarket(key, net = pickNet()) {
   if (!contract) return null;
   try {
     const raw = await contract.getMarket(parsed.id);
-    const m = parsed.version === 2 ? raw : { question: raw[0], category: raw[1], deadline: raw[2], yesPool: raw[3], noPool: raw[4], outcome: raw[5], status: raw[6] };
+    const m = parsed.version >= 2 ? raw : { question: raw[0], category: raw[1], deadline: raw[2], yesPool: raw[3], noPool: raw[4], outcome: raw[5], status: raw[6] };
     const total = m.yesPool + m.noPool;
     const yes = total === 0n ? 50 : Number((m.yesPool * 100n) / total);
     return {

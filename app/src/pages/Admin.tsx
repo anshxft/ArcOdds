@@ -93,14 +93,14 @@ function MarketRow({ market }: { market: Market }) {
   const resolve = (outcome: boolean) => {
     const side = outcome ? 'YES' : 'NO'
     const oneSided = (outcome ? market.yesPool : market.noPool) === 0 && market.volume > 0
-    const note = oneSided && market.version === 2 ? '\n\nNobody backed this side, so the contract will cancel the market and refund everyone.' : ''
+    const note = oneSided && market.version >= 2 ? '\n\nNobody backed this side, so the contract will cancel the market and refund everyone.' : ''
     if (window.confirm(`Resolve "${market.question}" as ${side}?\n\nThis is final and cannot be undone.${note}`)) {
       run(`Resolve ${market.key} ${side}`, () => resolveMarket(market.version, market.id, outcome))
     }
   }
   const cancel = () => {
     const reason = window.prompt(`Cancel "${market.question}"? Everyone can then refund their stake.\n\nReason (shown on-chain):`)
-    if (reason?.trim()) run(`Cancel ${market.key}`, () => cancelMarket(market.id, reason.trim()))
+    if (reason?.trim()) run(`Cancel ${market.key}`, () => cancelMarket(market.version, market.id, reason.trim()))
   }
   return (
     <div className="cell grid gap-3 p-4 md:grid-cols-[1fr_auto] md:items-center">
@@ -108,7 +108,7 @@ function MarketRow({ market }: { market: Market }) {
         <Link to={`/market/${market.key}`} className="font-medium hover:underline">{market.question}</Link>
         <Label className="block">
           {market.key} · {state === 'closed' ? 'awaiting resolution' : state} · closes {formatDate(market.deadline)} ({daysFrom(market.deadline)})
-          {market.version === 2 && ` · resolve by ${formatDate(market.deadline + RESOLUTION_WINDOW)}`} · {formatUsdc(market.volume)}
+          {market.version >= 2 && ` · resolve by ${formatDate(market.deadline + RESOLUTION_WINDOW)}`} · {formatUsdc(market.volume)}
         </Label>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -118,7 +118,7 @@ function MarketRow({ market }: { market: Market }) {
             <button type="button" onClick={() => resolve(false)} className="press label bg-signal px-4 py-2.5 text-on-signal">Resolve NO</button>
           </>
         )}
-        {market.version === 2 && (state === 'open' || state === 'closed') && (
+        {market.version >= 2 && (state === 'open' || state === 'closed') && (
           <button type="button" onClick={cancel} className="press label border border-line-strong px-4 py-2.5 hover:bg-ink hover:text-paper">Cancel</button>
         )}
       </div>

@@ -6,10 +6,10 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
-    "deploy:arc": "hardhat run scripts/deploy-v2.js --network arcTestnet",
+    "deploy:arc": "hardhat run scripts/deploy.js --network arcTestnet",
     "markets:arc": "hardhat run scripts/add-markets.js --network arcTestnet",
     "resolve:arc": "hardhat run scripts/resolve-market.js --network arcTestnet",
-    "deploy:mainnet": "hardhat run scripts/deploy-v2.js --network arcMainnet",
+    "deploy:mainnet": "hardhat run scripts/deploy.js --network arcMainnet",
     "markets:mainnet": "hardhat run scripts/add-markets.js --network arcMainnet",
     "resolve:mainnet": "hardhat run scripts/resolve-market.js --network arcMainnet",
     "check:arc": "node scripts/check-resolutions.js"

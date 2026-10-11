@@ -11,7 +11,7 @@ const ABI = {
 // One provider per network; batching off because the testnet RPC mishandles batches.
 const CONTRACTS = Object.entries(NETWORKS).flatMap(([network, n]) => {
   const provider = new ethers.JsonRpcProvider(n.rpc, n.chainId, { staticNetwork: true, batchMaxCount: 1 });
-  return [[2, n.v2], [1, n.v1]].filter(([, address]) => address).map(([version, address]) => ({ network, version, address, abi: ABI[version], provider }));
+  return [[3, n.v3], [2, n.v2], [1, n.v1]].filter(([, address]) => address).map(([version, address]) => ({ network, version, address, abi: ABI[Math.min(version, 2)], provider }));
 });
 const WINDOW = 30 * 86400; // PredictArcV2.RESOLUTION_WINDOW
 const day = (seconds) => new Date(seconds * 1000).toISOString().slice(0, 10);
@@ -25,12 +25,12 @@ async function main() {
     const count = Number(await contract.marketCount());
     for (let id = 1; id <= count; id += 1) {
       const raw = await contract.getMarket(id);
-      const m = version === 2 ? raw : { question: raw[0], deadline: raw[2], yesPool: raw[3], noPool: raw[4], status: raw[6] };
+      const m = version >= 2 ? raw : { question: raw[0], deadline: raw[2], yesPool: raw[3], noPool: raw[4], status: raw[6] };
       if (Number(m.status) !== 0) continue;
       const deadline = Number(m.deadline);
       const pool = `${ethers.formatEther(m.yesPool)} YES / ${ethers.formatEther(m.noPool)} NO`;
-      const row = { key: `${network === "arcMainnet" ? "MAINNET " : ""}v${version}-${id}`, question: m.question, rules: version === 2 ? m.rules : "(legacy: question wording)", deadline: day(deadline), pool };
-      if (deadline <= now) due.push({ ...row, resolveBy: version === 2 ? day(deadline + WINDOW) : "no limit (v1)" });
+      const row = { key: `${network === "arcMainnet" ? "MAINNET " : ""}v${version}-${id}`, question: m.question, rules: version >= 2 ? m.rules : "(legacy: question wording)", deadline: day(deadline), pool };
+      if (deadline <= now) due.push({ ...row, resolveBy: version >= 2 ? day(deadline + WINDOW) : "no limit (v1)" });
       else if (deadline - now <= 14 * 86400) soon.push(row);
     }
   }

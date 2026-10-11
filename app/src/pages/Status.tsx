@@ -15,7 +15,7 @@ async function probe(check: () => Promise<unknown>) {
 
 const CHECKS = [
   ['Arc network', 'Public RPC answering', () => fetch(ARC.rpc, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }) }).then((r) => { if (!r.ok) throw new Error() })],
-  ['PredictArc contracts', 'v2 + legacy v1 readable on-chain', () => fetchMarkets()],
+  ['PredictArc contracts', 'current + legacy contracts readable on-chain', () => fetchMarkets()],
   ['Arc explorer', 'Trade history source', () => fetch(`${ARC.explorer}/api/v2/stats`).then((r) => { if (!r.ok) throw new Error() })],
 ] as const
 
