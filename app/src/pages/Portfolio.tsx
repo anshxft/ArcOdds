@@ -129,7 +129,7 @@ export default function Portfolio() {
                   ) : canCashOut(row.market) ? (
                     <CashOutButton version={row.version} marketId={row.marketId} side={row.side} stakeWei={row.raw} stake={row.amount} onDone={() => setVersion((value) => value + 1)} className="w-full" />
                   ) : (
-                    <span className="label text-muted">{row.claimed ? (row.market.status === 2 ? 'Refunded' : 'Claimed') : row.resolved ? (row.won ? 'Won' : 'Lost') : marketState(row.market) === 'closed' ? 'Awaiting resolution' : 'Open'}</span>
+                    <span className="label text-muted">{row.claimed ? (row.market.status === 2 ? 'Refunded' : 'Claimed') : row.resolved ? (row.won ? 'Won' : 'Lost') : marketState(row.market) === 'closed' ? 'Awaiting resolution' : isLegacy(row.version) ? 'Old contract: no cash-out' : 'Open'}</span>
                   )}
                 </div>
               </div>
