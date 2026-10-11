@@ -11,6 +11,7 @@ import { ARC, CONTRACTS, fetchPositions } from '@/lib/chain'
 import { formatUsdc, shortAddress, useMarkets } from '@/lib/markets'
 import { gsap, reducedMotion } from '@/lib/motion'
 import { connect, disconnect, useIsOwner, useWallet, walletOptions, type WalletOption } from '@/lib/wallet'
+import { setTheme, useTheme } from '@/lib/theme'
 import { mascot, setPoringHidden, usePoringHidden, type Mood } from '@/mascot/react'
 import { poolPayout } from '@/lib/payout'
 
@@ -64,22 +65,27 @@ function Logo() {
   )
 }
 
-function ThemeToggle() {
-  const [dark, setDark] = useState(() => document.documentElement.dataset.theme === 'dark')
-  useEffect(() => {
-    document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-    try {
-      localStorage.setItem('theme', dark ? 'dark' : 'light')
-    } catch {
-      /* ignore */
-    }
-  }, [dark])
+/** Text button in the desktop header; `compact` is the sun/moon icon used in the phone nav. */
+function ThemeToggle({ compact = false, className = '' }: { compact?: boolean; className?: string }) {
+  const dark = useTheme() === 'dark'
+  const toggle = () => {
+    setTheme(dark ? 'light' : 'dark')
+    mascot(dark ? 'amazed' : 'dreamy', { ms: 1800, say: dark ? 'Lights on!' : 'Lights off!' })
+  }
   return (
-    <button type="button" onClick={() => {
-      setDark(!dark)
-      mascot(dark ? 'amazed' : 'dreamy', { ms: 1800, say: dark ? 'Lights on!' : 'Lights off!' })
-    }} className="press label hover-ink flex h-full items-center px-4" aria-label="Toggle dark mode">
-      {dark ? 'Light' : 'Dark'}
+    <button type="button" onClick={toggle} className={`press label hover-ink flex items-center justify-center ${className}`} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} aria-pressed={dark}>
+      {compact ? (
+        <svg viewBox="0 0 24 24" className="size-[18px]" aria-hidden="true">
+          {dark ? (
+            <g fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="4.5" />
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" />
+            </g>
+          ) : (
+            <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" fill="currentColor" />
+          )}
+        </svg>
+      ) : dark ? 'Light' : 'Dark'}
     </button>
   )
 }
@@ -271,9 +277,7 @@ function Header() {
           </a>
         </nav>
         <div className="cell flex items-stretch" data-tour="wallet">
-          <span className="hidden md:block">
-            <ThemeToggle />
-          </span>
+          <ThemeToggle className="hidden h-full px-4 md:flex" />
           <WalletButton />
         </div>
       </div>
@@ -283,6 +287,7 @@ function Header() {
             {label}{to === '/portfolio' && <NavBadge count={ready} />}
           </NavLink>
         ))}
+        <ThemeToggle compact className="cell min-h-11 w-12 shrink-0" />
       </nav>
     </header>
   )

@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from 'react-router'
 import './index.css'
 import { Layout, Orb } from '@/components/site'
 import Home from '@/pages/Home'
+import { initTheme } from '@/lib/theme'
 
 const Markets = lazy(() => import('@/pages/Markets'))
 const Market = lazy(() => import('@/pages/Market'))
@@ -12,12 +13,7 @@ const Status = lazy(() => import('@/pages/Status'))
 const Docs = lazy(() => import('@/pages/Docs'))
 const Admin = lazy(() => import('@/pages/Admin'))
 
-try {
-  const saved = localStorage.getItem('theme')
-  if (saved === 'dark' || saved === 'light') document.documentElement.dataset.theme = saved
-} catch {
-  /* storage blocked: default light */
-}
+initTheme()
 
 const fallback = (
   <div className="grid min-h-[60vh] place-items-center">
