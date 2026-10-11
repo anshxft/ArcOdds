@@ -9,6 +9,7 @@ import { ARC, CASHOUT_FEE, IS_TESTNET, switchNetwork, txUrl } from '@/lib/chain'
 import { bettorCount, byRelevance, marketImage, marketState, shortAddress, timeAgo, useMarkets } from '@/lib/markets'
 import { useBoot, useInView, useMarquee, useScrollMotion } from '@/lib/motion'
 import { poolPayout } from '@/lib/payout'
+import { usePageMeta } from '@/lib/meta'
 
 function Ticker() {
   const { markets } = useMarkets()
@@ -56,6 +57,7 @@ const TERMINAL_GRID: [number, number] = [2, 1] // stable reference: a new array 
 
 export default function Home() {
   const scope = useRef<HTMLDivElement>(null)
+  usePageMeta()
   const { markets, bets, loading } = useMarkets()
   const ready = markets.length > 0
   const gridCell = useRef<HTMLDivElement>(null)

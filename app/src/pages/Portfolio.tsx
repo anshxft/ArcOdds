@@ -12,9 +12,11 @@ import { poolPayout } from '@/lib/payout'
 import { useBoot, useScrollMotion } from '@/lib/motion'
 import { claimWinnings, refund, useWallet, errorText } from '@/lib/wallet'
 import { mascot } from '@/mascot/react'
+import { usePageMeta } from '@/lib/meta'
 
 export default function Portfolio() {
   const scope = useRef<HTMLDivElement>(null)
+  usePageMeta('Portfolio', 'Your PredictArc positions: claim winnings, refund cancelled markets or cash out early.')
   const { account } = useWallet()
   const { markets } = useMarkets()
   const [positions, setPositions] = useState<Position[] | null>(null)

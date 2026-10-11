@@ -6,12 +6,14 @@ import { bettorCount, byRelevance, marketState, useMarkets } from '@/lib/markets
 import { ARC } from '@/lib/chain'
 import { useBoot, useScrollMotion } from '@/lib/motion'
 import { mascot } from '@/mascot/react'
+import { usePageMeta } from '@/lib/meta'
 
 const SORTS = { volume: 'Featured', closing: 'Closing soon', yes: 'Yes %' } as const
 type Sort = keyof typeof SORTS
 
 export default function Markets() {
   const scope = useRef<HTMLDivElement>(null)
+  usePageMeta('Markets', 'Every open PredictArc market: crypto, finance, politics, sports and more. Bet YES or NO in USDC on Arc.')
   const { markets, bets, loading, error } = useMarkets()
   const [category, setCategory] = useState('all')
   const [sort, setSort] = useState<Sort>('volume')

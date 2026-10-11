@@ -12,6 +12,9 @@ const Portfolio = lazy(() => import('@/pages/Portfolio'))
 const Status = lazy(() => import('@/pages/Status'))
 const Docs = lazy(() => import('@/pages/Docs'))
 const Admin = lazy(() => import('@/pages/Admin'))
+const NotFound = lazy(() => import('@/pages/NotFound'))
+const Privacy = lazy(() => import('@/pages/Legal').then((m) => ({ default: m.Privacy })))
+const Terms = lazy(() => import('@/pages/Legal').then((m) => ({ default: m.Terms })))
 
 initTheme()
 
@@ -34,7 +37,9 @@ createRoot(document.getElementById('root')!).render(
             <Route path="status" element={<Status />} />
             <Route path="docs" element={<Docs />} />
             <Route path="admin" element={<Admin />} />
-            <Route path="*" element={<Home />} />
+            <Route path="privacy" element={<Privacy />} />
+            <Route path="terms" element={<Terms />} />
+            <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
       </Suspense>

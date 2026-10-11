@@ -340,6 +340,8 @@ function Footer() {
           {ARC.faucet && <a href={ARC.faucet} target="_blank" rel="noreferrer" data-tour="faucet" className="link-line w-fit">Faucet</a>}
           <a href="https://x.com/imalanxx" target="_blank" rel="noreferrer" className="link-line w-fit">X (Twitter)</a>
           <a href="https://github.com/anshxft/ArcOdds" target="_blank" rel="noreferrer" className="link-line w-fit">Source code (AGPL-3.0)</a>
+          <Link to="/privacy" className="link-line w-fit">Privacy</Link>
+          <Link to="/terms" className="link-line w-fit">Terms</Link>
           <button type="button" onClick={() => setPoringHidden(!poringHidden)} className="link-line w-fit text-left">
             {poringHidden ? 'Bring Poring back' : 'Hide Poring'}
           </button>

@@ -11,6 +11,7 @@ import { quote } from '@/lib/payout'
 import { useBoot, useScrollMotion } from '@/lib/motion'
 import { placeBet, useWallet, errorText } from '@/lib/wallet'
 import { mascot } from '@/mascot/react'
+import { usePageMeta } from '@/lib/meta'
 
 interface Brief {
   summary: string
@@ -91,9 +92,8 @@ function AiBrief({ market }: { market: MarketT }) {
 
 const RISK_KEY = 'pa_mainnet_risk_ok'
 
-function TradePanel({ market }: { market: MarketT }) {
+function TradePanel({ market, side, setSide }: { market: MarketT; side: Side; setSide: (side: Side) => void }) {
   const { account } = useWallet()
-  const [side, setSide] = useState<Side>('YES')
   const [amount, setAmount] = useState('')
   const [pending, setPending] = useState(false)
   const [balance, setBalance] = useState<number | null>(null)
@@ -102,6 +102,7 @@ function TradePanel({ market }: { market: MarketT }) {
   const stake = Number(amount) || 0
   const GAS_RESERVE = 0.02 // USDC is also Arc's gas token, so keep a little back
   const tooMuch = balance !== null && stake > balance - GAS_RESERVE
+  const invalid = amount.trim() !== '' && !(stake > 0)
   // Mainnet moves real USDC through an unaudited contract: ask once, remember the answer.
   const [accepted, setAccepted] = useState(() => {
     try {
@@ -168,7 +169,7 @@ function TradePanel({ market }: { market: MarketT }) {
   }
 
   return (
-    <div className="cell" data-tour="trade">
+    <div className="cell scroll-mt-28 lg:scroll-mt-16" data-tour="trade">
       <div className="flex items-center justify-between border-b border-line px-5 py-3">
         <Label className="text-ink">Trade</Label>
         <Label>USDC / Arc</Label>
@@ -197,9 +198,11 @@ function TradePanel({ market }: { market: MarketT }) {
               </span>
             )}
           </div>
-          <div className="mt-2 flex border border-line-strong focus-within:border-ink">
+          <div className={`mt-2 flex border focus-within:border-ink ${invalid || tooMuch ? 'border-signal' : 'border-line-strong'}`}>
             <input
               id="amount"
+              aria-invalid={invalid || tooMuch}
+              aria-describedby={invalid || tooMuch ? 'amount-error' : undefined}
               type="number"
               inputMode="decimal"
               min="0"
@@ -211,6 +214,11 @@ function TradePanel({ market }: { market: MarketT }) {
             />
             <span className="label grid place-items-center px-3 text-muted">USDC</span>
           </div>
+          {(invalid || tooMuch) && (
+            <p id="amount-error" role="alert" className="label mt-2 text-signal">
+              {invalid ? 'Enter an amount above 0' : `Not enough USDC: keep ${GAS_RESERVE} back for gas`}
+            </p>
+          )}
           <div className="mt-2 grid grid-cols-4 gap-px bg-line">
             {[1, 5, 10, 25].map((value) => (
               <button key={value} type="button" onClick={() => setAmount(String(value))} className="press label hover-ink bg-paper py-2.5">{value}</button>
@@ -246,7 +254,7 @@ function TradePanel({ market }: { market: MarketT }) {
             type="button"
             onClick={submit}
             onPointerEnter={(event) => event.pointerType === 'mouse' && stake > 0 && !pending && !tooMuch && mascot('excited', { ms: 1800 })}
-            disabled={!stake || pending || tooMuch || !accepted}
+            disabled={!(stake > 0) || pending || tooMuch || !accepted}
             className={`press label flex min-h-13 w-full items-center justify-center gap-3 disabled:opacity-40 ${side === 'YES' ? 'bg-ink text-paper' : 'bg-signal text-on-signal'}`}
           >
             {pending && <Orb state="working" size={20} label="Submitting" />}
@@ -283,6 +291,28 @@ function TradePanel({ market }: { market: MarketT }) {
         )}
         <p className="text-xs leading-relaxed text-muted">Pool-based: winners split the whole pool pro-rata, minus 2% of the losing side. Estimates move as others bet.</p>
       </div>
+    </div>
+  )
+}
+
+/** Phones: the trade panel sits below the long left column, so keep a bet bar on screen until it is in view. */
+function MobileBetBar({ market, onPick }: { market: MarketT; onPick: (side: Side) => void }) {
+  const [panelVisible, setPanelVisible] = useState(false)
+  useEffect(() => {
+    const panel = document.querySelector('[data-tour="trade"]')
+    if (!panel) return
+    const observer = new IntersectionObserver(([entry]) => setPanelVisible(entry.isIntersecting))
+    observer.observe(panel)
+    return () => observer.disconnect()
+  }, [])
+  if (panelVisible || marketState(market) !== 'open' || isLegacy(market.version)) return null
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 border-t border-ink bg-paper lg:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      {(['YES', 'NO'] as Side[]).map((option) => (
+        <button key={option} type="button" onClick={() => onPick(option)} className={`press font-display min-h-14 text-xl font-bold ${option === 'YES' ? 'bg-ink text-paper' : 'bg-signal text-on-signal'}`}>
+          Bet {option} <span className="text-base">{option === 'YES' ? market.yesOdds : 100 - market.yesOdds}%</span>
+        </button>
+      ))}
     </div>
   )
 }
@@ -327,8 +357,17 @@ export default function Market() {
   const scope = useRef<HTMLDivElement>(null)
   const { markets, bets, loading } = useMarkets()
   const market = markets.find((item) => item.key === key)
+  const [side, setSide] = useState<Side>('YES')
   useBoot(scope, Boolean(market))
   useScrollMotion(scope, Boolean(market))
+  usePageMeta(
+    market?.question ?? (loading ? 'Market' : 'Market not found'),
+    market ? `YES ${market.yesOdds}% / NO ${100 - market.yesOdds}% · closes ${formatDate(market.deadline)} · ${market.category}. Bet in USDC on Arc.` : undefined,
+  )
+  const pick = (option: Side) => {
+    setSide(option)
+    document.querySelector('[data-tour="trade"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   if (!market) {
     return (
@@ -398,10 +437,11 @@ export default function Market() {
           </div>
         </div>
         <div className="self-start lg:sticky lg:top-[57px]">
-          <TradePanel market={market} />
+          <TradePanel market={market} side={side} setSide={setSide} />
           <Share market={market} />
         </div>
       </section>
+      <MobileBetBar market={market} onPick={pick} />
     </div>
   )
 }

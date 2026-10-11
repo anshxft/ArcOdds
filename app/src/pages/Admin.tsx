@@ -7,6 +7,7 @@ import { fetchBalance, txUrl, type Market } from '@/lib/chain'
 import { formatDate, formatUsdc, marketState, refreshMarkets, useMarkets } from '@/lib/markets'
 import { useBoot } from '@/lib/motion'
 import { cancelMarket, createMarket, resolveMarket, useIsOwner, useWallet, errorText } from '@/lib/wallet'
+import { usePageMeta } from '@/lib/meta'
 
 const CATEGORIES = ['crypto', 'finance', 'politics', 'sports', 'tech', 'entertainment']
 const RESOLUTION_WINDOW = 30 * 86400 // PredictArcV2: after deadline + this, anyone can cancel
@@ -128,6 +129,7 @@ function MarketRow({ market }: { market: Market }) {
 
 export default function Admin() {
   const scope = useRef<HTMLDivElement>(null)
+  usePageMeta('Admin')
   const { account } = useWallet()
   const isOwner = useIsOwner()
   const { markets } = useMarkets()

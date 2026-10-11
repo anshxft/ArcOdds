@@ -5,7 +5,7 @@ import { Contract, JsonRpcProvider, formatEther } from "ethers";
 
 const NETWORKS = createRequire(import.meta.url)("../networks.json");
 const ABI = {
-  2: ["function getMarket(uint256) view returns (tuple(string question, string category, string rules, uint256 deadline, uint256 yesPool, uint256 noPool, bool outcome, uint8 status, address creator))"],
+  2: ["function getMarket(uint256) view returns (tuple(string question, string category, string rules, uint256 deadline, uint256 yesPool, uint256 noPool, bool outcome, uint8 status, address creator))", "function marketCount() view returns (uint256)"],
   1: ["function getMarket(uint256) view returns (string question, string category, uint256 deadline, uint256 yesPool, uint256 noPool, bool outcome, uint8 status, address creator)"],
 };
 export const MAINNET_LIVE = Boolean(NETWORKS.arcMainnet.v3 || NETWORKS.arcMainnet.v2);
@@ -53,6 +53,15 @@ export async function readMarket(key, net = pickNet()) {
   } catch {
     return null; // unknown id or RPC hiccup: callers fall back to the generic card
   }
+}
+
+/** Keys of every market on the newest contract of a network ("v3-1" ... "v3-33"), for the sitemap. */
+export async function currentMarketKeys(net = pickNet()) {
+  const config = net === "mainnet" ? NETWORKS.arcMainnet : NETWORKS.arcTestnet;
+  const version = [3, 2].find((v) => config[`v${v}`]);
+  if (!version) return [];
+  const count = Number(await contractFor(net, version).marketCount());
+  return Array.from({ length: count }, (_, i) => `v${version}-${i + 1}`);
 }
 
 export const formatDate = (seconds) =>

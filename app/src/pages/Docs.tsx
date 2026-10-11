@@ -3,6 +3,7 @@ import SplitText from '@/components/SplitText'
 import { Asterisk, Decode, Label } from '@/components/site'
 import { ARC, CONTRACTS, CURRENT_VERSION, IS_TESTNET, addressUrl, type Version } from '@/lib/chain'
 import { useBoot, useScrollMotion } from '@/lib/motion'
+import { usePageMeta } from '@/lib/meta'
 
 const Gallery = lazy(() => import('@/mascot/Gallery'))
 
@@ -23,6 +24,7 @@ const SECTIONS = [
 
 export default function Docs() {
   const scope = useRef<HTMLDivElement>(null)
+  usePageMeta('Docs', 'How PredictArc works: wallets, USDC on Arc, payouts, cash-out, resolution and risks.')
   useBoot(scope)
   useScrollMotion(scope)
   return (

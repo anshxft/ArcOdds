@@ -3,6 +3,7 @@ import SplitText from '@/components/SplitText'
 import { Asterisk, Decode, Label, Orb } from '@/components/site'
 import { ARC, fetchMarkets } from '@/lib/chain'
 import { useBoot, useScrollMotion } from '@/lib/motion'
+import { usePageMeta } from '@/lib/meta'
 
 async function probe(check: () => Promise<unknown>) {
   try {
@@ -21,6 +22,7 @@ const CHECKS = [
 
 export default function Status() {
   const scope = useRef<HTMLDivElement>(null)
+  usePageMeta('Status', 'Live checks for the Arc network, the PredictArc contracts and the Arc explorer.')
   const [results, setResults] = useState<(boolean | null)[]>(CHECKS.map(() => null))
   useBoot(scope)
   useScrollMotion(scope)
