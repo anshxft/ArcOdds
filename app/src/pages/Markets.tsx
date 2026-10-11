@@ -3,6 +3,7 @@ import SplitText from '@/components/SplitText'
 import { Decode, Label, Orb } from '@/components/site'
 import { MarketCard } from '@/components/market'
 import { bettorCount, byRelevance, marketState, useMarkets } from '@/lib/markets'
+import { ARC } from '@/lib/chain'
 import { useBoot, useScrollMotion } from '@/lib/motion'
 import { mascot } from '@/mascot/react'
 
@@ -93,10 +94,10 @@ export default function Markets() {
         {loading && (
           <div className="cell col-span-full flex min-h-[120vh] items-start justify-center gap-3 p-20">
             <Orb state="searching" label="Loading markets" />
-            <Label>Reading Arc Testnet…</Label>
+            <Label>Reading {ARC.name}…</Label>
           </div>
         )}
-        {error && !markets.length && <p className="cell col-span-full p-10 text-sm">Could not reach Arc Testnet: {error}</p>}
+        {error && !markets.length && <p className="cell col-span-full p-10 text-sm">Could not reach {ARC.name}: {error}</p>}
         {!loading && !list.length && !error && <p className="cell col-span-full p-10 text-sm text-muted">No markets match. Try another search or category.</p>}
         {list.map((market) => <MarketCard key={market.key} market={market} bettors={bettorCount(bets, market.key)} />)}
       </section>

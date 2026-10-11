@@ -1,19 +1,21 @@
 // Served only to link-preview crawlers (see the user-agent rewrite in vercel.json):
 // the SPA can't set per-market <meta> tags for bots that don't run JavaScript.
-import { formatDate, readMarket, statusLabel } from "./_market.js";
+import { MAINNET_LIVE, formatDate, pickNet, readMarket, statusLabel } from "./_market.js";
 
 const SITE = "https://www.arcpredict.xyz";
 const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 
 export async function GET(request) {
-  const key = new URL(request.url).searchParams.get("key");
-  const market = await readMarket(key);
-  const url = market ? `${SITE}/market/${market.key}` : SITE;
+  const params = new URL(request.url).searchParams;
+  const market = await readMarket(params.get("key"), pickNet(params.get("net")));
+  // Testnet links keep ?net=testnet once mainnet is the default, so they open the same market.
+  const netQuery = market?.testnet && MAINNET_LIVE ? "net=testnet" : "";
+  const url = market ? `${SITE}/market/${market.key}${netQuery ? `?${netQuery}` : ""}` : SITE;
   const title = market ? `${market.question} — PredictArc` : "PredictArc — prediction markets on Arc";
   const description = market
-    ? `${statusLabel(market)}. YES ${market.yes}% / NO ${100 - market.yes}% · closes ${formatDate(market.deadline)} · ${market.category}. Bet with test USDC on Arc.`
-    : "Prediction markets settled in USDC on Arc Testnet.";
-  const image = market ? `${SITE}/api/og?key=${market.key}` : `${SITE}/api/og`;
+    ? `${statusLabel(market)}. YES ${market.yes}% / NO ${100 - market.yes}% · closes ${formatDate(market.deadline)} · ${market.category}. Bet with ${market.testnet ? "free test USDC" : "USDC"} on Arc.`
+    : "Prediction markets settled in USDC on Arc.";
+  const image = market ? `${SITE}/api/og?key=${market.key}${netQuery ? `&${netQuery}` : ""}` : `${SITE}/api/og`;
 
   const html = `<!doctype html>
 <html lang="en"><head>

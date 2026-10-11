@@ -5,7 +5,7 @@ import CountUp from '@/components/CountUp'
 import SplitText from '@/components/SplitText'
 import { Asterisk, Decode, Label, Orb } from '@/components/site'
 import { Halftone, MarketCard } from '@/components/market'
-import { ARC, txUrl } from '@/lib/chain'
+import { ARC, IS_TESTNET, switchNetwork, txUrl } from '@/lib/chain'
 import { bettorCount, byRelevance, marketImage, marketState, shortAddress, timeAgo, useMarkets } from '@/lib/markets'
 import { useBoot, useInView, useMarquee, useScrollMotion } from '@/lib/motion'
 import { poolPayout } from '@/lib/payout'
@@ -70,7 +70,7 @@ export default function Home() {
   const resolved = markets.filter((market) => market.status === 1).sort((a, b) => b.deadline - a.deadline).slice(0, 4)
   const stats = [
     ['Markets', markets.length, '', 'On the Arc contract'],
-    ['Volume', Math.round(markets.reduce((sum, m) => sum + m.volume, 0)), ' USDC', 'Test USDC in pools'],
+    ['Volume', Math.round(markets.reduce((sum, m) => sum + m.volume, 0)), ' USDC', IS_TESTNET ? 'Test USDC in pools' : 'USDC in pools'],
     ['Traders', bettorCount(bets), '', 'Unique wallets'],
     ['Predictions', bets.length, '', 'Confirmed bets'],
     ['Resolved', markets.filter((m) => m.status === 1).length, '', 'Settled by owner'],
@@ -138,11 +138,15 @@ export default function Home() {
         <div className="cell flex flex-col justify-between gap-8 p-6 md:col-span-5 md:p-8" data-boot>
           <div>
             <p className="max-w-md text-2xl leading-snug md:text-[28px]">The crowd's best guess, priced in USDC and settled on Arc.</p>
-            <p className="label mt-3 text-muted">/a testnet prediction market/</p>
+            <p className="label mt-3 text-muted">{IS_TESTNET ? '/a testnet prediction market/' : '/live on Arc mainnet/'}</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link to="/markets" className="press label bg-ink px-5 py-3.5 text-paper hover:bg-signal hover:text-on-signal">Explore markets</Link>
-            <a href={ARC.faucet} target="_blank" rel="noreferrer" className="press label border border-line-strong px-5 py-3.5 hover:bg-ink hover:text-paper">Claim free test USDC</a>
+            {ARC.faucet ? (
+              <a href={ARC.faucet} target="_blank" rel="noreferrer" className="press label border border-line-strong px-5 py-3.5 hover:bg-ink hover:text-paper">Claim free test USDC</a>
+            ) : (
+              <button type="button" onClick={() => switchNetwork('testnet')} className="press label border border-line-strong px-5 py-3.5 hover:bg-ink hover:text-paper">Try it free on testnet</button>
+            )}
           </div>
         </div>
         <div ref={gridCell} className="cell relative hidden min-h-64 md:col-span-3 md:block" data-boot>
@@ -182,7 +186,7 @@ export default function Home() {
       <SectionHead kicker="Live / v2 contract / rules on-chain" title="Fresh predictions" action={<Link to="/markets" className="press label hover-ink border border-line-strong px-4 py-2.5">All markets</Link>} />
       <section className="frame grid border-t-0 md:grid-cols-3">
         {loading
-          ? <div className="cell col-span-full flex min-h-[460px] items-center justify-center gap-3 p-16"><Orb state="searching" label="Loading markets" /><Label>Reading Arc Testnet…</Label></div>
+          ? <div className="cell col-span-full flex min-h-[460px] items-center justify-center gap-3 p-16"><Orb state="searching" label="Loading markets" /><Label>Reading {ARC.name}…</Label></div>
           : featured.map((market) => <MarketCard key={market.key} market={market} bettors={bettorCount(bets, market.key)} featured />)}
       </section>
 
@@ -240,8 +244,8 @@ export default function Home() {
       <SectionHead kicker="Human / expression / integration" title="How it works" />
       <section className="frame grid border-t-0 md:grid-cols-4">
         {[
-          ['Connect', 'Use any browser wallet. PredictArc switches it to Arc Testnet for you.'],
-          ['Fund', 'Claim free test USDC from the Circle faucet. It is also the gas token.'],
+          ['Connect', `Use any browser wallet. PredictArc switches it to ${ARC.name} for you.`],
+          ['Fund', IS_TESTNET ? 'Claim free test USDC from the Circle faucet. It is also the gas token.' : 'Bring USDC to Arc (bridge it with CCTP). It is also the gas token.'],
           ['Predict', 'Stake on YES or NO. Your stake joins that side of the pool.'],
           ['Claim', 'After the deadline the owner sets the outcome. Winners split the pool minus 2%.'],
         ].map(([title, body], index) => (

@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import SplitText from '@/components/SplitText'
 import { Asterisk, Decode, Label, Orb, WalletButton } from '@/components/site'
 import { BigOdds, Halftone, OddsBar, PoolChart } from '@/components/market'
-import { ARC, addressUrl, fetchBalance, marketKey, parseMarketKey, txUrl, type Market as MarketT, type Side } from '@/lib/chain'
+import { ARC, IS_TESTNET, MAINNET_LIVE, addressUrl, fetchBalance, marketKey, parseMarketKey, txUrl, type Market as MarketT, type Side } from '@/lib/chain'
 import { bettorCount, formatDate, formatUsdc, marketImage, marketState, refreshMarkets, shortAddress, stateLabel, timeAgo, useMarkets } from '@/lib/markets'
 import { quote } from '@/lib/payout'
 import { useBoot, useScrollMotion } from '@/lib/motion'
@@ -25,7 +25,7 @@ function localBrief(market: MarketT): Brief {
     summary: `The pool prices "${market.question}" at ${yes}% YES and ${100 - yes}% NO.`,
     yesCase: [`The pool leans ${yes >= 50 ? 'toward' : 'against'} YES at ${yes}%.`, `A clear catalyst before ${formatDate(market.deadline)} could move it.`, 'The question resolves on a single, checkable outcome.'],
     noCase: [`NO still holds ${100 - yes}% of the pool.`, 'Timing risk: the event must happen before the deadline.', 'Weak or late evidence favours NO.'],
-    risks: ['Testnet pools are small, so one bet can swing the odds.', 'Pool odds reflect stakes, not a forecast.', 'The contract owner sets the outcome after the deadline.'],
+    risks: ['Pools are small, so one bet can swing the odds.', 'Pool odds reflect stakes, not a forecast.', 'The contract owner sets the outcome after the deadline.'],
     watchlist: [`News around ${market.category}.`, 'Large bets landing on either side.', 'The resolution source near the deadline.'],
   }
 }
@@ -88,6 +88,8 @@ function AiBrief({ market }: { market: MarketT }) {
   )
 }
 
+const RISK_KEY = 'pa_mainnet_risk_ok'
+
 function TradePanel({ market }: { market: MarketT }) {
   const { account } = useWallet()
   const [side, setSide] = useState<Side>('YES')
@@ -98,6 +100,23 @@ function TradePanel({ market }: { market: MarketT }) {
   const stake = Number(amount) || 0
   const GAS_RESERVE = 0.02 // USDC is also Arc's gas token, so keep a little back
   const tooMuch = balance !== null && stake > balance - GAS_RESERVE
+  // Mainnet moves real USDC through an unaudited contract: ask once, remember the answer.
+  const [accepted, setAccepted] = useState(() => {
+    try {
+      return IS_TESTNET || localStorage.getItem(RISK_KEY) === '1'
+    } catch {
+      return IS_TESTNET
+    }
+  })
+  const accept = (value: boolean) => {
+    setAccepted(value)
+    try {
+      if (value) localStorage.setItem(RISK_KEY, '1')
+      else localStorage.removeItem(RISK_KEY)
+    } catch {
+      /* storage blocked: ask again next visit */
+    }
+  }
 
   useEffect(() => {
     if (!account) return setBalance(null)
@@ -114,13 +133,13 @@ function TradePanel({ market }: { market: MarketT }) {
   const odds = side === 'YES' ? market.yesOdds : 100 - market.yesOdds
 
   async function submit() {
-    if (!(stake > 0)) return
+    if (!(stake > 0) || !accepted) return
     setPending(true)
     mascot('working', { ms: 60_000, say: `Sending ${stake} USDC on ${side}…` })
     const run = placeBet(market.version, market.id, side === 'YES', stake)
     toast.promise(run, {
       loading: `Placing ${stake} USDC on ${side}…`,
-      success: (hash) => ({ message: 'Bet confirmed on Arc Testnet', action: { label: 'View tx', onClick: () => window.open(txUrl(hash), '_blank', 'noopener') } }),
+      success: (hash) => ({ message: `Bet confirmed on ${ARC.name}`, action: { label: 'View tx', onClick: () => window.open(txUrl(hash), '_blank', 'noopener') } }),
       error: (error) => errorText(error, 'Bet failed'),
     })
     try {
@@ -205,17 +224,23 @@ function TradePanel({ market }: { market: MarketT }) {
           <p className="label border border-line-strong p-3">Legacy contract: new bets are closed here. Existing positions stay claimable. <Link to="/markets" className="underline">See live v2 markets</Link></p>
         ) : account ? (
           <>
+          {!IS_TESTNET && (
+            <label className="flex cursor-pointer items-start gap-2.5 border border-signal p-3 text-xs leading-relaxed">
+              <input type="checkbox" checked={accepted} onChange={(event) => accept(event.target.checked)} className="mt-0.5 size-4 shrink-0 accent-[var(--signal)]" />
+              <span>Real USDC on Arc mainnet. The contract is unaudited and the owner sets outcomes from the rules below. I can afford to lose this stake, and prediction markets are legal where I live.</span>
+            </label>
+          )}
           <button
             type="button"
             onClick={submit}
             onPointerEnter={(event) => event.pointerType === 'mouse' && stake > 0 && !pending && !tooMuch && mascot('excited', { ms: 1800 })}
-            disabled={!stake || pending || tooMuch}
+            disabled={!stake || pending || tooMuch || !accepted}
             className={`press label flex min-h-13 w-full items-center justify-center gap-3 disabled:opacity-40 ${side === 'YES' ? 'bg-ink text-paper' : 'bg-signal text-on-signal'}`}
           >
             {pending && <Orb state="working" size={20} label="Submitting" />}
             {pending ? 'Confirm in wallet…' : tooMuch ? 'Not enough USDC' : `Buy ${side} for ${stake || 0} USDC`}
           </button>
-          {tooMuch && <a href={ARC.faucet} target="_blank" rel="noreferrer" className="label block text-center underline">Get free test USDC</a>}
+          {tooMuch && ARC.faucet && <a href={ARC.faucet} target="_blank" rel="noreferrer" className="label block text-center underline">Get free test USDC</a>}
           </>
         ) : (
           <WalletButton className="min-h-13 w-full justify-center" />
@@ -227,7 +252,7 @@ function TradePanel({ market }: { market: MarketT }) {
 }
 
 function Share({ market }: { market: MarketT }) {
-  const url = `${location.origin}/market/${market.key}`
+  const url = `${location.origin}/market/${market.key}${IS_TESTNET && MAINNET_LIVE ? '?net=testnet' : ''}`
   const text = `${market.question} ${market.yesOdds}% YES on PredictArc`
   const enc = encodeURIComponent
   const links = [
@@ -326,7 +351,7 @@ export default function Market() {
           </div>
           <AiBrief market={market} />
           <div className="cell" data-reveal>
-            <div className="label border-b border-line px-5 py-3 text-ink">Arc Testnet activity</div>
+            <div className="label border-b border-line px-5 py-3 text-ink">{ARC.name} activity</div>
             {marketBets.length ? [...marketBets].reverse().slice(0, 12).map((bet, index) => (
               <a key={index} href={bet.txHash ? txUrl(bet.txHash) : undefined} target="_blank" rel="noreferrer" className="grid grid-cols-[52px_1fr_auto] items-center gap-3 border-b border-line px-5 py-3 last:border-b-0 hover:bg-paper-2">
                 <span className={`label px-1.5 py-0.5 text-center ${bet.side === 'YES' ? 'bg-ink text-paper' : 'bg-signal text-on-signal'}`}>{bet.side}</span>

@@ -1,18 +1,57 @@
-// Read-side access to the PredictArc contracts on Arc Testnet (viem).
-// v2 (PredictArcV2) is current; v1 (ArcOdds) is legacy: its positions stay readable and claimable.
+// Read-side access to the PredictArc contracts on Arc (viem). Networks and contract addresses come
+// from the repo-root networks.json, which the deploy script updates.
+// Mainnet is the default once it has a v2 contract; testnet stays one switch away (judges and
+// anyone without real USDC can try it free). v1 (ArcOdds) is a testnet-only legacy contract.
 import { createPublicClient, decodeAbiParameters, defineChain, formatEther, getAddress, http, parseAbi, type Address } from 'viem'
+import NETWORKS from '../../../networks.json'
+
+export type NetworkName = 'mainnet' | 'testnet'
+const CONFIG = { mainnet: NETWORKS.arcMainnet, testnet: NETWORKS.arcTestnet }
+const NETWORK_KEY = 'pa_net'
+const available = (name: NetworkName): NetworkName => (CONFIG[name].v2 ? name : 'testnet')
+
+/** ?net=testnet|mainnet in the URL wins (and is remembered), then the saved choice, then the default. */
+function pickNetwork(): NetworkName {
+  try {
+    const fromUrl = new URLSearchParams(location.search).get('net')
+    if (fromUrl === 'mainnet' || fromUrl === 'testnet') {
+      localStorage.setItem(NETWORK_KEY, fromUrl)
+      return available(fromUrl)
+    }
+    const saved = localStorage.getItem(NETWORK_KEY)
+    if (saved === 'mainnet' || saved === 'testnet') return available(saved)
+  } catch {
+    /* storage blocked: default */
+  }
+  return available('mainnet')
+}
+
+export const NETWORK = pickNetwork()
+export const IS_TESTNET = NETWORK === 'testnet'
+export const MAINNET_LIVE = Boolean(CONFIG.mainnet.v2)
+const NET = CONFIG[NETWORK]
+
+/** Reloads the app on the other network (all modules read the network once, at load). */
+export function switchNetwork(name: NetworkName) {
+  try {
+    localStorage.setItem(NETWORK_KEY, name)
+  } catch {
+    /* storage blocked: the URL parameter still carries it */
+  }
+  location.href = `${location.pathname}?net=${name}`
+}
 
 export const ARC = {
-  chainId: 5042002,
-  chainIdHex: '0x4cef52',
-  name: 'Arc Testnet',
-  rpc: 'https://rpc.testnet.arc.network',
-  explorer: 'https://explorer.testnet.arc.io',
-  faucet: 'https://faucet.circle.com',
+  chainId: NET.chainId,
+  chainIdHex: `0x${NET.chainId.toString(16)}`,
+  name: NET.name,
+  rpc: NET.rpc,
+  explorer: NET.explorer,
+  faucet: NET.faucet, // testnet only; null on mainnet
 }
 const BET_PLACED_TOPIC = '0x4af71b021e799c62c158bd54636ca8da2fa26115a21a2dc6efe486ec104fd15f' // same event in v1 and v2
 
-export const arcTestnet = defineChain({
+export const arcChain = defineChain({
   id: ARC.chainId,
   name: ARC.name,
   nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
@@ -21,8 +60,8 @@ export const arcTestnet = defineChain({
   contracts: { multicall3: { address: '0xcA11bde05977b3631167028862bE2a173976CA11' } },
 })
 
-// Arc RPC mishandles JSON-RPC batches, so keep transport batching off; reads fold into Multicall3 instead.
-export const publicClient = createPublicClient({ chain: arcTestnet, transport: http(ARC.rpc, { batch: false }) })
+// The testnet RPC mishandles JSON-RPC batches, so keep transport batching off; reads fold into Multicall3 instead.
+export const publicClient = createPublicClient({ chain: arcChain, transport: http(ARC.rpc, { batch: false }) })
 
 const SHARED = [
   'function marketCount() view returns (uint256)',
@@ -44,12 +83,18 @@ const ABI_V1 = parseAbi([
   'function getMarket(uint256) view returns (string question, string category, uint256 deadline, uint256 yesPool, uint256 noPool, bool outcome, uint8 status, address creator)',
 ])
 
-export const CONTRACTS = {
-  2: { address: '0xfadbE0877379F3a6CBC8A612b9B28b1B25baa796' as Address, abi: ABI_V2 },
-  1: { address: '0x19D638Af6b2De9718Eff496fc27a304155D6Af44' as Address, abi: ABI_V1 },
-} as const
-export type Version = keyof typeof CONTRACTS
-const VERSIONS: Version[] = [2, 1]
+type Contract = { address: Address; abi: typeof ABI_V2 | typeof ABI_V1 }
+export type Version = 2 | 1
+export const CONTRACTS: { 2: { address: Address; abi: typeof ABI_V2 }; 1?: { address: Address; abi: typeof ABI_V1 } } = {
+  2: { address: NET.v2 as Address, abi: ABI_V2 },
+  ...(NET.v1 ? { 1: { address: NET.v1 as Address, abi: ABI_V1 } } : {}),
+}
+export const contract = (version: Version): Contract => {
+  const found = CONTRACTS[version]
+  if (!found) throw new Error(`No v${version} contract on ${ARC.name}`)
+  return found
+}
+const VERSIONS: Version[] = CONTRACTS[1] ? [2, 1] : [2]
 
 export type Side = 'YES' | 'NO'
 export interface Market {
@@ -98,7 +143,7 @@ export const addressUrl = (address: string) => `${ARC.explorer}/address/${addres
 
 // One eth_call per batch through Multicall3; results come back in call order.
 async function readMany(version: Version, functionName: string, argsList: unknown[][]): Promise<unknown[]> {
-  const { address, abi } = CONTRACTS[version]
+  const { address, abi } = contract(version)
   return publicClient.multicall({
     allowFailure: false,
     contracts: argsList.map((args) => ({ address, abi, functionName, args })) as never,
@@ -106,7 +151,7 @@ async function readMany(version: Version, functionName: string, argsList: unknow
 }
 
 async function marketIds(version: Version) {
-  const { address, abi } = CONTRACTS[version]
+  const { address, abi } = contract(version)
   const count = (await publicClient.readContract({ address, abi, functionName: 'marketCount' } as never)) as bigint
   return Array.from({ length: Number(count) }, (_, index) => index + 1)
 }
@@ -180,7 +225,7 @@ async function fetchVersionBets(version: Version): Promise<Bet[]> {
   const bets: Bet[] = []
   let params = ''
   for (let page = 0; page < 20; page += 1) {
-    const response = await fetch(`${ARC.explorer}/api/v2/addresses/${CONTRACTS[version].address}/logs${params}`)
+    const response = await fetch(`${ARC.explorer}/api/v2/addresses/${contract(version).address}/logs${params}`)
     if (!response.ok) throw new Error(`Explorer request failed: ${response.status}`)
     const data = await response.json()
     for (const log of data.items ?? []) {

@@ -1,7 +1,7 @@
 // GET /api/og?key=v2-3 -> 1200x630 PNG share card in the site's cybercore style.
 // Without a (valid) key it renders the generic site card.
 import { ImageResponse } from "@vercel/og";
-import { formatDate, readMarket, statusLabel } from "./_market.js";
+import { formatDate, pickNet, readMarket, statusLabel } from "./_market.js";
 
 const PAPER = "#e4e4e0";
 const INK = "#0b0b0b";
@@ -62,7 +62,7 @@ function marketCard(market) {
   return h("div", { width: "100%", height: "100%", flexDirection: "column", background: PAPER, color: INK, border: `1px solid ${LINE}` },
     h("div", { height: 96, alignItems: "center", justifyContent: "space-between", padding: "0 48px", borderBottom: `1px solid ${LINE}` },
       h("div", { alignItems: "center", gap: 14 }, mark(40), h("div", { fontFamily: "Tektur", fontSize: 44, letterSpacing: -1 }, "predictarc")),
-      label(`Market ${market.key} / ${market.category}`),
+      label(`Market ${market.key} / ${market.category}${market.testnet ? " / testnet" : ""}`),
     ),
     h("div", { flex: 1, flexDirection: "column", justifyContent: "center", padding: "0 48px", gap: 18, borderBottom: `1px solid ${LINE}` },
       h("div", { alignItems: "center", gap: 14 }, asterisk(30), label(statusLabel(market), { color: INK })),
@@ -98,8 +98,9 @@ function siteCard() {
 }
 
 export async function GET(request) {
-  const key = new URL(request.url).searchParams.get("key");
-  const [fonts, market] = await Promise.all([loadFonts(), key ? readMarket(key) : null]);
+  const params = new URL(request.url).searchParams;
+  const key = params.get("key");
+  const [fonts, market] = await Promise.all([loadFonts(), key ? readMarket(key, pickNet(params.get("net"))) : null]);
   return new ImageResponse(market ? marketCard(market) : siteCard(), {
     width: 1200,
     height: 630,

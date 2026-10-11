@@ -7,7 +7,7 @@ import { ThinkingOrb } from 'thinking-orbs'
 import Noise from '@/components/Noise'
 import VariableProximity from '@/components/VariableProximity'
 import DecryptedText from '@/components/DecryptedText'
-import { ARC, CONTRACTS, fetchPositions } from '@/lib/chain'
+import { ARC, CONTRACTS, IS_TESTNET, MAINNET_LIVE, NETWORK, fetchPositions, switchNetwork, type NetworkName } from '@/lib/chain'
 import { formatUsdc, shortAddress, useMarkets } from '@/lib/markets'
 import { gsap, reducedMotion } from '@/lib/motion'
 import { connect, disconnect, useIsOwner, useWallet, walletOptions, type WalletOption } from '@/lib/wallet'
@@ -62,6 +62,26 @@ function Logo() {
       <LogoMark className="logo-mark h-[22px] w-auto" />
       predictarc
     </Link>
+  )
+}
+
+/** Mainnet (real USDC) / Testnet (free test USDC). Switching reloads the app on that network. */
+function NetworkSwitch() {
+  const options: [NetworkName, string][] = [['mainnet', 'Mainnet'], ['testnet', 'Testnet']]
+  return (
+    <span className="flex border border-line-strong" role="group" aria-label="Network">
+      {options.map(([name, label]) => (
+        <button
+          key={name}
+          type="button"
+          aria-pressed={NETWORK === name}
+          onClick={() => NETWORK !== name && switchNetwork(name)}
+          className={`press label px-2.5 py-1 ${NETWORK === name ? (name === 'mainnet' ? 'bg-signal text-on-signal' : 'bg-ink text-paper') : 'hover-ink'}`}
+        >
+          {label}
+        </button>
+      ))}
+    </span>
   )
 }
 
@@ -260,7 +280,7 @@ function Header() {
         <nav className="cell hidden items-stretch md:flex" aria-label="Main">
           <span className="hidden items-center gap-3 border-r border-line px-5 xl:flex">
             <span className="h-px w-10 bg-line-strong" aria-hidden="true" />
-            <span className="label text-muted">Testnet / 2026</span>
+            {MAINNET_LIVE ? <NetworkSwitch /> : <span className="label text-muted">Testnet / 2026</span>}
           </span>
           {NAV.map(([to, label]) => (
             <NavLink key={to} to={to} data-tour={label.toLowerCase()} className={({ isActive }) => `press label hover-ink flex items-center px-4 lg:px-5 ${isActive ? 'bg-ink text-paper' : ''}`}>
@@ -272,9 +292,11 @@ function Header() {
               <Asterisk className="size-3" /> Admin
             </NavLink>
           )}
-          <a href={ARC.faucet} target="_blank" rel="noreferrer" data-tour="faucet" className="press label hover-ink ml-auto hidden items-center gap-2 border-l border-line px-5 whitespace-nowrap lg:flex">
-            <Asterisk className="size-3" /> Free test USDC
-          </a>
+          {ARC.faucet && (
+            <a href={ARC.faucet} target="_blank" rel="noreferrer" data-tour="faucet" className="press label hover-ink ml-auto hidden items-center gap-2 border-l border-line px-5 whitespace-nowrap lg:flex">
+              <Asterisk className="size-3" /> Free test USDC
+            </a>
+          )}
         </nav>
         <div className="cell flex items-stretch" data-tour="wallet">
           <ThemeToggle className="hidden h-full px-4 md:flex" />
@@ -300,8 +322,11 @@ function Footer() {
     <footer className="mt-24">
       <div className="frame grid md:grid-cols-4">
         <div className="cell p-6 md:col-span-2">
-          <p className="max-w-sm text-lg leading-snug">Prediction markets settled in USDC on Arc Testnet. No real funds, real contracts.</p>
-          <p className="label mt-3 text-muted">/a testnet experiment/</p>
+          <p className="max-w-sm text-lg leading-snug">
+            {IS_TESTNET ? `Prediction markets settled in USDC on ${ARC.name}. No real funds, real contracts.` : 'Prediction markets settled in real USDC on Arc. Unaudited beta: only bet what you can afford to lose.'}
+          </p>
+          <p className="label mt-3 text-muted">{IS_TESTNET ? '/a testnet experiment/' : '/real USDC, your call/'}</p>
+          {MAINNET_LIVE && <div className="mt-4 w-fit"><NetworkSwitch /></div>}
         </div>
         <div className="cell flex flex-col gap-2 p-6">
           <Label>Explore</Label>
@@ -312,7 +337,7 @@ function Footer() {
         <div className="cell flex flex-col gap-2 p-6">
           <Label>Elsewhere</Label>
           <a href={`${ARC.explorer}/address/${CONTRACTS[2].address}`} target="_blank" rel="noreferrer" className="link-line w-fit">Contract</a>
-          <a href={ARC.faucet} target="_blank" rel="noreferrer" data-tour="faucet" className="link-line w-fit">Faucet</a>
+          {ARC.faucet && <a href={ARC.faucet} target="_blank" rel="noreferrer" data-tour="faucet" className="link-line w-fit">Faucet</a>}
           <a href="https://x.com/imalanxx" target="_blank" rel="noreferrer" className="link-line w-fit">X (Twitter)</a>
           <a href="https://github.com/anshxft/ArcOdds" target="_blank" rel="noreferrer" className="link-line w-fit">Source code (AGPL-3.0)</a>
           <button type="button" onClick={() => setPoringHidden(!poringHidden)} className="link-line w-fit text-left">

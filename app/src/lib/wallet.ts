@@ -1,7 +1,7 @@
 // Injected-wallet connection (EIP-6963 discovery, window.ethereum fallback) and signed actions.
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { createWalletClient, custom, parseEther, type Address } from 'viem'
-import { ARC, CONTRACTS, arcTestnet, fetchOwner, publicClient, type Version } from './chain'
+import { ARC, arcChain, contract, fetchOwner, publicClient, type Version } from './chain'
 
 interface Eip1193 {
   request(args: { method: string; params?: unknown[] }): Promise<unknown>
@@ -69,7 +69,7 @@ async function ensureArc(provider: Eip1193) {
   try {
     await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: ARC.chainIdHex }] })
   } catch (error) {
-    if ((error as { code?: number }).code !== 4902) throw new Error('Please switch your wallet to Arc Testnet.')
+    if ((error as { code?: number }).code !== 4902) throw new Error(`Please switch your wallet to ${ARC.name}.`)
     await provider.request({
       method: 'wallet_addEthereumChain',
       params: [{
@@ -104,8 +104,8 @@ async function write(version: Version, functionName: string, args: unknown[], va
   if (!provider) throw new Error('No browser wallet found. Install MetaMask, Rabby or OKX Wallet.')
   const [account] = (await provider.request({ method: 'eth_requestAccounts' })) as Address[]
   await ensureArc(provider) // never sign on the wrong network
-  const wallet = createWalletClient({ account, chain: arcTestnet, transport: custom(provider) })
-  const { address, abi } = CONTRACTS[version]
+  const wallet = createWalletClient({ account, chain: arcChain, transport: custom(provider) })
+  const { address, abi } = contract(version)
   const hash = await wallet.writeContract({ address, abi, functionName, args, value } as never)
   const receipt = await publicClient.waitForTransactionReceipt({ hash })
   if (receipt.status !== 'success') throw new Error('Transaction reverted on-chain')

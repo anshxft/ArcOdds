@@ -1,19 +1,28 @@
-// Shared by the OG image and the crawler page: reads one market from either PredictArc contract.
+// Shared by the OG image and the crawler page: reads one market from PredictArc on Arc mainnet or
+// testnet. Addresses come from the repo-root networks.json (written by the deploy script).
+import { createRequire } from "node:module";
 import { Contract, JsonRpcProvider, formatEther } from "ethers";
 
-const provider = new JsonRpcProvider("https://rpc.testnet.arc.network", 5042002, { staticNetwork: true, batchMaxCount: 1 });
-const CONTRACTS = {
-  2: new Contract(
-    "0xfadbE0877379F3a6CBC8A612b9B28b1B25baa796",
-    ["function getMarket(uint256) view returns (tuple(string question, string category, string rules, uint256 deadline, uint256 yesPool, uint256 noPool, bool outcome, uint8 status, address creator))"],
-    provider,
-  ),
-  1: new Contract(
-    "0x19D638Af6b2De9718Eff496fc27a304155D6Af44",
-    ["function getMarket(uint256) view returns (string question, string category, uint256 deadline, uint256 yesPool, uint256 noPool, bool outcome, uint8 status, address creator)"],
-    provider,
-  ),
+const NETWORKS = createRequire(import.meta.url)("../networks.json");
+const ABI = {
+  2: ["function getMarket(uint256) view returns (tuple(string question, string category, string rules, uint256 deadline, uint256 yesPool, uint256 noPool, bool outcome, uint8 status, address creator))"],
+  1: ["function getMarket(uint256) view returns (string question, string category, uint256 deadline, uint256 yesPool, uint256 noPool, bool outcome, uint8 status, address creator)"],
 };
+export const MAINNET_LIVE = Boolean(NETWORKS.arcMainnet.v2);
+
+/** Same rule as the site: mainnet once it has a contract, unless ?net=testnet. */
+export const pickNet = (net) => (net === "testnet" || !MAINNET_LIVE ? "testnet" : "mainnet");
+
+const contracts = {};
+function contractFor(net, version) {
+  const config = net === "mainnet" ? NETWORKS.arcMainnet : NETWORKS.arcTestnet;
+  const address = version === 2 ? config.v2 : config.v1;
+  if (!address) return null;
+  const id = `${net}:${version}`;
+  // Batching off: the testnet RPC mishandles JSON-RPC batches.
+  contracts[id] ??= new Contract(address, ABI[version], new JsonRpcProvider(config.rpc, config.chainId, { staticNetwork: true, batchMaxCount: 1 }));
+  return contracts[id];
+}
 
 /** "v2-3" -> v2 market 3; a bare "3" is an old v1 link. Returns null for anything else. */
 export function parseKey(key) {
@@ -21,11 +30,12 @@ export function parseKey(key) {
   return match ? { version: Number(match[1] || 1), id: Number(match[2]) } : null;
 }
 
-export async function readMarket(key) {
+export async function readMarket(key, net = pickNet()) {
   const parsed = parseKey(key);
-  if (!parsed) return null;
+  const contract = parsed && contractFor(net, parsed.version);
+  if (!contract) return null;
   try {
-    const raw = await CONTRACTS[parsed.version].getMarket(parsed.id);
+    const raw = await contract.getMarket(parsed.id);
     const m = parsed.version === 2 ? raw : { question: raw[0], category: raw[1], deadline: raw[2], yesPool: raw[3], noPool: raw[4], outcome: raw[5], status: raw[6] };
     const total = m.yesPool + m.noPool;
     const yes = total === 0n ? 50 : Number((m.yesPool * 100n) / total);
@@ -38,6 +48,7 @@ export async function readMarket(key) {
       volume: Number(formatEther(total)),
       status: Number(m.status),
       outcome: m.outcome ? "YES" : "NO",
+      testnet: net === "testnet",
     };
   } catch {
     return null; // unknown id or RPC hiccup: callers fall back to the generic card

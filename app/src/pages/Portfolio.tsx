@@ -5,7 +5,7 @@ import SplitText from '@/components/SplitText'
 import CountUp from '@/components/CountUp'
 import { Decode, Label, Orb, WalletButton } from '@/components/site'
 import { Halftone } from '@/components/market'
-import { fetchPositions, txUrl, type Position, type Version } from '@/lib/chain'
+import { ARC, fetchPositions, txUrl, type Position, type Version } from '@/lib/chain'
 import { formatUsdc, marketImage, marketState, refreshMarkets, stateLabel, useMarkets } from '@/lib/markets'
 import { poolPayout } from '@/lib/payout'
 import { useBoot, useScrollMotion } from '@/lib/motion'
@@ -87,7 +87,7 @@ export default function Portfolio() {
         <section className="frame border-t-0">
           <div className="cell flex flex-col items-center gap-4 p-20 text-center">
             <Orb state="breathing" label="Waiting for a wallet" />
-            <p className="max-w-sm text-muted">Connect a wallet to see your Arc Testnet positions, payouts and anything ready to claim.</p>
+            <p className="max-w-sm text-muted">Connect a wallet to see your {ARC.name} positions, payouts and anything ready to claim.</p>
           </div>
         </section>
       ) : positions === null ? (

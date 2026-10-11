@@ -1,34 +1,35 @@
-// Deploys PredictArcV2, seeds MARKETS_V2, and writes deployment-v2.json.
+// Deploys PredictArcV2 and records its address in networks.json (read by the site, share cards
+// and scripts). Markets are added separately with add-markets.js.
+//   npx hardhat run scripts/deploy-v2.js --network arcTestnet
+//   CONFIRM_MAINNET=yes npx hardhat run scripts/deploy-v2.js --network arcMainnet
 const fs = require("fs");
 const path = require("path");
-const { MARKETS_V2 } = require("./markets-v2");
+const { mainnetGuard, NETWORKS_FILE } = require("./network");
 
 async function main() {
+  const name = hre.network.name;
+  const networks = JSON.parse(fs.readFileSync(NETWORKS_FILE, "utf8"));
+  if (!networks[name]) throw new Error(`Unknown network ${name}; add it to networks.json`);
+  if (networks[name].v2 && process.env.FORCE !== "yes") {
+    throw new Error(`networks.json already has a v2 contract on ${name} (${networks[name].v2}). Set FORCE=yes to deploy a new one.`);
+  }
+  mainnetGuard(name);
+
   const [deployer] = await ethers.getSigners();
-  console.log(`Deployer ${deployer.address}, balance ${ethers.formatEther(await ethers.provider.getBalance(deployer.address))} USDC`);
+  if (!deployer) throw new Error(`No deployer key for ${name}: set ${name === "arcMainnet" ? "MAINNET_PRIVATE_KEY" : "PRIVATE_KEY"} in .env`);
+  console.log(`Network ${name}, deployer ${deployer.address}, balance ${ethers.formatEther(await ethers.provider.getBalance(deployer.address))} USDC`);
 
   const contract = await (await ethers.getContractFactory("PredictArcV2")).deploy();
   await contract.waitForDeployment();
   const address = await contract.getAddress();
-  console.log(`PredictArcV2 deployed to ${address}`);
+  const receipt = await ethers.provider.getTransactionReceipt(contract.deploymentTransaction().hash);
+  console.log(`PredictArcV2 deployed to ${address} (block ${receipt.blockNumber})`);
 
-  for (const market of MARKETS_V2) {
-    const deadline = Math.floor(Date.parse(market.deadline) / 1000);
-    const tx = await contract.createMarket(market.question, market.category, market.rules, deadline);
-    await tx.wait();
-    console.log(`Created: ${market.question}`);
-  }
-
-  const output = {
-    contract: "PredictArcV2",
-    address,
-    network: "arcTestnet",
-    chainId: 5042002,
-    deployBlock: (await ethers.provider.getTransactionReceipt(contract.deploymentTransaction().hash)).blockNumber,
-    deployedAt: new Date().toISOString(),
-  };
-  fs.writeFileSync(path.join(__dirname, "..", "deployment-v2.json"), JSON.stringify(output, null, 2));
-  console.log(`Saved deployment-v2.json. Balance left ${ethers.formatEther(await ethers.provider.getBalance(deployer.address))} USDC`);
+  networks[name].v2 = address;
+  networks[name].v2DeployBlock = receipt.blockNumber;
+  fs.writeFileSync(NETWORKS_FILE, JSON.stringify(networks, null, 2) + "\n");
+  console.log(`Saved to networks.json. Balance left ${ethers.formatEther(await ethers.provider.getBalance(deployer.address))} USDC`);
+  console.log(`Next: add markets with  ${name === "arcMainnet" ? "CONFIRM_MAINNET=yes " : ""}npx hardhat run scripts/add-markets.js --network ${name}`);
 }
 
 main().catch((error) => {

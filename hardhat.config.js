@@ -1,9 +1,11 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
+const NETWORKS = require("./networks.json");
 
-const PRIVATE_KEY = process.env.PRIVATE_KEY || "";
-const ARC_RPC_URL = process.env.ARC_RPC_URL || "https://rpc.testnet.arc.network";
-const DEPLOYER_KEY = PRIVATE_KEY && !PRIVATE_KEY.startsWith("0x") ? `0x${PRIVATE_KEY}` : PRIVATE_KEY;
+const withPrefix = (key) => (key && !key.startsWith("0x") ? `0x${key}` : key);
+// Separate keys on purpose: the testnet key must never sign on mainnet by accident.
+const TESTNET_KEY = withPrefix(process.env.PRIVATE_KEY || "");
+const MAINNET_KEY = withPrefix(process.env.MAINNET_PRIVATE_KEY || "");
 
 module.exports = {
   solidity: {
@@ -17,21 +19,24 @@ module.exports = {
   },
   networks: {
     arcTestnet: {
-      url: ARC_RPC_URL,
-      chainId: 5042002,
-      accounts: DEPLOYER_KEY ? [DEPLOYER_KEY] : [],
+      url: process.env.ARC_RPC_URL || NETWORKS.arcTestnet.rpc,
+      chainId: NETWORKS.arcTestnet.chainId,
+      accounts: TESTNET_KEY ? [TESTNET_KEY] : [],
+    },
+    arcMainnet: {
+      url: process.env.ARC_MAINNET_RPC_URL || NETWORKS.arcMainnet.rpc,
+      chainId: NETWORKS.arcMainnet.chainId,
+      accounts: MAINNET_KEY ? [MAINNET_KEY] : [],
     },
   },
-  // Arc's explorer is Blockscout: `npx hardhat verify --network arcTestnet <address>`
+  // Arc's explorers are Blockscout: `npx hardhat verify --network <arcTestnet|arcMainnet> <address>`
   etherscan: {
-    apiKey: { arcTestnet: "blockscout" },
-    customChains: [
-      {
-        network: "arcTestnet",
-        chainId: 5042002,
-        urls: { apiURL: "https://explorer.testnet.arc.io/api", browserURL: "https://explorer.testnet.arc.io" },
-      },
-    ],
+    apiKey: { arcTestnet: "blockscout", arcMainnet: "blockscout" },
+    customChains: ["arcTestnet", "arcMainnet"].map((network) => ({
+      network,
+      chainId: NETWORKS[network].chainId,
+      urls: { apiURL: `${NETWORKS[network].explorer}/api`, browserURL: NETWORKS[network].explorer },
+    })),
   },
   sourcify: { enabled: false },
 };

@@ -16,7 +16,7 @@ import { setMascotHandler, setPoringHidden, type Mood } from './react'
 import { reducedMotion } from '@/lib/motion'
 import { formatDate, formatUsdc, marketState, shortAddress, useMarkets } from '@/lib/markets'
 import { useWallet } from '@/lib/wallet'
-import { fetchBalance, type Market } from '@/lib/chain'
+import { ARC, IS_TESTNET, fetchBalance, type Market } from '@/lib/chain'
 
 gsap.registerPlugin(Draggable)
 
@@ -35,9 +35,9 @@ interface Step {
 }
 
 const TOUR: Step[] = [
-  { text: 'PredictArc lets you bet YES or NO on real-world questions, with free test USDC. Let me show you around!', mood: 'welcome' },
+  { text: `PredictArc lets you bet YES or NO on real-world questions, ${IS_TESTNET ? 'with free test USDC' : 'settled in USDC'}. Let me show you around!`, mood: 'welcome' },
   { target: '[data-tour="faucet"]', text: 'Step 1: grab free test USDC here. It also pays the gas on Arc.' },
-  { target: '[data-tour="wallet"]', text: 'Step 2: connect a wallet. I switch it to Arc Testnet for you.' },
+  { target: '[data-tour="wallet"]', text: `Step 2: connect a wallet. I switch it to ${ARC.name} for you.` },
   { target: '[data-tour="markets"]', text: 'Step 3: every market lives here. Search, filter, pick one.' },
   { target: 'a.cell[href^="/market/"]', text: 'Tap any market to see the odds and place a bet.' },
   { target: '[data-tour="portfolio"]', text: 'Your bets and winnings live here. When you win, claim it there!' },
@@ -67,8 +67,10 @@ interface Progress {
   bet: boolean
 }
 const CHECKLIST: { key: keyof Progress; label: string; step: Step }[] = [
-  { key: 'wallet', label: 'Connect a wallet', step: { target: '[data-tour="wallet"]', text: 'Connect a wallet here. I switch it to Arc Testnet for you.' } },
-  { key: 'usdc', label: 'Get free test USDC', step: { target: '[data-tour="faucet"]', text: 'Get free test USDC here: pick Arc Testnet on the faucet page.' } },
+  { key: 'wallet', label: 'Connect a wallet', step: { target: '[data-tour="wallet"]', text: `Connect a wallet here. I switch it to ${ARC.name} for you.` } },
+  IS_TESTNET
+    ? { key: 'usdc', label: 'Get free test USDC', step: { target: '[data-tour="faucet"]', text: 'Get free test USDC here: pick Arc Testnet on the faucet page.' } }
+    : { key: 'usdc', label: 'Get USDC on Arc', step: { text: 'Bridge USDC to Arc from another chain (CCTP), or buy it in a wallet that supports Arc. A little also covers gas.' } },
   { key: 'bet', label: 'Place your first bet', step: { target: 'a.cell[href^="/market/"], [data-tour="trade"], [data-tour="markets"]', text: 'Pick a market and bet YES or NO. Even 1 USDC works!' } },
 ]
 const ONBOARDED = 'poring_onboarded'
@@ -552,7 +554,7 @@ export default function Mascot() {
       const soon = marketsRef.current.filter((m) => marketState(m) === 'open').sort((a, b) => a.deadline - b.deadline)[0]
       const tips = [
         'Drag me anywhere and let go. I bounce!',
-        'Free test USDC is up in the header.',
+        IS_TESTNET ? 'Free test USDC is up in the header.' : 'Want to practise first? Switch to Testnet in the header.',
         'Odds are just the pool split. They move with every bet.',
         'Winners split the losing side, minus 2%.',
         'Try the AI brief on any market.',

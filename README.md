@@ -43,7 +43,23 @@ npm test
 
 Tests include a check that the site's payout estimate (`app/src/lib/payout.ts`) matches the contract's real `claimWinnings` payout.
 
-To deploy a fresh v2, copy `.env.example` to `.env`, add a testnet-only deployer key, then run `npm run deploy:arc` (markets come from `scripts/markets-v2.js`). Update the address in `app/src/lib/chain.ts`, `api/_market.js` and `scripts/check-resolutions.js`.
+Networks and contract addresses live in `networks.json` (repo root). The site, the share cards and the scripts all read it; the deploy script writes to it.
+
+### Testnet
+
+Copy `.env.example` to `.env`, set `PRIVATE_KEY` (testnet-only wallet), then `npm run deploy:arc` and `npm run markets:arc` (markets come from `scripts/markets-v2.js`).
+
+### Mainnet (real USDC)
+
+The contract is unaudited and the owner decides outcomes. Every mainnet write needs `CONFIRM_MAINNET=yes` (bash: `CONFIRM_MAINNET=yes npm run ...`; PowerShell: `$env:CONFIRM_MAINNET="yes"; npm run ...`).
+
+1. Make a fresh wallet for the owner and fund it with a little USDC on Arc mainnet (bridge with CCTP). Deploying plus ~30 markets costs well under 1 USDC in gas.
+2. Put its key in `.env` as `MAINNET_PRIVATE_KEY` (never the testnet key).
+3. `CONFIRM_MAINNET=yes npm run deploy:mainnet` deploys and writes the address into `networks.json`.
+4. `CONFIRM_MAINNET=yes npm run markets:mainnet` creates the markets (skips any that close within the hour).
+5. `npx hardhat verify --network arcMainnet <address>` verifies the source on explorer.arc.io (if the explorer API refuses, verify by hand with the flattened source: `npx hardhat flatten contracts/PredictArcV2.sol`).
+6. Commit `networks.json` and push. Once `arcMainnet.v2` is set, the site opens on mainnet by default, with a Mainnet / Testnet switch in the header and footer (`?net=testnet` in a link opens testnet).
+7. Later, hand ownership to a multisig: `transferOwnership(safe)` from the owner, then `acceptOwnership()` from the Safe.
 
 ## Owner tasks
 
@@ -54,6 +70,7 @@ npm run check:arc                                           # what needs resolvi
 MARKET=1 OUTCOME=yes npm run resolve:arc                    # v1
 VERSION=2 MARKET=1 OUTCOME=yes npm run resolve:arc          # v2
 VERSION=2 MARKET=1 CANCEL="reason" npm run resolve:arc      # v2: void, bettors refund
+CONFIRM_MAINNET=yes VERSION=2 MARKET=1 OUTCOME=yes npm run resolve:mainnet   # mainnet
 ```
 
 Winners claim (and cancelled-market bettors refund) from the Portfolio page.

@@ -1,0 +1,22 @@
+{
+  "arcMainnet": {
+    "name": "Arc",
+    "chainId": 5042,
+    "rpc": "https://rpc.mainnet.arc.io",
+    "explorer": "https://explorer.arc.io",
+    "faucet": null,
+    "v2": null,
+    "v2DeployBlock": null,
+    "v1": null
+  },
+  "arcTestnet": {
+    "name": "Arc Testnet",
+    "chainId": 5042002,
+    "rpc": "https://rpc.testnet.arc.network",
+    "explorer": "https://explorer.testnet.arc.io",
+    "faucet": "https://faucet.circle.com",
+    "v2": "0xfadbE0877379F3a6CBC8A612b9B28b1B25baa796",
+    "v2DeployBlock": null,
+    "v1": "0x19D638Af6b2De9718Eff496fc27a304155D6Af44"
+  }
+}
