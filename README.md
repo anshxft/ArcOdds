@@ -11,7 +11,7 @@ Parimutuel YES/NO prediction markets on Arc Testnet, paid in native USDC. Live a
 
 Addresses live in `networks.json`. The newest contract on a network is current; older ones are legacy (their markets stay visible if anyone bet, and stay claimable).
 
-- **PredictArcV3** (current): V2 plus cash-out. Testnet `0x73318b5D028c1f8873a8b2c344Ef12397Fa6F0d1` (verified). Mainnet: see `networks.json`.
+- **PredictArcV3** (current): V2 plus cash-out. Mainnet `0x7718408EA41a92F1f2A356535BAE43cBe73275eb`, testnet `0x73318b5D028c1f8873a8b2c344Ef12397Fa6F0d1` (both verified).
 - **PredictArcV2**: rules on-chain, cancel + refunds, auto-refund for one-sided markets, 30-day stale-market escape hatch, two-step ownership. Mainnet `0xA5C7BC89827a67d794DF11ee9D90c4331b34d15A`, testnet `0xfadbE0877379F3a6CBC8A612b9B28b1B25baa796` (both verified).
 - **ArcOdds** (v1, testnet only): `0x19D638Af6b2De9718Eff496fc27a304155D6Af44`.
 

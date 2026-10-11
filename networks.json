@@ -5,8 +5,8 @@
     "rpc": "https://rpc.mainnet.arc.io",
     "explorer": "https://explorer.arc.io",
     "faucet": null,
-    "v3": null,
-    "v3DeployBlock": null,
+    "v3": "0x7718408EA41a92F1f2A356535BAE43cBe73275eb",
+    "v3DeployBlock": 25413313,
     "v2": "0xA5C7BC89827a67d794DF11ee9D90c4331b34d15A",
     "v2DeployBlock": 25409621,
     "v1": null
