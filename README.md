@@ -11,7 +11,8 @@ Parimutuel YES/NO prediction markets on Arc Testnet, paid in native USDC. Live a
 
 Both verified on the Arc explorer:
 
-- `PredictArcV2` (current): `0xfadbE0877379F3a6CBC8A612b9B28b1B25baa796`. Rules on-chain, cancel + refunds, auto-refund for one-sided markets, 30-day stale-market escape hatch, two-step ownership.
+- `PredictArcV2` on **Arc mainnet** (real USDC): `0xA5C7BC89827a67d794DF11ee9D90c4331b34d15A`, verified on explorer.arc.io. The site opens here by default.
+- `PredictArcV2` on Arc testnet (free test USDC): `0xfadbE0877379F3a6CBC8A612b9B28b1B25baa796`. Rules on-chain, cancel + refunds, auto-refund for one-sided markets, 30-day stale-market escape hatch, two-step ownership.
 - `ArcOdds` (legacy v1): `0x19D638Af6b2De9718Eff496fc27a304155D6Af44`. Existing positions stay claimable; no new bets from the app.
 
 Fee: 2% of the losing pool. Payout = stake × (winning pool + losing pool − fee) / winning pool.
