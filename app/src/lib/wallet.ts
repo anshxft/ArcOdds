@@ -142,7 +142,7 @@ export const resolveMarket = (version: Version, marketId: number, outcome: boole
 export const cancelMarket = (version: Version, marketId: number, reason: string) => write(version, 'cancelMarket', [BigInt(marketId), reason])
 
 let ownerRequest: Promise<string> | null = null
-/** True when the connected wallet owns the v2 contract (gates the admin page; the contract enforces it). */
+/** True when the connected wallet owns the current contract (gates the admin page; the contract enforces it). */
 export function useIsOwner() {
   const { account } = useWallet()
   const [owner, setOwner] = useState<string | null>(null)

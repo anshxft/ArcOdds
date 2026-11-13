@@ -5,7 +5,7 @@ import CountUp from '@/components/CountUp'
 import SplitText from '@/components/SplitText'
 import { Asterisk, Decode, Label, Orb } from '@/components/site'
 import { Halftone, MarketCard } from '@/components/market'
-import { ARC, CASHOUT_FEE, IS_TESTNET, switchNetwork, txUrl } from '@/lib/chain'
+import { ARC, CASHOUT_FEE, CURRENT_VERSION, IS_TESTNET, switchNetwork, txUrl } from '@/lib/chain'
 import { bettorCount, byRelevance, marketImage, marketState, shortAddress, timeAgo, useMarkets } from '@/lib/markets'
 import { useBoot, useInView, useMarquee, useScrollMotion } from '@/lib/motion'
 import { poolPayout } from '@/lib/payout'
@@ -113,14 +113,14 @@ export default function Home() {
       <section className="frame grid grid-cols-2 border-t-0 md:grid-cols-12">
         <div className="cell col-span-1 h-28 md:col-span-4" data-boot>
           <Halftone src={marketImage({ question: 'bitcoin', category: 'crypto' })} className="size-full" eager />
-          <Label className="absolute right-2 bottom-2 bg-paper px-1">Market 01 / crypto</Label>
+          <Label className="absolute right-2 bottom-2 bg-paper px-1">Settled in USDC</Label>
         </div>
         <div className="cell hidden items-center justify-center md:col-span-4 md:flex" data-boot>
-          <Decode text="Final / Market / Design 2026" className="text-muted" />
+          <Decode text="Rules on-chain / 2% fee / cash out any time" className="text-muted" />
         </div>
         <div className="cell col-span-1 h-28 md:col-span-4" data-boot>
           <Halftone src={marketImage({ question: 'world cup', category: 'sports' })} className="size-full" eager />
-          <Label className="absolute top-2 left-2 bg-paper px-1">Market 10 / sports</Label>
+          <Label className="absolute top-2 left-2 bg-paper px-1">Live on Arc</Label>
         </div>
       </section>
 
@@ -198,7 +198,7 @@ export default function Home() {
       <Ticker />
 
       <div className="mt-20" />
-      <SectionHead kicker="Live / v2 contract / rules on-chain" title="Fresh predictions" action={<Link to="/markets" className="press label hover-ink border border-line-strong px-4 py-2.5">All markets</Link>} />
+      <SectionHead kicker={`Live / v${CURRENT_VERSION} contract / rules on-chain`} title="Fresh predictions" action={<Link to="/markets" className="press label hover-ink border border-line-strong px-4 py-2.5">All markets</Link>} />
       <section className="frame grid border-t-0 md:grid-cols-3">
         {loading
           ? <div className="cell col-span-full flex min-h-[460px] items-center justify-center gap-3 p-16"><Orb state="searching" label="Loading markets" /><Label>Reading {ARC.name}…</Label></div>
@@ -256,7 +256,7 @@ export default function Home() {
       </section>
 
       <div className="mt-20" />
-      <SectionHead kicker="Human / expression / integration" title="How it works" />
+      <SectionHead kicker="Connect / fund / predict / claim" title="How it works" />
       <section className="frame grid border-t-0 md:grid-cols-4">
         {[
           ['Connect', `Use any browser wallet. PredictArc switches it to ${ARC.name} for you.`],

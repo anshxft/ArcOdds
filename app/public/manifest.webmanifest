@@ -1,0 +1,14 @@
+{
+  "name": "PredictArc",
+  "short_name": "PredictArc",
+  "description": "Prediction markets settled in USDC on Arc.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#e4e4e0",
+  "theme_color": "#e4e4e0",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

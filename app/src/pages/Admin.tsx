@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { toast } from 'sonner'
 import SplitText from '@/components/SplitText'
 import { Asterisk, Decode, Label, Orb, WalletButton } from '@/components/site'
-import { fetchBalance, txUrl, type Market } from '@/lib/chain'
+import { CURRENT_VERSION, fetchBalance, txUrl, type Market } from '@/lib/chain'
 import { formatDate, formatUsdc, marketState, refreshMarkets, useMarkets } from '@/lib/markets'
 import { useBoot } from '@/lib/motion'
 import { cancelMarket, createMarket, resolveMarket, useIsOwner, useWallet, errorText } from '@/lib/wallet'
@@ -59,7 +59,7 @@ function CreateForm() {
   const field = 'mt-2 w-full border border-line-strong bg-transparent px-3 py-3 outline-none focus:border-ink'
   return (
     <form onSubmit={submit} className="cell space-y-5 p-6">
-      <span className="flex items-center gap-2"><Asterisk className="size-3" /><Label className="text-ink">New market (v2)</Label></span>
+      <span className="flex items-center gap-2"><Asterisk className="size-3" /><Label className="text-ink">New market (v{CURRENT_VERSION})</Label></span>
       <div>
         <label htmlFor="q" className="label text-muted">Question</label>
         <input id="q" required maxLength={160} value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Will … before …?" className={field} />
@@ -89,20 +89,61 @@ function CreateForm() {
   )
 }
 
+type Pending = { kind: 'resolve'; outcome: boolean } | { kind: 'cancel' }
+
+/** Final, irreversible owner actions: show the facts and make the owner type the outcome to confirm. */
+function ConfirmDialog({ market, pending, onClose }: { market: Market; pending: Pending; onClose: () => void }) {
+  const dialog = useRef<HTMLDialogElement>(null)
+  const [typed, setTyped] = useState('')
+  const [reason, setReason] = useState('')
+  useEffect(() => {
+    dialog.current?.showModal()
+  }, [])
+  const word = pending.kind === 'cancel' ? 'CANCEL' : pending.outcome ? 'YES' : 'NO'
+  const oneSided = pending.kind === 'resolve' && (pending.outcome ? market.yesPool : market.noPool) === 0 && market.volume > 0
+  const ready = typed.trim().toUpperCase() === word && (pending.kind === 'resolve' || reason.trim().length > 0)
+  const confirm = (event: FormEvent) => {
+    event.preventDefault()
+    if (!ready) return
+    if (pending.kind === 'resolve') run(`Resolve ${market.key} ${word}`, () => resolveMarket(market.version, market.id, pending.outcome))
+    else run(`Cancel ${market.key}`, () => cancelMarket(market.version, market.id, reason.trim()))
+    onClose()
+  }
+  return (
+    <dialog ref={dialog} onClose={onClose} className="m-auto w-[min(92vw,520px)] border border-ink bg-paper p-0 text-ink backdrop:bg-black/50">
+      <form onSubmit={confirm} className="space-y-4 p-6">
+        <Label className="text-ink">{pending.kind === 'cancel' ? 'Cancel market' : `Resolve ${word}`} · final, cannot be undone</Label>
+        <p className="font-display text-xl font-bold leading-snug">{market.question}</p>
+        <dl className="grid grid-cols-2 gap-px bg-line text-sm">
+          <div className="bg-paper py-2"><dt className="label text-muted">YES pool</dt><dd className="font-mono">{formatUsdc(market.yesPool)}</dd></div>
+          <div className="bg-paper py-2 pl-3"><dt className="label text-muted">NO pool</dt><dd className="font-mono">{formatUsdc(market.noPool)}</dd></div>
+        </dl>
+        {market.rules && <p className="text-sm text-muted">Rules: {market.rules}</p>}
+        {oneSided && <p className="label border border-signal p-3">Nobody backed {word}, so the contract will cancel the market and refund everyone.</p>}
+        {pending.kind === 'cancel' && (
+          <label className="block">
+            <span className="label text-muted">Reason (stored on-chain)</span>
+            <input value={reason} onChange={(event) => setReason(event.target.value)} required className="mt-1 w-full border border-line-strong bg-transparent px-3 py-2" />
+          </label>
+        )}
+        <label className="block">
+          <span className="label text-muted">Type {word} to confirm</span>
+          <input value={typed} onChange={(event) => setTyped(event.target.value)} autoComplete="off" className="mt-1 w-full border border-line-strong bg-transparent px-3 py-2 font-mono" />
+        </label>
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={() => dialog.current?.close()} className="press label border border-line-strong px-4 py-2.5">Back</button>
+          <button type="submit" disabled={!ready} className={`press label px-4 py-2.5 disabled:opacity-40 ${word === 'NO' ? 'bg-signal text-on-signal' : 'bg-ink text-paper'}`}>{pending.kind === 'cancel' ? 'Cancel market' : `Resolve ${word}`}</button>
+        </div>
+      </form>
+    </dialog>
+  )
+}
+
 function MarketRow({ market }: { market: Market }) {
   const state = marketState(market)
-  const resolve = (outcome: boolean) => {
-    const side = outcome ? 'YES' : 'NO'
-    const oneSided = (outcome ? market.yesPool : market.noPool) === 0 && market.volume > 0
-    const note = oneSided && market.version >= 2 ? '\n\nNobody backed this side, so the contract will cancel the market and refund everyone.' : ''
-    if (window.confirm(`Resolve "${market.question}" as ${side}?\n\nThis is final and cannot be undone.${note}`)) {
-      run(`Resolve ${market.key} ${side}`, () => resolveMarket(market.version, market.id, outcome))
-    }
-  }
-  const cancel = () => {
-    const reason = window.prompt(`Cancel "${market.question}"? Everyone can then refund their stake.\n\nReason (shown on-chain):`)
-    if (reason?.trim()) run(`Cancel ${market.key}`, () => cancelMarket(market.version, market.id, reason.trim()))
-  }
+  const [pending, setPending] = useState<Pending | null>(null)
+  const resolve = (outcome: boolean) => setPending({ kind: 'resolve', outcome })
+  const cancel = () => setPending({ kind: 'cancel' })
   return (
     <div className="cell grid gap-3 p-4 md:grid-cols-[1fr_auto] md:items-center">
       <div className="min-w-0">
@@ -123,6 +164,7 @@ function MarketRow({ market }: { market: Market }) {
           <button type="button" onClick={cancel} className="press label border border-line-strong px-4 py-2.5 hover:bg-ink hover:text-paper">Cancel</button>
         )}
       </div>
+      {pending && <ConfirmDialog market={market} pending={pending} onClose={() => setPending(null)} />}
     </div>
   )
 }

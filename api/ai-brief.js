@@ -1,3 +1,7 @@
+// GET /api/ai-brief?key=v3-1[&net=testnet]: the server reads the market from the chain itself, so the
+// endpoint cannot be used as a free LLM proxy, and the CDN caches each brief for an hour.
+import { formatDate, pickNet, readMarket } from "./_market.js";
+
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "google/gemma-4-26b-a4b-it:free";
 // Free OpenRouter models come and go, so try several (checked against /api/v1/models, Oct 2026).
 const OPENROUTER_FALLBACK_MODELS = [
@@ -9,17 +13,16 @@ const OPENROUTER_FALLBACK_MODELS = [
 
 function buildBriefPrompt(market) {
   const prompt = {
-    question: market.q,
-    category: market.cat,
-    yesProbability: market.yes,
-    noProbability: 100 - Number(market.yes || 0),
-    closes: market.closes,
-    resolutionRule: market.rule,
-    source: market.source,
+    question: market.question,
+    category: market.category,
+    yesPoolShare: market.yes,
+    noPoolShare: 100 - market.yes,
+    closes: formatDate(market.deadline),
+    resolutionRule: market.rules || "Resolved by the owner from the plain wording of the question.",
   };
 
   return [
-    "Create a short, neutral prediction-market brief for this PredictArc testnet market.",
+    "Create a short, neutral prediction-market brief for this PredictArc market on Arc.",
     "Do not give financial advice. Do not tell the user what to buy.",
     "Return only valid JSON with keys: summary, yesCase, noCase, risks, watchlist, disclaimer.",
     "summary must be one sentence.",
@@ -47,15 +50,15 @@ async function requestOpenRouterBrief(market, model) {
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      "HTTP-Referer": "https://predictarc.vercel.app",
-      "X-Title": "PredictArc Testnet",
+      "HTTP-Referer": "https://www.arcpredict.xyz",
+      "X-Title": "PredictArc",
     },
     body: JSON.stringify({
       model,
       messages: [
         {
           role: "system",
-          content: "You write short, neutral prediction-market briefs for a testnet app. Return only valid JSON.",
+          content: "You write short, neutral prediction-market briefs for a USDC prediction-market app. Return only valid JSON.",
         },
         {
           role: "user",
@@ -104,18 +107,19 @@ async function createBrief(market) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
+  if (req.method !== "GET") {
     res.status(405).json({ error: "Method not allowed" });
     return;
   }
 
   try {
-    const market = req.body?.market;
-    if (!market?.q) {
-      res.status(400).json({ error: "Market details are required" });
+    const market = await readMarket(req.query.key, pickNet(req.query.net));
+    if (!market) {
+      res.status(404).json({ error: "Unknown market" });
       return;
     }
     const brief = await createBrief(market);
+    res.setHeader("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=600");
     res.status(200).json({ brief });
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message || "Unable to create AI brief" });

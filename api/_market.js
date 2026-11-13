@@ -43,6 +43,7 @@ export async function readMarket(key, net = pickNet()) {
       key: `v${parsed.version}-${parsed.id}`,
       question: m.question,
       category: m.category,
+      rules: parsed.version >= 2 ? m.rules : null,
       deadline: Number(m.deadline),
       yes,
       volume: Number(formatEther(total)),

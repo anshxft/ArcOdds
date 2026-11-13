@@ -36,24 +36,23 @@ function AiBrief({ market }: { market: MarketT }) {
   const [brief, setBrief] = useState<Brief | null>(null)
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
+  const [fallback, setFallback] = useState(false)
 
   async function generate() {
     setLoading(true)
     mascot('thinking', { ms: 30_000 })
     try {
-      const response = await fetch('/api/ai-brief', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ market: { id: market.id, q: market.question, cat: market.category, yes: market.yesOdds, closes: formatDate(market.deadline), rule: market.rules ?? 'Resolved by the owner from the question wording.', source: 'PredictArc on-chain pool odds' } }),
-      })
+      const response = await fetch(`/api/ai-brief?key=${market.key}${IS_TESTNET && MAINNET_LIVE ? '&net=testnet' : ''}`)
       const data = await response.json()
       if (!response.ok) throw new Error(data.error)
       setBrief(data.brief)
       setNote('')
+      setFallback(false)
       mascot('proud', { say: 'Brief ready. Read both sides!' })
     } catch {
       setBrief(localBrief(market))
-      setNote('Local preview: the AI service is not reachable from this build.')
+      setNote('The AI service is not reachable right now, so this is a quick summary from the pool numbers.')
+      setFallback(true)
       mascot('confused', { say: 'AI is offline, here is a quick take.' })
     } finally {
       setLoading(false)
@@ -63,7 +62,7 @@ function AiBrief({ market }: { market: MarketT }) {
   return (
     <div className="cell" data-reveal>
       <div className="flex items-center justify-between border-b border-line px-5 py-3">
-        <span className="flex items-center gap-2"><Asterisk className="size-3" /><Label className="text-ink">AI brief</Label></span>
+        <span className="flex items-center gap-2"><Asterisk className="size-3" /><Label className="text-ink">{fallback ? 'Quick summary' : 'AI brief'}</Label></span>
         <button type="button" onClick={generate} disabled={loading} className="press label hover-ink border border-line-strong px-3 py-2 disabled:opacity-50">
           {brief ? 'Refresh' : 'Generate'}
         </button>
@@ -241,7 +240,7 @@ function TradePanel({ market, side, setSide }: { market: MarketT; side: Side; se
             {state === 'resolved' ? `Resolved ${market.outcome}. Winners claim from Portfolio.` : state === 'cancelled' ? 'Cancelled. Every bettor can refund their full stake from Portfolio.' : 'Trading closed. Waiting for the owner to resolve.'}
           </p>
         ) : isLegacy(market.version) ? (
-          <p className="label border border-line-strong p-3">Legacy contract: new bets are closed here. Existing positions stay claimable. <Link to="/markets" className="underline">See live v2 markets</Link></p>
+          <p className="label border border-line-strong p-3">Legacy contract: new bets are closed here. Existing positions stay claimable. <Link to="/markets" className="underline">See live markets</Link></p>
         ) : account ? (
           <>
           {!IS_TESTNET && (
