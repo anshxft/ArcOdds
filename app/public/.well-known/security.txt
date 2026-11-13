@@ -1,6 +1,5 @@
 # Found a security issue in PredictArc (site or contracts)? Please report it privately first.
 Contact: https://x.com/imalanxx
-Contact: https://github.com/anshxft/ArcOdds/security/advisories/new
 Expires: 2027-11-13T00:00:00.000Z
 Preferred-Languages: en, hi
 Canonical: https://www.arcpredict.xyz/.well-known/security.txt
