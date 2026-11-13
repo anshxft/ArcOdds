@@ -37,15 +37,20 @@ export function useScrollMotion(scope: RefObject<HTMLElement | null>, ready = tr
     if (!ready || reducedMotion()) return
     const reveal = gsap.utils.toArray<HTMLElement>('[data-reveal]')
     gsap.set(reveal, { opacity: 0, y: 32 })
-    ScrollTrigger.batch(reveal, {
-      start: 'top 90%',
-      once: true,
-      onEnter: (batch) => gsap.to(batch, { opacity: 1, y: 0, duration: 0.9, ease: 'expo.out', stagger: 0.06, overwrite: true }),
-    })
+    // IntersectionObserver instead of ScrollTrigger.batch: the browser reports entries off the scroll
+    // path, so revealing dozens of cards costs no layout reads while scrolling.
+    const observer = new IntersectionObserver((entries) => {
+      const batch = entries.filter((entry) => entry.isIntersecting).map((entry) => entry.target)
+      if (!batch.length) return
+      batch.forEach((el) => observer.unobserve(el))
+      gsap.to(batch, { opacity: 1, y: 0, duration: 0.9, ease: 'expo.out', stagger: 0.06, overwrite: true })
+    }, { rootMargin: '0px 0px -10% 0px' })
+    reveal.forEach((el) => observer.observe(el))
     gsap.utils.toArray<HTMLElement>('[data-parallax]').forEach((el) => {
       gsap.fromTo(el, { yPercent: -6 }, { yPercent: 6, ease: 'none', scrollTrigger: { trigger: el.parentElement, scrub: true } })
     })
     ScrollTrigger.refresh()
+    return () => observer.disconnect()
   }, { scope, dependencies: [ready] })
 }
 

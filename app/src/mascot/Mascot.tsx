@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router'
 import gsap from 'gsap'
+import { useLenis } from 'lenis/react'
 import { Draggable } from 'gsap/Draggable'
 import { createAvatar, type AvatarController } from '@bible-strong/avatar-react'
 import '@bible-strong/avatar-react/styles.css'
@@ -118,6 +119,7 @@ interface Brain {
 }
 
 export default function Mascot() {
+  const lenis = useLenis()
   const mover = useRef<HTMLDivElement>(null) // fixed; travels with x/y
   const body = useRef<HTMLDivElement>(null) // squash, stretch, spin; the drag handle
   const avatar = useRef<AvatarController>(null)
@@ -804,8 +806,6 @@ export default function Mascot() {
 
     // ---- the page ----
 
-    let lastScroll = scrollY
-    let lastScrollAt = performance.now()
     let lastWhee = 0
     let bottomSaid = ''
     // While the page scrolls Poring just stands there, so its face loop pauses (it costs a
@@ -813,11 +813,12 @@ export default function Mascot() {
     let scrollPaused = false
     let scrollResume = 0
     let lastBottomCheck = 0
+    // Scroll position, speed and end come from Lenis: reading scrollY / scrollHeight here forced a full
+    // layout on every scroll event (~770 ms of reflow in a few seconds of scrolling).
     const onScroll = () => {
+      if (!lenis) return
       const now = performance.now()
-      const velocity = Math.abs(scrollY - lastScroll) / Math.max(now - lastScrollAt, 1)
-      lastScroll = scrollY
-      lastScrollAt = now
+      const velocity = Math.abs(lenis.velocity) / 16 // px per frame -> px per ms
       if (!scrollPaused && mode !== 'drag' && !physics) {
         scrollPaused = true
         avatar.current?.pause()
@@ -839,7 +840,7 @@ export default function Mascot() {
         play('surprised')
         say(pick(['Slow down!', 'Wheee, scrolling!']), 1500)
         settle(1500)
-      } else if (!busy && bottomSaid !== location.pathname && now - lastBottomCheck > 300 && (lastBottomCheck = now) && innerHeight + scrollY >= document.documentElement.scrollHeight - 40) {
+      } else if (!busy && bottomSaid !== location.pathname && now - lastBottomCheck > 300 && (lastBottomCheck = now) && lenis.scroll >= lenis.limit - 40) {
         bottomSaid = location.pathname
         play('cool')
         say('You made it to the bottom!', 2200)
@@ -984,7 +985,7 @@ export default function Mascot() {
     const activity = ['pointermove', 'pointerdown', 'keydown', 'scroll', 'touchstart'] as const
     activity.forEach((name) => window.addEventListener(name, onActivity, { passive: true }))
     window.addEventListener('pointermove', onPointerMove, { passive: true })
-    window.addEventListener('scroll', onScroll, { passive: true })
+    const offScroll = lenis?.on('scroll', onScroll)
     window.addEventListener('resize', onResize)
 
     return () => {
@@ -1002,10 +1003,10 @@ export default function Mascot() {
       document.documentElement.removeEventListener('mouseleave', onLeaveWindow)
       activity.forEach((name) => window.removeEventListener(name, onActivity))
       window.removeEventListener('pointermove', onPointerMove)
-      window.removeEventListener('scroll', onScroll)
+      offScroll?.()
       window.removeEventListener('resize', onResize)
     }
-  }, [still])
+  }, [still, lenis])
 
   if (still) {
     return (
