@@ -1,7 +1,8 @@
-import { Suspense, lazy, useRef } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import SplitText from '@/components/SplitText'
 import { Asterisk, Decode, Label } from '@/components/site'
-import { ARC, CONTRACTS, CURRENT_VERSION, IS_TESTNET, addressUrl, type Version } from '@/lib/chain'
+import { ARC, CONTRACTS, CURRENT_VERSION, IS_TESTNET, addressUrl, fetchOwner, type Version } from '@/lib/chain'
 import { useBoot, useScrollMotion } from '@/lib/motion'
 import { usePageMeta } from '@/lib/meta'
 
@@ -16,6 +17,8 @@ const SECTIONS = [
   ['How payouts work', 'Each market has a YES pool and a NO pool. Winners split both pools pro-rata to their stake, minus a 2% fee taken from the losing pool. If nobody bet against you, you get your stake back.'],
   ['Cash out', 'Changed your mind? Until one hour before a market closes you can take all or part of your stake back from the market page or Portfolio, minus a 2% exit fee. The fee stops anyone from moving the odds with a big bet and leaving for free; the last hour is locked so the final odds stay put.'],
   ['Resolution', 'Trading stops at the deadline. The owner sets the outcome following the rules stored on-chain for each market. If nobody backed the winning side, the market is cancelled instead and everyone is refunded. If the owner does not resolve within 30 days, anyone can cancel it so bettors can refund.'],
+  ['Trust model', 'One owner wallet (shown above) can create markets, set the outcome after a deadline, cancel a market so everyone refunds, and withdraw the fees the contract has collected. It cannot move your stake, change a market’s rules or deadline, block refunds, or pay itself from the pools: the contract only lets it withdraw what it recorded as fees (2% of losing pools and 2% of cash-outs). If it does not resolve a market within 30 days of the deadline, anyone can cancel it and every bettor gets a full refund. Every outcome is listed on the Resolutions page with its transaction.'],
+  ['Security', 'Found a bug in the site or the contracts? Report it privately first: message @imalanxx on X or open a private security advisory on the GitHub repo. Please do not test against other people’s funds. The contracts are verified on the Arc explorer but have not been audited yet.'],
   ['Legacy markets', 'Markets from older contracts that someone bet on stay visible, so those positions can still be claimed or refunded. New bets always go to the current contract.'],
   IS_TESTNET
     ? ['FAQ', 'This is the testnet version: no real funds. Odds are pool shares, not forecasts, and small pools move a lot.']
@@ -27,6 +30,10 @@ export default function Docs() {
   usePageMeta('Docs', 'How PredictArc works: wallets, USDC on Arc, payouts, cash-out, resolution and risks.')
   useBoot(scope)
   useScrollMotion(scope)
+  const [owner, setOwner] = useState<string | null>(null)
+  useEffect(() => {
+    fetchOwner().then(setOwner).catch(() => {})
+  }, [])
   return (
     <div ref={scope}>
       <section className="frame grid border-t-0 md:grid-cols-12">
@@ -45,6 +52,13 @@ export default function Docs() {
               </div>
             )
           })}
+          {owner && (
+            <>
+              <Label className="mt-2">Owner (sets outcomes)</Label>
+              <a href={addressUrl(owner)} target="_blank" rel="noopener noreferrer" className="break-all font-mono text-sm hover:underline">{owner}</a>
+              <Link to="/resolutions" className="label underline">See every resolution</Link>
+            </>
+          )}
           <Label className="mt-2">Network</Label>
           <span className="font-mono text-sm">{ARC.name} · chain {ARC.chainId}</span>
         </div>

@@ -1,31 +1,59 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import SplitText from '@/components/SplitText'
-import { Decode, Label, Orb } from '@/components/site'
+import { Decode, Orb } from '@/components/site'
 import { MarketCard } from '@/components/market'
-import { bettorCount, byRelevance, marketState, useMarkets } from '@/lib/markets'
+import { bettorCount, byRelevance, marketState, refreshMarkets, useMarkets } from '@/lib/markets'
+import { useWatchlist } from '@/lib/watchlist'
 import { ARC } from '@/lib/chain'
 import { useBoot, useScrollMotion } from '@/lib/motion'
 import { mascot } from '@/mascot/react'
 import { usePageMeta } from '@/lib/meta'
 
-const SORTS = { volume: 'Featured', closing: 'Closing soon', yes: 'Yes %' } as const
+const SORTS = { volume: 'Featured', closing: 'Closing soon', newest: 'Newest', traders: 'Most traders', yes: 'Yes %' } as const
 type Sort = keyof typeof SORTS
+const STATUSES = { all: 'All', open: 'Open', closed: 'Awaiting result', resolved: 'Resolved', watch: 'Watchlist' } as const
+type Status = keyof typeof STATUSES
 
 export default function Markets() {
   const scope = useRef<HTMLDivElement>(null)
-  usePageMeta('Markets', 'Every open PredictArc market: crypto, finance, politics, sports and more. Bet YES or NO in USDC on Arc.')
+  const { cat: pathCat } = useParams()
+  const navigate = useNavigate()
+  usePageMeta(
+    pathCat ? `${pathCat[0].toUpperCase()}${pathCat.slice(1)} prediction markets` : 'Markets',
+    pathCat ? `Bet YES or NO in USDC on ${pathCat} questions. Pool odds, rules on-chain, settled on Arc.` : 'Every open PredictArc market: crypto, finance, politics, sports and more. Bet YES or NO in USDC on Arc.',
+  )
   const { markets, bets, loading, error } = useMarkets()
-  const [category, setCategory] = useState('all')
-  const [sort, setSort] = useState<Sort>('volume')
-  const [query, setQuery] = useState('')
+  const watchlist = useWatchlist()
+  // Filters live in the URL (?cat=crypto&sort=closing&status=open&q=btc) so links and Back keep them.
+  const [params, setParams] = useSearchParams()
+  const category = pathCat || params.get('cat') || 'all'
+  const sort = (params.get('sort') as Sort) in SORTS ? (params.get('sort') as Sort) : 'volume'
+  const status = (params.get('status') as Status) in STATUSES ? (params.get('status') as Status) : 'all'
+  const query = params.get('q') || ''
+  const setParam = (name: string, value: string, fallback: string) =>
+    setParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (value === fallback) next.delete(name)
+      else next.set(name, value)
+      return next
+    }, { replace: true })
+  // Categories have their own URL (/markets/crypto) so they can be shared and indexed.
+  const setCategory = (value: string) => navigate({ pathname: value === 'all' ? '/markets' : `/markets/${value}`, search: params.toString() }, { replace: true })
+  const setSort = (value: Sort) => setParam('sort', value, 'volume')
+  const setStatus = (value: Status) => setParam('status', value, 'all')
+  const setQuery = (value: string) => setParam('q', value, '')
   useBoot(scope)
   useScrollMotion(scope, markets.length > 0)
 
   const categories = useMemo(() => ['all', ...new Set(markets.map((market) => market.category))], [markets])
   const list = markets
     .filter((market) => (category === 'all' || market.category === category) && market.question.toLowerCase().includes(query.toLowerCase()))
+    .filter((market) => (status === 'watch' ? watchlist.includes(market.key) : status === 'resolved' ? market.status !== 0 : status === 'all' || marketState(market) === status))
     .sort((a, b) => {
       if (sort === 'closing') return Number(marketState(a) !== 'open') - Number(marketState(b) !== 'open') || a.deadline - b.deadline
+      if (sort === 'newest') return b.version - a.version || b.id - a.id
+      if (sort === 'traders') return bettorCount(bets, b.key) - bettorCount(bets, a.key) || byRelevance(a, b)
       if (sort === 'yes') return b.yesOdds - a.yesOdds
       return byRelevance(a, b)
     })
@@ -63,6 +91,15 @@ export default function Markets() {
         </div>
       </section>
 
+      <section className="frame border-t-0">
+        <div className="cell flex flex-wrap" role="group" aria-label="Status">
+          {(Object.keys(STATUSES) as Status[]).map((key) => (
+            <button key={key} type="button" onClick={() => setStatus(key)} aria-pressed={status === key} className={`press label min-h-11 border-r border-line px-4 ${status === key ? 'bg-ink text-paper' : 'hover-ink'}`}>
+              {STATUSES[key]}{key === 'watch' && watchlist.length ? ` (${watchlist.length})` : ''}
+            </button>
+          ))}
+        </div>
+      </section>
       <section className="frame grid border-t-0 md:grid-cols-[1fr_auto]">
         <div className="cell flex flex-wrap" role="group" aria-label="Category">
           {categories.map((name) => (
@@ -77,7 +114,7 @@ export default function Markets() {
             </button>
           ))}
         </div>
-        <div className="cell flex" role="group" aria-label="Sort">
+        <div className="cell flex flex-wrap" role="group" aria-label="Sort">
           {(Object.keys(SORTS) as Sort[]).map((key) => (
             <button
               key={key}
@@ -93,14 +130,27 @@ export default function Markets() {
       </section>
 
       <section className="frame grid border-t-0 sm:grid-cols-2 lg:grid-cols-3">
-        {loading && (
-          <div className="cell col-span-full flex min-h-[120vh] items-start justify-center gap-3 p-20">
-            <Orb state="searching" label="Loading markets" />
-            <Label>Reading {ARC.name}…</Label>
+        {loading &&
+          Array.from({ length: 6 }, (_, index) => (
+            <div key={index} className="cell flex flex-col" aria-hidden="true">
+              <div className="skeleton aspect-[16/9] border-b border-line" />
+              <div className="space-y-3 p-4">
+                <div className="skeleton h-3 w-1/3" />
+                <div className="skeleton h-5 w-11/12" />
+                <div className="skeleton h-5 w-2/3" />
+                <div className="skeleton h-2 w-full" />
+              </div>
+            </div>
+          ))}
+        {loading && <span className="sr-only"><Orb state="searching" size={20} label={`Loading markets from ${ARC.name}`} /></span>}
+        {error && !markets.length && (
+          <div className="cell col-span-full flex flex-wrap items-center gap-4 p-10 text-sm">
+            <span>Could not reach {ARC.name}: {error}</span>
+            <button type="button" onClick={() => refreshMarkets()} className="press label bg-ink px-4 py-2.5 text-paper">Retry</button>
+            <a href="/status" className="label underline">Check status</a>
           </div>
         )}
-        {error && !markets.length && <p className="cell col-span-full p-10 text-sm">Could not reach {ARC.name}: {error}</p>}
-        {!loading && !list.length && !error && <p className="cell col-span-full p-10 text-sm text-muted">No markets match. Try another search or category.</p>}
+        {!loading && !list.length && !error && <p className="cell col-span-full p-10 text-sm text-muted">{status === 'watch' ? 'Your watchlist is empty. Tap the star on any market to follow it.' : 'No markets match. Try another search, status or category.'}</p>}
         {list.map((market) => <MarketCard key={market.key} market={market} bettors={bettorCount(bets, market.key)} />)}
       </section>
     </div>

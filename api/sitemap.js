@@ -3,7 +3,7 @@
 import { currentMarketKeys } from "./_market.js";
 
 const SITE = "https://www.arcpredict.xyz";
-const PAGES = ["/", "/markets", "/status", "/docs", "/privacy", "/terms"];
+const PAGES = ["/", "/markets", "/status", "/docs", "/resolutions", "/privacy", "/terms"];
 
 export async function GET() {
   const keys = await currentMarketKeys().catch(() => []); // RPC hiccup: still list the pages

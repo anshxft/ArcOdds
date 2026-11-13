@@ -54,6 +54,43 @@ export default function Portfolio() {
     return map
   }, {})).reduce((sum, value) => sum + value, 0)
   const claimable = rows.filter((row) => row.claimable).reduce((sum, row) => sum + row.ifRight, 0)
+  // One claim or refund per market covers both sides, so de-duplicate by market.
+  const ready = [...new Map(rows.filter((row) => row.claimable || row.refundable).map((row) => [row.key, row])).values()]
+  const [claimingAll, setClaimingAll] = useState(false)
+
+  /** Claims and refunds one after another (the contract has no batch call yet). */
+  async function claimAll() {
+    setClaimingAll(true)
+    let done = 0
+    for (const row of ready) {
+      try {
+        await (row.refundable ? refund(row.version, row.marketId) : claimWinnings(row.version, row.marketId))
+        done += 1
+        toast.success(`${done} of ${ready.length} done`)
+      } catch (error) {
+        toast.error(`Stopped at ${row.market.question.slice(0, 40)}…: ${errorText(error, 'Transaction failed')}`)
+        break
+      }
+    }
+    setClaimingAll(false)
+    if (done) mascot('golden', { ms: 4000, say: `Collected ${done} payout${done > 1 ? 's' : ''}!` })
+    await refreshMarkets()
+    setVersion((value) => value + 1)
+  }
+
+  /** Positions as a CSV file (for your records or taxes). */
+  function exportCsv() {
+    const cell = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`
+    const lines = [
+      ['Market', 'Question', 'Side', 'Staked USDC', 'Payout if right USDC', 'Status', 'Claimed'].map(cell).join(','),
+      ...rows.map((row) => [row.key, row.market.question, row.side, row.amount, row.ifRight.toFixed(6), stateLabel(row.market), row.claimed ? 'yes' : 'no'].map(cell).join(',')),
+    ]
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }))
+    link.download = `predictarc-positions-${account?.slice(0, 8)}.csv`
+    link.click()
+    URL.revokeObjectURL(link.href)
+  }
 
   async function claim(version: Version, marketId: number, isRefund: boolean) {
     const run = isRefund ? refund(version, marketId) : claimWinnings(version, marketId)
@@ -112,6 +149,17 @@ export default function Portfolio() {
               </div>
             ))}
           </section>
+          {rows.length > 0 && (
+            <section className="frame flex flex-wrap items-center justify-end gap-2 border-t-0 px-4 py-3">
+              {ready.length > 1 && (
+                <button type="button" onClick={claimAll} disabled={claimingAll} className="press label flex items-center gap-2 bg-signal px-4 py-2.5 text-on-signal disabled:opacity-50">
+                  {claimingAll && <Orb state="working" size={20} label="Claiming" />}
+                  {claimingAll ? 'Confirm each in wallet…' : `Claim all (${ready.length})`}
+                </button>
+              )}
+              <button type="button" onClick={exportCsv} className="press label border border-line-strong px-4 py-2.5">Download CSV</button>
+            </section>
+          )}
           <section className="frame border-t-0">
             {rows.length ? rows.map((row) => (
               <div key={`${row.key}-${row.side}`} className="cell grid grid-cols-[64px_1fr] items-center gap-4 p-4 md:grid-cols-[88px_1fr_90px_140px_140px_150px]" data-reveal>

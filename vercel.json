@@ -95,6 +95,14 @@
     {
       "source": "/admin",
       "destination": "/index.html"
+    },
+    {
+      "source": "/resolutions",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/markets/:cat",
+      "destination": "/index.html"
     }
   ],
   "functions": {

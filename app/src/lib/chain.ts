@@ -54,6 +54,8 @@ export const ARC = {
 }
 const BET_PLACED_TOPIC = '0x4af71b021e799c62c158bd54636ca8da2fa26115a21a2dc6efe486ec104fd15f' // same event in v1, v2 and v3
 const CASHED_OUT_TOPIC = toEventSelector('CashedOut(uint256,address,bool,uint256,uint256)') // v3
+const RESOLVED_TOPIC = toEventSelector('MarketResolved(uint256,bool)')
+const CANCELLED_TOPIC = toEventSelector('MarketCancelled(uint256,string)') // v2+
 
 export const arcChain = defineChain({
   id: ARC.chainId,
@@ -134,6 +136,15 @@ export interface Bet {
   user: string
   side: Side
   amount: number
+  time: number
+  txHash: string | null
+}
+/** An owner resolution or a cancellation, as recorded on-chain. */
+export interface Resolution {
+  key: string
+  kind: 'resolved' | 'cancelled'
+  outcome: Side | null
+  reason: string | null
   time: number
   txHash: string | null
 }
@@ -246,15 +257,31 @@ export async function fetchPosition(version: Version, marketId: number, account:
   return { yes, no, claimed }
 }
 
-/** BetPlaced (and v3 CashedOut) history from the Arc explorer (the public RPC prunes old logs). */
-async function fetchVersionBets(version: Version): Promise<Bet[]> {
+/** Bets, cash-outs and resolutions from the Arc explorer (the public RPC prunes old logs). */
+async function fetchVersionHistory(version: Version): Promise<{ bets: Bet[]; resolutions: Resolution[] }> {
   const bets: Bet[] = []
+  const resolutions: Resolution[] = []
   let params = ''
-  for (let page = 0; page < 20; page += 1) {
+  // ponytail: explorer paging, capped at 100 pages (~5k logs); an indexer replaces this once volume needs it
+  for (let page = 0; page < 100; page += 1) {
     const response = await fetch(`${ARC.explorer}/api/v2/addresses/${contract(version).address}/logs${params}`)
     if (!response.ok) throw new Error(`Explorer request failed: ${response.status}`)
     const data = await response.json()
     for (const log of data.items ?? []) {
+      const topic = log.topics?.[0]
+      if (topic === RESOLVED_TOPIC || topic === CANCELLED_TOPIC) {
+        const resolved = topic === RESOLVED_TOPIC
+        const [value] = decodeAbiParameters([{ type: resolved ? 'bool' : 'string' }], log.data)
+        resolutions.push({
+          key: marketKey(version, Number(BigInt(log.topics[1]))),
+          kind: resolved ? 'resolved' : 'cancelled',
+          outcome: resolved ? (value ? 'YES' : 'NO') : null,
+          reason: resolved ? null : String(value),
+          time: Date.parse(log.block_timestamp),
+          txHash: log.transaction_hash || null,
+        })
+        continue
+      }
       const kind = log.topics?.[0] === BET_PLACED_TOPIC ? 'bet' : log.topics?.[0] === CASHED_OUT_TOPIC ? 'cashout' : null
       if (!kind) continue
       const [side, amount] = decodeAbiParameters([{ type: 'bool' }, { type: 'uint256' }], log.data)
@@ -271,9 +298,13 @@ async function fetchVersionBets(version: Version): Promise<Bet[]> {
     if (!data.next_page_params) break
     params = '?' + new URLSearchParams(data.next_page_params)
   }
-  return bets
+  return { bets, resolutions }
 }
 
-export async function fetchBets(): Promise<Bet[]> {
-  return (await Promise.all(VERSIONS.map(fetchVersionBets))).flat().sort((a, b) => a.time - b.time)
+export async function fetchHistory(): Promise<{ bets: Bet[]; resolutions: Resolution[] }> {
+  const all = await Promise.all(VERSIONS.map(fetchVersionHistory))
+  return {
+    bets: all.flatMap((h) => h.bets).sort((a, b) => a.time - b.time),
+    resolutions: all.flatMap((h) => h.resolutions).sort((a, b) => b.time - a.time),
+  }
 }

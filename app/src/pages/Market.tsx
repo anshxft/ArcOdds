@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 import SplitText from '@/components/SplitText'
-import { Asterisk, Decode, Label, Orb, WalletButton } from '@/components/site'
-import { BigOdds, Halftone, OddsBar, PoolChart } from '@/components/market'
+import { Asterisk, Decode, GetUsdc, Label, Orb, WalletButton } from '@/components/site'
+import { BigOdds, Halftone, MarketCard, OddsBar, PoolChart } from '@/components/market'
 import { CashOutButton } from '@/components/CashOut'
 import { ARC, CASHOUT_CUTOFF, IS_TESTNET, MAINNET_LIVE, addressUrl, canCashOut, fetchBalance, fetchPosition, isLegacy, marketKey, parseMarketKey, txUrl, type Market as MarketT, type Side } from '@/lib/chain'
-import { bettorCount, formatDate, formatUsdc, marketImage, marketState, refreshMarkets, shortAddress, stateLabel, timeAgo, useMarkets } from '@/lib/markets'
+import { bettorCount, byRelevance, countdown, formatDate, formatDateTime, formatUsdc, formatUtc, marketImage, marketState, refreshMarkets, shortAddress, stateLabel, timeAgo, useMarkets } from '@/lib/markets'
 import { quote } from '@/lib/payout'
 import { useBoot, useScrollMotion } from '@/lib/motion'
 import { placeBet, useWallet, errorText } from '@/lib/wallet'
@@ -259,7 +259,7 @@ function TradePanel({ market, side, setSide }: { market: MarketT; side: Side; se
             {pending && <Orb state="working" size={20} label="Submitting" />}
             {pending ? 'Confirm in wallet…' : tooMuch ? 'Not enough USDC' : `Buy ${side} for ${stake || 0} USDC`}
           </button>
-          {tooMuch && ARC.faucet && <a href={ARC.faucet} target="_blank" rel="noreferrer" className="label block text-center underline">Get free test USDC</a>}
+          {tooMuch && <div className="text-center"><GetUsdc /></div>}
           </>
         ) : (
           <WalletButton className="min-h-13 w-full justify-center" />
@@ -291,6 +291,42 @@ function TradePanel({ market, side, setSide }: { market: MarketT; side: Side; se
         <p className="text-xs leading-relaxed text-muted">Pool-based: winners split the whole pool pro-rata, minus 2% of the losing side. Estimates move as others bet.</p>
       </div>
     </div>
+  )
+}
+
+/** Live countdown to the deadline, and to the cash-out lock an hour before it. */
+function ClosingClock({ market }: { market: MarketT }) {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+  const left = countdown(market.deadline, now)
+  if (!left || market.status !== 0) return null
+  const lock = market.version >= 3 ? countdown(market.deadline - CASHOUT_CUTOFF, now) : null
+  return (
+    <p className="label flex flex-wrap gap-x-4 gap-y-1">
+      <span>Closes in <span className="text-ink">{left}</span></span>
+      {market.version >= 3 && <span>{lock ? <>Cash-out locks in <span className="text-ink">{lock}</span></> : 'Cash-out is locked (last hour)'}</span>}
+    </p>
+  )
+}
+
+/** A few other open markets in the same category. */
+function RelatedMarkets({ market }: { market: MarketT }) {
+  const { markets, bets } = useMarkets()
+  const related = markets
+    .filter((other) => other.key !== market.key && other.category === market.category && marketState(other) === 'open')
+    .sort(byRelevance)
+    .slice(0, 3)
+  if (!related.length) return null
+  return (
+    <section className="frame mt-12">
+      <div className="label cell px-5 py-3 text-ink">More in {market.category}</div>
+      <div className="grid md:grid-cols-3">
+        {related.map((other) => <MarketCard key={other.key} market={other} bettors={bettorCount(bets, other.key)} />)}
+      </div>
+    </section>
   )
 }
 
@@ -363,6 +399,11 @@ export default function Market() {
     market?.question ?? (loading ? 'Market' : 'Market not found'),
     market ? `YES ${market.yesOdds}% / NO ${100 - market.yesOdds}% · closes ${formatDate(market.deadline)} · ${market.category}. Bet in USDC on Arc.` : undefined,
   )
+  // Odds move with other people's bets: re-read the pools every 10 s while this page is open.
+  useEffect(() => {
+    const timer = window.setInterval(() => refreshMarkets(false), 10_000)
+    return () => window.clearInterval(timer)
+  }, [])
   const pick = (option: Side) => {
     setSide(option)
     document.querySelector('[data-tour="trade"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -396,15 +437,16 @@ export default function Market() {
             {[
               ['Volume', formatUsdc(market.volume)],
               ['Traders', String(bettorCount(bets, market.key))],
-              ['Closes', formatDate(market.deadline)],
+              ['Closes', formatDateTime(market.deadline)],
               ['Creator', shortAddress(market.creator)],
             ].map(([term, value]) => (
               <div key={term} className="bg-paper py-2 pr-3">
                 <Label>{term}</Label>
-                <div className="font-mono text-sm">{term === 'Creator' ? <a href={addressUrl(market.creator)} target="_blank" rel="noreferrer" className="hover:underline">{value}</a> : value}</div>
+                <div className="font-mono text-sm" title={term === 'Closes' ? formatUtc(market.deadline) : undefined}>{term === 'Creator' ? <a href={addressUrl(market.creator)} target="_blank" rel="noreferrer" className="hover:underline">{value}</a> : value}</div>
               </div>
             ))}
           </div>
+          <ClosingClock market={market} />
         </div>
       </section>
 
@@ -440,6 +482,7 @@ export default function Market() {
           <Share market={market} />
         </div>
       </section>
+      <RelatedMarkets market={market} />
       <MobileBetBar market={market} onPick={pick} />
     </div>
   )

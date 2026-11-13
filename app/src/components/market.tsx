@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { toggleWatch, useWatchlist } from '@/lib/watchlist'
 import NumberFlow from '@number-flow/react'
 import PixelTransition from '@/components/PixelTransition'
 import { Asterisk, Label, Orb } from '@/components/site'
@@ -61,8 +62,21 @@ function CardBody({ market, bettors }: { market: Market; bettors: number }) {
 
 /** Featured variant swaps photo for live odds through a pixel dissolve on hover. */
 export function MarketCard({ market, bettors, featured = false }: { market: Market; bettors: number; featured?: boolean }) {
+  const watched = useWatchlist().includes(market.key)
   return (
-    <Link to={`/market/${market.key}`} className="cell hover-lift group flex flex-col bg-paper" data-reveal>
+    <Link to={`/market/${market.key}`} className="cell hover-lift group relative flex flex-col bg-paper" data-reveal>
+      <button
+        type="button"
+        onClick={(event) => {
+          event.preventDefault()
+          toggleWatch(market.key)
+        }}
+        aria-pressed={watched}
+        aria-label={watched ? 'Remove from watchlist' : 'Add to watchlist'}
+        className={`press absolute top-2 right-2 z-10 grid size-9 place-items-center border border-ink ${watched ? 'bg-signal text-on-signal' : 'bg-paper text-ink'}`}
+      >
+        <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z" fill={watched ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>
+      </button>
       {featured ? (
         <PixelTransition
           aspectRatio="62%"

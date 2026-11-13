@@ -1,6 +1,6 @@
 // Shared market data: one fetch for the whole app, refreshed every minute.
 import { useSyncExternalStore } from 'react'
-import { fetchBets, fetchMarkets, type Bet, type Market } from './chain'
+import { fetchHistory, fetchMarkets, type Bet, type Market, type Resolution } from './chain'
 
 // Picked from the question so any market, v1 or v2, gets a fitting photo.
 const IMAGE_RULES: [RegExp, string][] = [
@@ -34,7 +34,7 @@ const CATEGORY_IMAGES: Record<string, string> = {
 }
 export function marketImage(market: { question: string; category: string }) {
   const hit = IMAGE_RULES.find(([pattern]) => pattern.test(market.question))
-  return `/markets/${hit?.[1] ?? CATEGORY_IMAGES[market.category] ?? 'finance'}.jpg`
+  return `/markets/${hit?.[1] ?? CATEGORY_IMAGES[market.category] ?? 'finance'}.webp`
 }
 
 export type MarketState = 'open' | 'closed' | 'resolved' | 'cancelled'
@@ -51,8 +51,22 @@ export function stateLabel(market: Market) {
   return 'Open'
 }
 
+// Dates show in the viewer's own timezone and locale; formatUtc is for tooltips.
 export const formatDate = (seconds: number) =>
-  new Date(seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+  new Date(seconds * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+export const formatDateTime = (seconds: number) =>
+  new Date(seconds * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })
+export const formatUtc = (seconds: number) => new Date(seconds * 1000).toUTCString()
+/** "3d 4h", "5h 12m", "42m 10s" until a unix time, or null once it has passed. */
+export function countdown(seconds: number, now = Date.now()) {
+  let left = Math.floor(seconds - now / 1000)
+  if (left <= 0) return null
+  const d = Math.floor(left / 86400)
+  const h = Math.floor((left %= 86400) / 3600)
+  const m = Math.floor((left %= 3600) / 60)
+  const s = left % 60
+  return d ? `${d}d ${h}h` : h ? `${h}h ${m}m` : `${m}m ${s}s`
+}
 export const formatUsdc = (value: number) =>
   `${value >= 1000 ? `${(value / 1000).toFixed(1)}K` : Number(value.toFixed(2)).toLocaleString('en-US')} USDC`
 export const shortAddress = (address: string) => `${address.slice(0, 6)}…${address.slice(-4)}`
@@ -66,10 +80,11 @@ export function timeAgo(ms: number) {
 interface Snapshot {
   markets: Market[]
   bets: Bet[]
+  resolutions: Resolution[]
   loading: boolean
   error: string | null
 }
-let snapshot: Snapshot = { markets: [], bets: [], loading: true, error: null }
+let snapshot: Snapshot = { markets: [], bets: [], resolutions: [], loading: true, error: null }
 const listeners = new Set<() => void>()
 let timer: number | undefined
 
@@ -78,21 +93,22 @@ function set(next: Partial<Snapshot>) {
   listeners.forEach((listener) => listener())
 }
 
-export async function refreshMarkets() {
+/** Reload markets (and, unless `withHistory` is false, the explorer history behind feeds and stats). */
+export async function refreshMarkets(withHistory = true) {
   try {
     set({ markets: await fetchMarkets(), loading: false, error: null })
   } catch (error) {
     set({ loading: false, error: (error as Error).message })
   }
   // Bet history is secondary (bettor counts, charts, feed); a failure there keeps the markets.
-  fetchBets().then((bets) => set({ bets })).catch(() => {})
+  if (withHistory) fetchHistory().then((history) => set(history)).catch(() => {})
 }
 
 function subscribe(listener: () => void) {
   listeners.add(listener)
   if (listeners.size === 1) {
     refreshMarkets()
-    timer = window.setInterval(refreshMarkets, 60000)
+    timer = window.setInterval(() => refreshMarkets(), 60000)
   }
   return () => {
     listeners.delete(listener)

@@ -7,7 +7,7 @@ import { ThinkingOrb } from 'thinking-orbs'
 import Noise from '@/components/Noise'
 import VariableProximity from '@/components/VariableProximity'
 import DecryptedText from '@/components/DecryptedText'
-import { ARC, CURRENT_VERSION, IS_TESTNET, contract, MAINNET_LIVE, NETWORK, fetchPositions, switchNetwork, type NetworkName } from '@/lib/chain'
+import { ARC, CURRENT_VERSION, IS_TESTNET, addressUrl, contract, fetchBalance, MAINNET_LIVE, NETWORK, fetchPositions, switchNetwork, type NetworkName } from '@/lib/chain'
 import { formatUsdc, shortAddress, useMarkets } from '@/lib/markets'
 import { gsap, reducedMotion } from '@/lib/motion'
 import { connect, disconnect, useIsOwner, useWallet, walletOptions, type WalletOption } from '@/lib/wallet'
@@ -33,8 +33,8 @@ export function Asterisk({ className = 'size-3.5' }: { className?: string }) {
   )
 }
 
-export function Label({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <span className={`label text-muted ${className}`}>{children}</span>
+export function Label({ children, className = '', title }: { children: ReactNode; className?: string; title?: string }) {
+  return <span title={title} className={`label text-muted ${className}`}>{children}</span>
 }
 
 /** Mono caption that decodes the first time it scrolls into view. */
@@ -110,6 +110,54 @@ function ThemeToggle({ compact = false, className = '' }: { compact?: boolean; c
   )
 }
 
+/** Deep links that reopen this exact page inside a mobile wallet's built-in browser. */
+function walletLinks(): [string, string][] {
+  const href = location.href
+  return [
+    ['MetaMask', `https://metamask.app.link/dapp/${location.host}${location.pathname}${location.search}`],
+    ['OKX Wallet', `https://www.okx.com/download?deeplink=${encodeURIComponent(`okx://wallet/dapp/url?dappUrl=${encodeURIComponent(href)}`)}`],
+    ['Coinbase Wallet', `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(href)}`],
+  ]
+}
+
+/** Where to get USDC on this network: the faucet on testnet, bridging or a wallet on mainnet. */
+export function GetUsdc({ className = '' }: { className?: string }) {
+  const dialog = useRef<HTMLDialogElement>(null)
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (open) dialog.current?.showModal()
+  }, [open])
+  const ways: [string, string, string | null][] = IS_TESTNET
+    ? [['Circle faucet', 'Free test USDC. Pick Arc Testnet and paste your address.', ARC.faucet]]
+    : [
+        ['Bridge with CCTP', 'Move USDC to Arc from Ethereum, Base, Arbitrum, OP Mainnet, Avalanche or Polygon in about 20 seconds.', 'https://heldby.vercel.app/app/wallet'],
+        ['From a wallet or exchange', 'Send or withdraw USDC on the Arc network straight to your address. USDC also pays the gas.', null],
+        ['Practise first', 'Switch to Testnet for free test USDC.', null],
+      ]
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className={`press label underline ${className}`}>Get USDC</button>
+      {open && (
+        <dialog ref={dialog} onClose={() => setOpen(false)} onClick={(event) => event.target === dialog.current && dialog.current?.close()} className="m-auto w-[min(440px,calc(100%-32px))] border border-line-strong bg-paper p-0 text-ink backdrop:bg-ink/40" data-lenis-prevent>
+          <div className="cell flex items-center justify-between px-5 py-4">
+            <span className="flex items-center gap-2"><Asterisk /><span className="label">Get USDC on {ARC.name}</span></span>
+            <button type="button" onClick={() => dialog.current?.close()} className="press label hover-ink px-2 py-1">Close</button>
+          </div>
+          <ul>
+            {ways.map(([title, body, href]) => (
+              <li key={title} className="cell border-r-0 px-5 py-4">
+                {href ? <a href={href} target="_blank" rel="noopener noreferrer" className="font-medium underline">{title} ↗</a> : <span className="font-medium">{title}</span>}
+                <p className="mt-1 text-sm text-muted">{body}</p>
+                {title === 'Practise first' && <button type="button" onClick={() => switchNetwork('testnet')} className="press label mt-2 border border-line-strong px-3 py-1.5">Switch to Testnet</button>}
+              </li>
+            ))}
+          </ul>
+        </dialog>
+      )}
+    </>
+  )
+}
+
 function WalletModal({ onClose }: { onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const [pending, setPending] = useState<string | null>(null)
@@ -168,7 +216,18 @@ function WalletModal({ onClose }: { onClose: () => void }) {
           ))}
         </ul>
       ) : (
-        <p className="px-5 py-8 text-sm text-muted">No browser wallet found. Install MetaMask, Rabby or OKX Wallet, or open PredictArc inside a wallet browser.</p>
+        <div className="px-5 py-6">
+          <p className="text-sm text-muted">No browser wallet found here. On a phone, open this page inside your wallet app:</p>
+          <div className="mt-4 grid gap-px bg-line">
+            {walletLinks().map(([name, href]) => (
+              <a key={name} href={href} className="press hover-ink flex items-center justify-between bg-paper px-4 py-3">
+                <span className="font-medium">Open in {name}</span>
+                <span className="label" aria-hidden="true">→</span>
+              </a>
+            ))}
+          </div>
+          <p className="mt-4 text-xs text-muted">On a computer, install MetaMask, Rabby or OKX Wallet and reload.</p>
+        </div>
       )}
     </dialog>
   )
@@ -177,19 +236,64 @@ function WalletModal({ onClose }: { onClose: () => void }) {
 export function WalletButton({ className = '' }: { className?: string }) {
   const { account } = useWallet()
   const [open, setOpen] = useState(false)
+  const [menu, setMenu] = useState(false)
+  const [balance, setBalance] = useState<number | null>(null)
+  const box = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!menu || !account) return
+    fetchBalance(account).then(setBalance).catch(() => setBalance(null))
+    const away = (event: PointerEvent) => !box.current?.contains(event.target as Node) && setMenu(false)
+    const esc = (event: KeyboardEvent) => event.key === 'Escape' && setMenu(false)
+    document.addEventListener('pointerdown', away)
+    document.addEventListener('keydown', esc)
+    return () => {
+      document.removeEventListener('pointerdown', away)
+      document.removeEventListener('keydown', esc)
+    }
+  }, [menu, account])
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(account ?? '')
+      toast.success('Address copied')
+    } catch {
+      toast.error('Could not copy the address')
+    }
+    setMenu(false)
+  }
+  const leave = () => {
+    disconnect()
+    setMenu(false)
+    toast('Wallet disconnected')
+    mascot('sad', { ms: 2500, say: 'Bye for now!' })
+  }
+  const item = 'press hover-ink flex w-full items-center justify-between border-t border-line px-4 py-3 text-left text-sm'
   return (
-    <>
+    <div ref={box} className={`relative flex ${className.includes('w-full') ? 'w-full' : ''}`}>
       <button
         type="button"
-        onClick={() => (account ? (disconnect(), toast('Wallet disconnected'), mascot('sad', { ms: 2500, say: 'Bye for now!' })) : setOpen(true))}
+        onClick={() => (account ? setMenu((value) => !value) : setOpen(true))}
+        aria-haspopup={account ? 'menu' : 'dialog'}
+        aria-expanded={account ? menu : undefined}
         className={`press label flex items-center gap-2 bg-ink px-4 text-paper hover:bg-signal hover:text-on-signal ${className}`}
-        title={account ? 'Disconnect wallet' : 'Connect wallet'}
       >
         <span className={`size-1.5 ${account ? 'bg-signal' : 'bg-paper'}`} aria-hidden="true" />
         {account ? shortAddress(account) : 'Connect wallet'}
       </button>
+      {menu && account && (
+        <div role="menu" className="absolute top-full right-0 z-50 mt-px w-64 border border-ink bg-paper text-ink shadow-[4px_4px_0_var(--ink)]">
+          <div className="px-4 py-3">
+            <span className="label text-muted">Balance</span>
+            <div className="font-mono text-lg">{balance === null ? '…' : `${Number(balance.toFixed(4))} USDC`}</div>
+            <GetUsdc />
+          </div>
+          <button type="button" role="menuitem" onClick={copy} className={item}>Copy address <span className="font-mono text-xs text-muted">{shortAddress(account)}</span></button>
+          <a role="menuitem" href={addressUrl(account)} target="_blank" rel="noopener noreferrer" className={item} onClick={() => setMenu(false)}>View on explorer <span aria-hidden="true">↗</span></a>
+          <Link role="menuitem" to="/portfolio" className={item} onClick={() => setMenu(false)}>Portfolio <span aria-hidden="true">→</span></Link>
+          <button type="button" role="menuitem" onClick={leave} className={`${item} text-signal`}>Disconnect</button>
+        </div>
+      )}
       {open && <WalletModal onClose={() => setOpen(false)} />}
-    </>
+    </div>
   )
 }
 
@@ -309,6 +413,11 @@ function Header() {
             {label}{to === '/portfolio' && <NavBadge count={ready} />}
           </NavLink>
         ))}
+        {MAINNET_LIVE && (
+          <button type="button" onClick={() => switchNetwork(NETWORK === 'mainnet' ? 'testnet' : 'mainnet')} className={`cell label min-h-11 shrink-0 px-3 ${NETWORK === 'mainnet' ? 'bg-signal text-on-signal' : 'bg-ink text-paper'}`} aria-label={`On ${NETWORK}. Switch to ${NETWORK === 'mainnet' ? 'testnet' : 'mainnet'}`}>
+            {NETWORK === 'mainnet' ? 'Main' : 'Test'}
+          </button>
+        )}
         <ThemeToggle compact className="cell min-h-11 w-12 shrink-0" />
       </nav>
     </header>
@@ -340,6 +449,7 @@ function Footer() {
           {ARC.faucet && <a href={ARC.faucet} target="_blank" rel="noreferrer" data-tour="faucet" className="link-line w-fit">Faucet</a>}
           <a href="https://x.com/imalanxx" target="_blank" rel="noreferrer" className="link-line w-fit">X (Twitter)</a>
           <a href="https://github.com/anshxft/ArcOdds" target="_blank" rel="noreferrer" className="link-line w-fit">Source code (AGPL-3.0)</a>
+          <Link to="/resolutions" className="link-line w-fit">Resolutions</Link>
           <Link to="/privacy" className="link-line w-fit">Privacy</Link>
           <Link to="/terms" className="link-line w-fit">Terms</Link>
           <button type="button" onClick={() => setPoringHidden(!poringHidden)} className="link-line w-fit text-left">
