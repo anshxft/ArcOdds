@@ -1,15 +1,14 @@
 // Motion roles, one tool per job:
 //   anime.js -> the boot sequence: grid cells above the fold wipe in when a page opens
-//   GSAP     -> scroll: reveals, parallax, the marquee ticker (ScrollTrigger + Lenis share its ticker)
+//   GSAP     -> reveals (IntersectionObserver-triggered) and the ticker Lenis runs on; parallax is CSS (index.css)
 //   CSS      -> every hover/press interaction (interruptible transitions, Emil's curves)
 import { type RefObject, useEffect, useState } from 'react'
 import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useGSAP } from '@gsap/react'
 import { animate, stagger } from 'animejs'
 
-gsap.registerPlugin(ScrollTrigger, useGSAP)
-export { gsap, ScrollTrigger, useGSAP }
+gsap.registerPlugin(useGSAP)
+export { gsap, useGSAP }
 
 export const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -46,10 +45,6 @@ export function useScrollMotion(scope: RefObject<HTMLElement | null>, ready = tr
       gsap.to(batch, { opacity: 1, y: 0, duration: 0.9, ease: 'expo.out', stagger: 0.06, overwrite: true })
     }, { rootMargin: '0px 0px -10% 0px' })
     reveal.forEach((el) => observer.observe(el))
-    gsap.utils.toArray<HTMLElement>('[data-parallax]').forEach((el) => {
-      gsap.fromTo(el, { yPercent: -6 }, { yPercent: 6, ease: 'none', scrollTrigger: { trigger: el.parentElement, scrub: true } })
-    })
-    ScrollTrigger.refresh()
     return () => observer.disconnect()
   }, { scope, dependencies: [ready] })
 }

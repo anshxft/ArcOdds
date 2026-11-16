@@ -17,6 +17,11 @@ import { poolPayout } from '@/lib/payout'
 
 const Mascot = lazy(() => import('@/mascot/Mascot'))
 
+// Lenis scrolls from JavaScript every frame, which costs a full layout per frame; on weak machines
+// (<= 4 cores or <= 4 GB) plain native scrolling, which runs on the compositor, feels smoother.
+const LOW_POWER =
+  (navigator.hardwareConcurrency || 8) <= 4 || ((navigator as Navigator & { deviceMemory?: number }).deviceMemory || 8) <= 4
+
 const NAV = [
   ['/markets', 'Markets'],
   ['/portfolio', 'Portfolio'],
@@ -485,7 +490,7 @@ export function Layout() {
   }, [pathname])
 
   return (
-    <ReactLenis root ref={lenis} options={{ autoRaf: false, lerp: reducedMotion() ? 1 : 0.1 }}>
+    <ReactLenis root ref={lenis} options={{ autoRaf: false, lerp: reducedMotion() ? 1 : 0.1, smoothWheel: !LOW_POWER }}>
       <div className="relative mx-auto min-h-screen max-w-[1440px] border-x border-line">
         <Header />
         <main>

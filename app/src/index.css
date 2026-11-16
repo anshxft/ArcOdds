@@ -108,7 +108,7 @@ body {
 /* Halftone: photos become black-and-white dot prints, like the reference's scans */
 .halftone {
   position: relative;
-  overflow: hidden;
+  overflow: clip; /* clip, not hidden: hidden makes a scroll container, which breaks the parallax view timeline */
   background: var(--paper);
 }
 .halftone img {
@@ -351,4 +351,24 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .skeleton { animation: none; }
+}
+
+/* Parallax as a CSS scroll-driven animation: runs on the compositor, no JS on scroll.
+   Browsers without animation-timeline simply show the image still. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    /* The image's own box clips (overflow: hidden), so view() would track that box; name the
+       timeline on the frame instead so it follows the frame through the page's viewport. */
+    .halftone:has(> [data-parallax]) {
+      view-timeline-name: --parallax;
+    }
+    [data-parallax] {
+      animation: parallax-y linear both;
+      animation-timeline: --parallax;
+    }
+  }
+}
+@keyframes parallax-y {
+  from { transform: translateY(-6%); }
+  to { transform: translateY(6%); }
 }

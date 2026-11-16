@@ -427,7 +427,7 @@ export default function Market() {
           <Link to="/markets" className="hover:underline">Markets</Link> / <span>v{market.version} #{String(market.id).padStart(2, '0')}</span> / <span>{market.category}</span>{isLegacy(market.version) && <span className="text-muted">/ legacy</span>}
           <span className="ml-auto flex items-center gap-2">{marketState(market) === 'closed' && <Orb state="solving" size={20} />}{stateLabel(market)}</span>
         </div>
-        <div className="cell h-48 overflow-hidden md:col-span-4 md:h-auto" data-boot>
+        <div className="cell h-48 overflow-clip md:col-span-4 md:h-auto" data-boot>
           <Halftone src={marketImage(market)} className="size-full" parallax eager />
         </div>
         <div className="cell flex flex-col justify-between gap-6 p-6 md:col-span-8 md:p-8" data-boot>

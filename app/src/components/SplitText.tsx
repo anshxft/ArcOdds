@@ -2,11 +2,10 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText as GSAPSplitText } from 'gsap/SplitText';
 import { useGSAP } from '@gsap/react';
 
-gsap.registerPlugin(ScrollTrigger, GSAPSplitText, useGSAP);
+gsap.registerPlugin(GSAPSplitText, useGSAP);
 
 export interface SplitTextProps {
   text: string;
@@ -75,17 +74,9 @@ const SplitText: React.FC<SplitTextProps> = ({
         el._rbsplitInstance = undefined;
       }
 
-      const startPct = (1 - threshold) * 100;
-      const marginMatch = /^(-?\d+(?:\.\d+)?)(px|em|rem|%)?$/.exec(rootMargin);
-      const marginValue = marginMatch ? parseFloat(marginMatch[1]) : 0;
-      const marginUnit = marginMatch ? marginMatch[2] || 'px' : 'px';
-      const sign =
-        marginValue === 0
-          ? ''
-          : marginValue < 0
-            ? `-=${Math.abs(marginValue)}${marginUnit}`
-            : `+=${marginValue}${marginUnit}`;
-      const start = `top ${startPct}%${sign}`;
+      // Same trigger point as before, as an IntersectionObserver bottom margin (e.g. -100px).
+      const marginMatch = /^(-?\d+(?:\.\d+)?)(px|%)?$/.exec(rootMargin);
+      const ioMargin = marginMatch ? `0px 0px ${marginMatch[1]}${marginMatch[2] || 'px'} 0px` : '0px';
       let targets: Element[] = [];
       const assignTargets = (self: GSAPSplitText) => {
         if (splitType.includes('chars') && (self as GSAPSplitText).chars?.length)
@@ -94,6 +85,17 @@ const SplitText: React.FC<SplitTextProps> = ({
         if (!targets.length && splitType.includes('lines') && self.lines.length) targets = self.lines;
         if (!targets.length) targets = self.chars || self.words || self.lines;
       };
+      // Play when the heading enters the viewport (IntersectionObserver, no scroll-time layout reads).
+      // autoSplit can rebuild the tween on resize, so keep the latest one and whether it has been seen.
+      let tween: gsap.core.Tween | null = null;
+      let seen = false;
+      const observer = new IntersectionObserver(entries => {
+        if (!entries.some(entry => entry.isIntersecting)) return;
+        seen = true;
+        observer.disconnect();
+        tween?.play();
+      }, { threshold: Math.min(Math.max(threshold, 0), 1), rootMargin: ioMargin });
+      observer.observe(el);
       const splitInstance = new GSAPSplitText(el, {
         type: splitType,
         smartWrap: true,
@@ -104,7 +106,7 @@ const SplitText: React.FC<SplitTextProps> = ({
         reduceWhiteSpace: false,
         onSplit: (self: GSAPSplitText) => {
           assignTargets(self);
-          return gsap.fromTo(
+          tween = gsap.fromTo(
             targets,
             { ...from },
             {
@@ -112,13 +114,7 @@ const SplitText: React.FC<SplitTextProps> = ({
               duration,
               ease,
               stagger: delay / 1000,
-              scrollTrigger: {
-                trigger: el,
-                start,
-                once: true,
-                fastScrollEnd: true,
-                anticipatePin: 0.4
-              },
+              paused: !seen,
               onComplete: () => {
                 animationCompletedRef.current = true;
                 onCompleteRef.current?.();
@@ -127,13 +123,13 @@ const SplitText: React.FC<SplitTextProps> = ({
               force3D: true
             }
           );
+          return tween;
         }
       });
       el._rbsplitInstance = splitInstance;
       return () => {
-        ScrollTrigger.getAll().forEach(st => {
-          if (st.trigger === el) st.kill();
-        });
+        observer.disconnect();
+        tween?.kill();
         try {
           splitInstance.revert();
         } catch (_) {}

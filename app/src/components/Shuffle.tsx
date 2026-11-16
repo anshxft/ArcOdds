@@ -2,12 +2,11 @@
 
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText as GSAPSplitText } from 'gsap/SplitText';
 import { useGSAP } from '@gsap/react';
 import { type JSX } from 'react';
 
-gsap.registerPlugin(ScrollTrigger, GSAPSplitText);
+gsap.registerPlugin(GSAPSplitText);
 
 export interface ShuffleProps {
   text: string;
@@ -77,14 +76,11 @@ const Shuffle: React.FC<ShuffleProps> = ({
     } else setFontsLoaded(true);
   }, []);
 
+  // IntersectionObserver rootMargin (bottom edge only, like the old ScrollTrigger start offset)
   const scrollTriggerStart = useMemo(() => {
-    const startPct = (1 - threshold) * 100;
-    const mm = /^(-?\d+(?:\.\d+)?)(px|em|rem|%)?$/.exec(rootMargin || '');
-    const mv = mm ? parseFloat(mm[1]) : 0;
-    const mu = mm ? mm[2] || 'px' : 'px';
-    const sign = mv === 0 ? '' : mv < 0 ? `-=${Math.abs(mv)}${mu}` : `+=${mv}${mu}`;
-    return `top ${startPct}%${sign}`;
-  }, [threshold, rootMargin]);
+    const mm = /^(-?\d+(?:\.\d+)?)(px|%)?$/.exec(rootMargin || '');
+    return mm ? `0px 0px ${mm[1]}${mm[2] || 'px'} 0px` : '0px';
+  }, [rootMargin]);
 
   useGSAP(
     () => {
@@ -430,15 +426,22 @@ const Shuffle: React.FC<ShuffleProps> = ({
         setReady(true);
       };
 
-      const st = ScrollTrigger.create({
-        trigger: el,
-        start,
-        once: triggerOnce,
-        onEnter: create
-      });
+      // IntersectionObserver instead of ScrollTrigger: nothing reads layout while the page scrolls.
+      let started = false;
+      const observer = new IntersectionObserver(
+        entries => {
+          if (!entries.some(entry => entry.isIntersecting)) return;
+          if (triggerOnce) observer.disconnect();
+          if (started && triggerOnce) return;
+          started = true;
+          create();
+        },
+        { threshold: Math.min(Math.max(threshold, 0), 1), rootMargin: start }
+      );
+      observer.observe(el);
 
       return () => {
-        st.kill();
+        observer.disconnect();
         removeHover();
         teardown();
         setReady(false);
