@@ -186,6 +186,7 @@ export default function Mascot() {
     let napUntil = 0
     let lastSaid = Date.now()
     let current: Mood = 'idle'
+    let scrollPaused = false // face loop paused while the page scrolls (see onScroll)
     let pokes: number[] = []
     let physics: (() => void) | null = null
     const timers = new Set<number>()
@@ -204,7 +205,9 @@ export default function Mascot() {
     const wait = (ms: number) => new Promise<void>((done) => later(done, ms))
     const play = (mood: Mood) => {
       current = mood
-      avatar.current?.play(mood)
+      // While scrolling only remember the mood; it plays once scrolling stops (each face frame is
+      // dozens of SVG attribute writes, which made the first scroll janky).
+      if (!scrollPaused) avatar.current?.play(mood)
     }
 
     // ---- speech ----
@@ -810,7 +813,6 @@ export default function Mascot() {
     let bottomSaid = ''
     // While the page scrolls Poring just stands there, so its face loop pauses (it costs a
     // render every frame) and picks up again once scrolling stops.
-    let scrollPaused = false
     let scrollResume = 0
     let lastBottomCheck = 0
     // Scroll position, speed and end come from Lenis: reading scrollY / scrollHeight here forced a full
